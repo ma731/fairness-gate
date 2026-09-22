@@ -29,6 +29,7 @@ import pandas as pd
 from src import policy as pol
 from src.dashboard import render as render_dashboard
 from src.fingerprint import pipeline_fingerprint
+from src.pages import about as render_about
 from src.report import annex_iv, checks_doc, dpia, model_card
 
 AUDIT_PATH = REPO_ROOT / "results" / "audit.json"
@@ -40,6 +41,7 @@ GENERATED = {
     REPO_ROOT / "docs" / "dpia.md": lambda r, t: dpia(r),
     REPO_ROOT / "results" / "checks.md": lambda r, t: checks_doc(r),
     REPO_ROOT / "docs" / "index.html": lambda r, t: render_dashboard(r, t),
+    REPO_ROOT / "docs" / "about.html": lambda r, t: render_about(r),
 }
 
 def _fail(msg: str) -> None:

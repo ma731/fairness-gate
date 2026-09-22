@@ -57,8 +57,8 @@ def sankey(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
     if not total:
         return '<p class="empty">No distribution data.</p>'
 
-    w, h = 860, 430
-    x0, x1 = 210, 610
+    w, h = 900, 440
+    x0, x1 = 240, 620
     bw = 22
     top, usable, gap = 34, h - 96, 26
 
@@ -85,20 +85,25 @@ def sankey(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
     # qualifies -> selected (true positives), then -> not selected (the overlooked)
     flows += ribbon(x0 + bw, ly0, x1, ry0, hgt(tp), "ok",
                     f"{tp:,} qualify and are selected")
-    flows += ribbon(x0 + bw, ly0 + hgt(tp), x1, ry1 + hgt(fp), hgt(fn), "bad",
+    flows += ribbon(x0 + bw, ly0 + hgt(tp), x1, ry1, hgt(fn), "bad",
                     f"{fn:,} qualify and are OVERLOOKED")
     # does not qualify -> selected (false positives), then -> not selected
     flows += ribbon(x0 + bw, ly1, x1, ry0 + hgt(tp), hgt(fp), "warnrb",
                     f"{fp:,} do not qualify but are selected")
-    flows += ribbon(x0 + bw, ly1 + hgt(fp), x1, ry1 + hgt(fp) + hgt(fn), hgt(tn), "ok",
+    flows += ribbon(x0 + bw, ly1 + hgt(fp), x1, ry1 + hgt(fn), hgt(tn), "ok",
                     f"{tn:,} do not qualify and are not selected")
 
     def node(x, y, n, label, sub, anchor, tx):
+        # Label block is centred on the node so it never floats away from its box.
+        cy = y + hgt(n) / 2
         return (
             f'<rect class="nd" x="{x}" y="{y}" width="{bw}" height="{hgt(n)}" rx="4"/>'
-            f'<text class="nl" x="{tx}" y="{y + 17}" text-anchor="{anchor}">{label}</text>'
-            f'<text class="nn" x="{tx}" y="{y + 36}" text-anchor="{anchor}">{n:,}</text>'
-            f'<text class="ns" x="{tx}" y="{y + 52}" text-anchor="{anchor}">{sub}</text>'
+            f'<text class="nl" x="{tx}" y="{cy - 14:.1f}" text-anchor="{anchor}">'
+            f"{label}</text>"
+            f'<text class="nn" x="{tx}" y="{cy + 8:.1f}" text-anchor="{anchor}">'
+            f"{n:,}</text>"
+            f'<text class="ns" x="{tx}" y="{cy + 26:.1f}" text-anchor="{anchor}">'
+            f"{sub}</text>"
         )
 
     nodes = (
@@ -193,41 +198,78 @@ def treemap(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
         key=lambda t: -t[1],
     )
     total = sum(n for _, n in items)
-    w, h = 860, 360
+    w, h = 880, 380
 
-    # Slice-and-dice in alternating bands: stable, readable, no randomness.
-    out, x, y, rw, rh, horiz = "", 0.0, 0.0, float(w), float(h), True
-    left = total
-    for i, (code, n) in enumerate(items):
-        frac = n / left if left else 0
-        if i == len(items) - 1:
-            cw, ch = rw, rh
-        elif horiz:
-            cw, ch = rw * frac, rh
-        else:
-            cw, ch = rw, rh * frac
+    # Squarified treemap. Slice-and-dice produced unreadable slivers at the tail, which
+    # is exactly the failure mode squarify exists to fix: it keeps cells near square by
+    # committing a row only when adding another tile would make the worst aspect ratio
+    # worse.
+    def worst(row, length, scale):
+        if not row or length <= 0:
+            return float("inf")
+        s_ = sum(row) * scale
+        side = s_ / length
+        if side <= 0:
+            return float("inf")
+        return max(max(r * scale / side / side * length for r in row),
+                   max(side * side * length / (r * scale) for r in row))
+
+    rects, row = [], []
+    x, y, rw, rh = 0.0, 0.0, float(w), float(h)
+    scale = (w * h) / total if total else 1.0
+    queue = list(items)
+
+    def layout_row(row_items, x, y, rw, rh):
+        """Place one committed row along the shorter side and return the leftover box."""
+        area = sum(n for _, n in row_items) * scale
+        out = []
+        if rw >= rh:
+            band = area / rh if rh else 0
+            oy = y
+            for code, n in row_items:
+                ch = (n * scale / band) if band else 0
+                out.append((code, n, x, oy, band, ch))
+                oy += ch
+            return out, x + band, y, rw - band, rh
+        band = area / rw if rw else 0
+        ox = x
+        for code, n in row_items:
+            cw = (n * scale / band) if band else 0
+            out.append((code, n, ox, y, cw, band))
+            ox += cw
+        return out, x, y + band, rw, rh - band
+
+    while queue:
+        nxt = queue[0]
+        side = min(rw, rh)
+        cur = [n for _, n in row]
+        if row and worst(cur + [nxt[1]], side, scale) > worst(cur, side, scale):
+            placed, x, y, rw, rh = layout_row(row, x, y, rw, rh)
+            rects += placed
+            row = []
+            continue
+        row.append(queue.pop(0))
+    if row:
+        placed, x, y, rw, rh = layout_row(row, x, y, rw, rh)
+        rects += placed
+
+    out = ""
+    for code, n, cx, cy, cw, ch in rects:
         label = short(code, attribute)
-        big = cw > 110 and ch > 48
+        big = cw > 96 and ch > 46
         out += (
-            f'<g class="row"><rect class="tm" x="{x + 2:.1f}" y="{y + 2:.1f}" '
+            f'<g class="row"><rect class="tm" x="{cx + 2:.1f}" y="{cy + 2:.1f}" '
             f'width="{max(cw - 4, 1):.1f}" height="{max(ch - 4, 1):.1f}" rx="7" '
             f'style="--v:{n / total:.4f}"><title>{esc(label)}: {n:,} people '
             f'({n / total:.1%})</title></rect>'
         )
         if big:
             out += (
-                f'<text class="tml" x="{x + 16:.1f}" y="{y + 30:.1f}">{esc(label)}</text>'
-                f'<text class="tmn" x="{x + 16:.1f}" y="{y + 52:.1f}">{n:,}</text>'
+                f'<text class="tml" x="{cx + 15:.1f}" y="{cy + 28:.1f}">'
+                f"{esc(label)}</text>"
+                f'<text class="tmn" x="{cx + 15:.1f}" y="{cy + 49:.1f}">{n:,}</text>'
             )
         out += "</g>"
-        if horiz:
-            x += cw
-            rw -= cw
-        else:
-            y += ch
-            rh -= ch
-        left -= n
-        horiz = not horiz
 
     return (
         f'<svg class="chart tree" viewBox="0 0 {w} {h}" width="100%" role="img" '
