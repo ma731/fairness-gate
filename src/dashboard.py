@@ -32,6 +32,8 @@ from src.charts_extra import (
     short,
     treemap,
 )
+from src.pointfield import SCRIPT as FIELD_SCRIPT
+from src.pointfield import markup as field_markup
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_DIR = REPO_ROOT / "docs"
@@ -959,6 +961,10 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
 /* ---- animated mesh: four colour fields drifting over the dark plane ----
    Kept inside our own palette rather than a rainbow. A cheerful gradient would fight
    the subject, and a fifth hue would break the rule that colour means one thing here. */
+.field {{ position:absolute; inset:0; width:100%; height:100%; z-index:1;
+  pointer-events:none; display:block; }}
+.hero .shell, .hero .mega-wrap {{ position:relative; z-index:2; }}
+.hero .topo {{ z-index:1; }}
 .mesh {{ position:absolute; inset:-30%; z-index:0; pointer-events:none;
   filter:blur(52px) saturate(120%); opacity:.5; }}
 .mesh i {{ position:absolute; display:block; border-radius:50%; }}
@@ -1099,6 +1105,7 @@ body {{ padding-top:0; }}
 <header class="hero">
   <div class="mesh" aria-hidden="true"><i class="m1"></i><i class="m2"></i>
     <i class="m3"></i><i class="m4"></i></div>
+  {field_markup(result)}
   {topo_lines()}
   <div class="shell">
     <p class="kicker">A fairness gate &#183; American Community Survey &#183;
@@ -1451,6 +1458,7 @@ body {{ padding-top:0; }}
   </div>
 </footer>
 
+<script>{FIELD_SCRIPT}</script>
 <script>
 (function () {{
   var root = document.documentElement;
