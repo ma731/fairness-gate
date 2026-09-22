@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fairness gate</title>
+<meta name="description" content="Policy gate result for the ACS income model.">
+<style>
+:root {
+  color-scheme: light;
+  --plane:#f9f9f7; --surface:#fcfcfb;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834;
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
+  --radius:10px;
+  --ease-out:cubic-bezier(.23,1,.32,1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --plane:#0d0d0d; --surface:#1a1a19;
+    --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19;
+  --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926;
+}
+* { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; }
+body {
+  margin:0; background:var(--plane); color:var(--ink);
+  font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.45;
+  font-feature-settings:"kern" 1; text-rendering:optimizeLegibility;
+}
+.wrap { max-width:1080px; margin:0 auto; padding:40px 20px 72px; }
+h1 { font-size:22px; letter-spacing:-.01em; margin:0 0 4px; }
+h2 { font-size:15px; letter-spacing:.06em; text-transform:uppercase;
+      color:var(--ink-2); margin:44px 0 14px; font-weight:600; }
+p { max-width:68ch; color:var(--ink-2); margin:0 0 12px; }
+code, .num, td, th { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+      font-variant-numeric:tabular-nums lining-nums; }
+.sub { color:var(--muted); font-size:13px; margin:0; }
+
+.masthead { display:flex; justify-content:space-between; align-items:flex-start;
+  gap:20px; flex-wrap:wrap; padding-bottom:20px; border-bottom:1px solid var(--border); }
+.verdict { display:inline-flex; align-items:center; gap:8px; padding:7px 14px;
+  border-radius:999px; font-size:13px; font-weight:600; letter-spacing:.04em;
+  text-transform:uppercase; border:1px solid var(--border); background:var(--surface); }
+.verdict .dot { width:9px; height:9px; }
+
+.tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:1px; background:var(--border); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden; margin-top:24px; }
+.tile { background:var(--surface); padding:16px 18px; }
+.tile .k { font-size:12px; color:var(--muted); letter-spacing:.06em;
+  text-transform:uppercase; }
+.tile .v { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums; font-size:26px; letter-spacing:-.02em;
+  margin-top:6px; }
+.tile .c { font-size:12px; color:var(--muted); margin-top:2px; }
+
+.panel { background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px; }
+
+.check { padding:14px 0; border-bottom:1px solid var(--border); }
+.check:last-child { border-bottom:0; }
+.check-head { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.check-head code { font-size:13px; color:var(--ink); }
+.check-foot { display:flex; gap:20px; font-size:12px; color:var(--muted);
+  margin-top:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.check-foot b { color:var(--ink); font-weight:600; }
+.dot { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+.status-pass { background:var(--good); } .status-warn { background:var(--warn); }
+.status-fail { background:var(--crit); }
+.chip { margin-left:auto; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 8px; border-radius:5px; border:1px solid var(--border); color:var(--ink-2); }
+.chip-fail { color:var(--crit); } .chip-warn { color:var(--ink-2); }
+
+svg.bullet .track { fill:var(--grid); }
+svg.bullet .fill { transition:opacity 160ms var(--ease-out); }
+svg.bullet .fill.status-pass { fill:var(--good); }
+svg.bullet .fill.status-warn { fill:var(--warn); }
+svg.bullet .fill.status-fail { fill:var(--crit); }
+svg.bullet .tick-warn, svg.bullet .tick-fail { stroke:var(--ink); stroke-width:2; }
+svg.bullet .tick-warn { stroke-dasharray:3 2; opacity:.45; }
+svg.bullet .tick-fail { opacity:.8; }
+
+svg.chart .grid { stroke:var(--grid); stroke-width:1; }
+svg.chart .axis { fill:var(--muted); font-size:10px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.chart .grp { fill:var(--ink); font-size:12px; }
+svg.chart .grp-n { fill:var(--muted); font-size:10.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.chart .val { fill:var(--ink-2); font-size:10.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.chart .s1 { fill:var(--s1); } svg.chart .s2 { fill:var(--s2); }
+svg.chart .link { stroke:var(--axis); stroke-width:2; }
+svg.chart .bar-row { transition:opacity 140ms var(--ease-out); }
+@media (hover:hover) and (pointer:fine) {
+  svg.chart:hover .bar-row { opacity:.45; }
+  svg.chart .bar-row:hover { opacity:1; }
+}
+
+.legend { display:flex; align-items:center; gap:8px; font-size:12px;
+  color:var(--ink-2); margin:0 0 10px; }
+.key { width:10px; height:10px; border-radius:3px; display:inline-block; }
+.key.k1 { background:var(--s1); }
+.key.k2 { background:var(--s2); margin-left:14px; }
+
+table { border-collapse:collapse; width:100%; font-size:13px; }
+th, td { padding:8px 12px; text-align:right; }
+thead th { font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; border-bottom:1px solid var(--axis); }
+tbody th { text-align:left; color:var(--ink); font-weight:600; }
+tbody tr + tr td, tbody tr + tr th { border-top:1px solid var(--border); }
+td.muted { color:var(--muted); }
+
+.note { font-size:13px; color:var(--ink-2); border-left:2px solid var(--axis);
+  padding-left:14px; margin:14px 0 0; max-width:68ch; }
+footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--border);
+  font-size:12px; color:var(--muted); }
+a { color:var(--ink); text-decoration-thickness:1px; text-underline-offset:2px; }
+
+.stagger > * { animation:rise 320ms var(--ease-out) backwards; }
+.stagger > :nth-child(2) { animation-delay:40ms; }
+.stagger > :nth-child(3) { animation-delay:80ms; }
+.stagger > :nth-child(4) { animation-delay:120ms; }
+@keyframes rise { from { opacity:0; transform:translateY(6px); } }
+@media (prefers-reduced-motion:reduce) {
+  .stagger > * { animation:none; }
+  * { transition-duration:1ms !important; }
+}
+@media print { body { background:#fff; } .panel { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div>
+      <h1>Fairness gate</h1>
+      <p class="sub">ACS income classifier, test year 2018.
+        Thresholds declared in <code>policy.yaml</code>.</p>
+    </div>
+    <span class="verdict"><span class="dot status-warn"></span>
+      Warn</span>
+  </header>
+
+  <div class="tiles stagger">
+    <div class="tile"><div class="k">Checks</div>
+      <div class="v">7&#8202;/&#8202;13</div>
+      <div class="c">6 warn, 0 fail</div></div>
+    <div class="tile"><div class="k">AUC, test</div>
+      <div class="v">0.888</div>
+      <div class="c">majority baseline 0.614</div></div>
+    <div class="tile"><div class="k">TPR gap, race</div>
+      <div class="v">0.312</div>
+      <div class="c">base rate gap 0.270</div></div>
+    <div class="tile"><div class="k">People audited</div>
+      <div class="v">600,551</div>
+      <div class="c">1 group too small to report</div></div>
+  </div>
+
+  <h2>What the gap means</h2>
+  <p>Among people who genuinely earn above the threshold, the model finds
+    <b>85.4%</b> of the Asian alone group and
+    <b>54.2%</b> of the Some other race alone group. Accuracy is
+    close to flat across groups, which is why accuracy is the wrong thing to look at:
+    a model can be equally accurate everywhere and still place its errors where they
+    matter most.</p>
+
+  <h2>Policy checks</h2>
+  <div class="panel"><div class="check"><div class="check-head"><span class="dot status-warn" aria-hidden="true"></span><code>fairness.RAC1P.max_calibration_gap</code><span class="chip chip-warn">Warn</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.0410"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-warn" x="0" y="7" width="229.8" height="10" rx="5"><title>measured 0.0410</title></rect><line class="tick-warn" x1="224.0" y1="2" x2="224.0" y2="22" /><title>target 0.040</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.080</title></svg><div class="check-foot"><span>measured <b>0.0410</b></span><span>target 0.040</span><span>limit 0.080</span></div></div><div class="check"><div class="check-head"><span class="dot status-warn" aria-hidden="true"></span><code>fairness.RAC1P.max_demographic_parity_difference</code><span class="chip chip-warn">Warn</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.3445"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-warn" x="0" y="7" width="342.9" height="10" rx="5"><title>measured 0.3445</title></rect><line class="tick-warn" x1="298.7" y1="2" x2="298.7" y2="22" /><title>target 0.300</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.450</title></svg><div class="check-foot"><span>measured <b>0.3445</b></span><span>target 0.300</span><span>limit 0.450</span></div></div><div class="check"><div class="check-head"><span class="dot status-warn" aria-hidden="true"></span><code>fairness.RAC1P.max_fpr_gap</code><span class="chip chip-warn">Warn</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.1447"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-warn" x="0" y="7" width="324.2" height="10" rx="5"><title>measured 0.1447</title></rect><line class="tick-warn" x1="224.0" y1="2" x2="224.0" y2="22" /><title>target 0.100</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.200</title></svg><div class="check-foot"><span>measured <b>0.1447</b></span><span>target 0.100</span><span>limit 0.200</span></div></div><div class="check"><div class="check-head"><span class="dot status-warn" aria-hidden="true"></span><code>fairness.RAC1P.max_tpr_gap</code><span class="chip chip-warn">Warn</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.3119"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-warn" x="0" y="7" width="399.3" height="10" rx="5"><title>measured 0.3119</title></rect><line class="tick-warn" x1="192.0" y1="2" x2="192.0" y2="22" /><title>target 0.150</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.350</title></svg><div class="check-foot"><span>measured <b>0.3119</b></span><span>target 0.150</span><span>limit 0.350</span></div></div><div class="check"><div class="check-head"><span class="dot status-warn" aria-hidden="true"></span><code>fairness.SEX.max_demographic_parity_difference</code><span class="chip chip-warn">Warn</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.1575"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-warn" x="0" y="7" width="282.3" height="10" rx="5"><title>measured 0.1575</title></rect><line class="tick-warn" x1="268.8" y1="2" x2="268.8" y2="22" /><title>target 0.150</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.250</title></svg><div class="check-foot"><span>measured <b>0.1575</b></span><span>target 0.150</span><span>limit 0.250</span></div></div><div class="check"><div class="check-head"><span class="dot status-warn" aria-hidden="true"></span><code>fairness.SEX.max_fpr_gap</code><span class="chip chip-warn">Warn</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.0802"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-warn" x="0" y="7" width="239.5" height="10" rx="5"><title>measured 0.0802</title></rect><line class="tick-warn" x1="238.9" y1="2" x2="238.9" y2="22" /><title>target 0.080</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.150</title></svg><div class="check-foot"><span>measured <b>0.0802</b></span><span>target 0.080</span><span>limit 0.150</span></div></div><div class="check"><div class="check-head"><span class="dot status-pass" aria-hidden="true"></span><code>fairness.SEX.max_calibration_gap</code><span class="chip chip-pass">Pass</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.0344"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-pass" x="0" y="7" width="192.5" height="10" rx="5"><title>measured 0.0344</title></rect><line class="tick-warn" x1="224.0" y1="2" x2="224.0" y2="22" /><title>target 0.040</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.080</title></svg><div class="check-foot"><span>measured <b>0.0344</b></span><span>target 0.040</span><span>limit 0.080</span></div></div><div class="check"><div class="check-head"><span class="dot status-pass" aria-hidden="true"></span><code>fairness.SEX.max_tpr_gap</code><span class="chip chip-pass">Pass</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.0710"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-pass" x="0" y="7" width="159.1" height="10" rx="5"><title>measured 0.0710</title></rect><line class="tick-warn" x1="179.2" y1="2" x2="179.2" y2="22" /><title>target 0.080</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.200</title></svg><div class="check-foot"><span>measured <b>0.0710</b></span><span>target 0.080</span><span>limit 0.200</span></div></div><div class="check"><div class="check-head"><span class="dot status-pass" aria-hidden="true"></span><code>performance.accuracy_over_majority</code><span class="chip chip-pass">Pass</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.1881"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-pass" x="0" y="7" width="105.3" height="10" rx="5"><title>measured 0.1881</title></rect><line class="tick-warn" x1="84.0" y1="2" x2="84.0" y2="22" /><title>target 0.150</title><line class="tick-fail" x1="56.0" y1="2" x2="56.0" y2="22" /><title>limit 0.100</title></svg><div class="check-foot"><span>measured <b>0.1881</b></span><span>target 0.150</span><span>limit 0.100</span></div></div><div class="check"><div class="check-head"><span class="dot status-pass" aria-hidden="true"></span><code>performance.auc</code><span class="chip chip-pass">Pass</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.8881"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-pass" x="0" y="7" width="497.3" height="10" rx="5"><title>measured 0.8881</title></rect><line class="tick-warn" x1="492.8" y1="2" x2="492.8" y2="22" /><title>target 0.880</title><line class="tick-fail" x1="476.0" y1="2" x2="476.0" y2="22" /><title>limit 0.850</title></svg><div class="check-foot"><span>measured <b>0.8881</b></span><span>target 0.880</span><span>limit 0.850</span></div></div><div class="check"><div class="check-head"><span class="dot status-pass" aria-hidden="true"></span><code>performance.ece</code><span class="chip chip-pass">Pass</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.0257"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-pass" x="0" y="7" width="230.3" height="10" rx="5"><title>measured 0.0257</title></rect><line class="tick-warn" x1="268.8" y1="2" x2="268.8" y2="22" /><title>target 0.030</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.050</title></svg><div class="check-foot"><span>measured <b>0.0257</b></span><span>target 0.030</span><span>limit 0.050</span></div></div><div class="check"><div class="check-head"><span class="dot status-pass" aria-hidden="true"></span><code>shift.auc</code><span class="chip chip-pass">Pass</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.8642"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-pass" x="0" y="7" width="484.0" height="10" rx="5"><title>measured 0.8642</title></rect><line class="tick-warn" x1="476.0" y1="2" x2="476.0" y2="22" /><title>target 0.850</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.800</title></svg><div class="check-foot"><span>measured <b>0.8642</b></span><span>target 0.850</span><span>limit 0.800</span></div></div><div class="check"><div class="check-head"><span class="dot status-pass" aria-hidden="true"></span><code>shift.tpr_gap_increase_vs_test</code><span class="chip chip-pass">Pass</span></div><svg class="bullet" viewBox="0 0 560 24" width="100%" height="24" role="img" aria-label="measured 0.0790"><rect class="track" x="0" y="7" width="560" height="10" rx="5" /><rect class="fill status-pass" x="0" y="7" width="236.1" height="10" rx="5"><title>measured 0.0790</title></rect><line class="tick-warn" x1="238.9" y1="2" x2="238.9" y2="22" /><title>target 0.080</title><line class="tick-fail" x1="448.0" y1="2" x2="448.0" y2="22" /><title>limit 0.150</title></svg><div class="check-foot"><span>measured <b>0.0790</b></span><span>target 0.080</span><span>limit 0.150</span></div></div></div>
+  <p class="note">The solid tick is the limit that fails the build. The dashed tick is
+    the target the project is aiming at. The distance between them is deliberate and is
+    argued in <code>policy.yaml</code>.</p>
+
+  <h2>Error rates by race</h2>
+  <div class="panel">
+    <p class="legend"><span class="key k1"></span>True positive rate<span class="key k2"></span>False positive rate</p>
+    <svg class="chart" viewBox="0 0 736 402" width="100%" height="402" role="img" aria-label="true and false positive rate by RAC1P"><line class="grid" x1="250" y1="20" x2="250" y2="388" /><text class="axis" x="250" y="14" text-anchor="middle">0%</text><line class="grid" x1="357.5" y1="20" x2="357.5" y2="388" /><text class="axis" x="357.5" y="14" text-anchor="middle">25%</text><line class="grid" x1="465.0" y1="20" x2="465.0" y2="388" /><text class="axis" x="465.0" y="14" text-anchor="middle">50%</text><line class="grid" x1="572.5" y1="20" x2="572.5" y2="388" /><text class="axis" x="572.5" y="14" text-anchor="middle">75%</text><line class="grid" x1="680.0" y1="20" x2="680.0" y2="388" /><text class="axis" x="680.0" y="14" text-anchor="middle">100%</text><g class="bar-row"><text class="grp" x="238" y="41" text-anchor="end">White alone</text><text class="grp-n" x="238" y="56" text-anchor="end">n&#8239;=&#8239;434,022</text><rect class="s1" x="250" y="26" width="358.2" height="13" rx="3"><title>White alone: true positive rate 0.833</title></rect><text class="val" x="616.2" y="37">83.3%</text><rect class="s2" x="250" y="43" width="98.0" height="13" rx="3"><title>White alone: false positive rate 0.228</title></rect><text class="val" x="356.0" y="54">22.8%</text></g><g class="bar-row"><text class="grp" x="238" y="87" text-anchor="end">Asian alone</text><text class="grp-n" x="238" y="102" text-anchor="end">n&#8239;=&#8239;55,374</text><rect class="s1" x="250" y="72" width="367.2" height="13" rx="3"><title>Asian alone: true positive rate 0.854</title></rect><text class="val" x="625.2" y="83">85.4%</text><rect class="s2" x="250" y="89" width="99.2" height="13" rx="3"><title>Asian alone: false positive rate 0.231</title></rect><text class="val" x="357.2" y="100">23.1%</text></g><g class="bar-row"><text class="grp" x="238" y="133" text-anchor="end">Black or African American alone</text><text class="grp-n" x="238" y="148" text-anchor="end">n&#8239;=&#8239;49,941</text><rect class="s1" x="250" y="118" width="304.8" height="13" rx="3"><title>Black or African American alone: true positive rate 0.709</title></rect><text class="val" x="562.8" y="129">70.9%</text><rect class="s2" x="250" y="135" width="70.9" height="13" rx="3"><title>Black or African American alone: false positive rate 0.165</title></rect><text class="val" x="328.9" y="146">16.5%</text></g><g class="bar-row"><text class="grp" x="238" y="179" text-anchor="end">Some other race alone</text><text class="grp-n" x="238" y="194" text-anchor="end">n&#8239;=&#8239;40,106</text><rect class="s1" x="250" y="164" width="233.1" height="13" rx="3"><title>Some other race alone: true positive rate 0.542</title></rect><text class="val" x="491.1" y="175">54.2%</text><rect class="s2" x="250" y="181" width="37.0" height="13" rx="3"><title>Some other race alone: false positive rate 0.086</title></rect><text class="val" x="295.0" y="192">8.6%</text></g><g class="bar-row"><text class="grp" x="238" y="225" text-anchor="end">Two or more races</text><text class="grp-n" x="238" y="240" text-anchor="end">n&#8239;=&#8239;16,928</text><rect class="s1" x="250" y="210" width="336.0" height="13" rx="3"><title>Two or more races: true positive rate 0.781</title></rect><text class="val" x="594.0" y="221">78.1%</text><rect class="s2" x="250" y="227" width="70.5" height="13" rx="3"><title>Two or more races: false positive rate 0.164</title></rect><text class="val" x="328.5" y="238">16.4%</text></g><g class="bar-row"><text class="grp" x="238" y="271" text-anchor="end">American Indian alone</text><text class="grp-n" x="238" y="286" text-anchor="end">n&#8239;=&#8239;2,340</text><rect class="s1" x="250" y="256" width="312.4" height="13" rx="3"><title>American Indian alone: true positive rate 0.727</title></rect><text class="val" x="570.4" y="267">72.7%</text><rect class="s2" x="250" y="273" width="76.1" height="13" rx="3"><title>American Indian alone: false positive rate 0.177</title></rect><text class="val" x="334.1" y="284">17.7%</text></g><g class="bar-row"><text class="grp" x="238" y="317" text-anchor="end">American Indian and Alaska Native tribes specified</text><text class="grp-n" x="238" y="332" text-anchor="end">n&#8239;=&#8239;926</text><rect class="s1" x="250" y="302" width="298.6" height="13" rx="3"><title>American Indian and Alaska Native tribes specified: true positive rate 0.694</title></rect><text class="val" x="556.6" y="313">69.4%</text><rect class="s2" x="250" y="319" width="51.9" height="13" rx="3"><title>American Indian and Alaska Native tribes specified: false positive rate 0.121</title></rect><text class="val" x="309.9" y="330">12.1%</text></g><g class="bar-row"><text class="grp" x="238" y="363" text-anchor="end">Native Hawaiian and Other Pacific Islander alone</text><text class="grp-n" x="238" y="378" text-anchor="end">n&#8239;=&#8239;883</text><rect class="s1" x="250" y="348" width="309.0" height="13" rx="3"><title>Native Hawaiian and Other Pacific Islander alone: true positive rate 0.719</title></rect><text class="val" x="567.0" y="359">71.9%</text><rect class="s2" x="250" y="365" width="87.4" height="13" rx="3"><title>Native Hawaiian and Other Pacific Islander alone: false positive rate 0.203</title></rect><text class="val" x="345.4" y="376">20.3%</text></g></svg>
+  </div>
+
+  <h2>Error rates by sex</h2>
+  <div class="panel">
+    <p class="legend"><span class="key k1"></span>True positive rate<span class="key k2"></span>False positive rate</p>
+    <svg class="chart" viewBox="0 0 736 126" width="100%" height="126" role="img" aria-label="true and false positive rate by SEX"><line class="grid" x1="250" y1="20" x2="250" y2="112" /><text class="axis" x="250" y="14" text-anchor="middle">0%</text><line class="grid" x1="357.5" y1="20" x2="357.5" y2="112" /><text class="axis" x="357.5" y="14" text-anchor="middle">25%</text><line class="grid" x1="465.0" y1="20" x2="465.0" y2="112" /><text class="axis" x="465.0" y="14" text-anchor="middle">50%</text><line class="grid" x1="572.5" y1="20" x2="572.5" y2="112" /><text class="axis" x="572.5" y="14" text-anchor="middle">75%</text><line class="grid" x1="680.0" y1="20" x2="680.0" y2="112" /><text class="axis" x="680.0" y="14" text-anchor="middle">100%</text><g class="bar-row"><text class="grp" x="238" y="41" text-anchor="end">Male</text><text class="grp-n" x="238" y="56" text-anchor="end">n&#8239;=&#8239;313,136</text><rect class="s1" x="250" y="26" width="363.1" height="13" rx="3"><title>Male: true positive rate 0.844</title></rect><text class="val" x="621.1" y="37">84.4%</text><rect class="s2" x="250" y="43" width="107.4" height="13" rx="3"><title>Male: false positive rate 0.250</title></rect><text class="val" x="365.4" y="54">25.0%</text></g><g class="bar-row"><text class="grp" x="238" y="87" text-anchor="end">Female</text><text class="grp-n" x="238" y="102" text-anchor="end">n&#8239;=&#8239;287,415</text><rect class="s1" x="250" y="72" width="332.5" height="13" rx="3"><title>Female: true positive rate 0.773</title></rect><text class="val" x="590.5" y="83">77.3%</text><rect class="s2" x="250" y="89" width="72.9" height="13" rx="3"><title>Female: false positive rate 0.170</title></rect><text class="val" x="330.9" y="100">17.0%</text></g></svg>
+  </div>
+
+  <h2>Predicted against observed</h2>
+  <div class="panel">
+    <p class="legend"><span class="key k1"></span>Observed rate<span class="key k2"></span>Mean predicted</p>
+    <svg class="chart" viewBox="0 0 736 274" width="100%" height="274" role="img" aria-label="observed rate against mean predicted probability by RAC1P"><line class="grid" x1="250" y1="20" x2="250" y2="260" /><text class="axis" x="250" y="14" text-anchor="middle">0.00</text><line class="grid" x1="465.0" y1="20" x2="465.0" y2="260" /><text class="axis" x="465.0" y="14" text-anchor="middle">0.27</text><line class="grid" x1="680.0" y1="20" x2="680.0" y2="260" /><text class="axis" x="680.0" y="14" text-anchor="middle">0.55</text><g class="bar-row"><text class="grp" x="238" y="38" text-anchor="end">Asian alone</text><line class="link" x1="576.2" y1="34" x2="608.3" y2="34" /><circle class="s1" cx="608.3" cy="34" r="5"><title>Asian alone: observed 0.458</title></circle><circle class="s2" cx="576.2" cy="34" r="5"><title>Asian alone: mean predicted 0.417</title></circle></g><g class="bar-row"><text class="grp" x="238" y="68" text-anchor="end">White alone</text><line class="link" x1="550.0" y1="64" x2="571.4" y2="64" /><circle class="s1" cx="571.4" cy="64" r="5"><title>White alone: observed 0.411</title></circle><circle class="s2" cx="550.0" cy="64" r="5"><title>White alone: mean predicted 0.384</title></circle></g><g class="bar-row"><text class="grp" x="238" y="98" text-anchor="end">Two or more races</text><line class="link" x1="485.4" y1="94" x2="507.3" y2="94" /><circle class="s1" cx="507.3" cy="94" r="5"><title>Two or more races: observed 0.329</title></circle><circle class="s2" cx="485.4" cy="94" r="5"><title>Two or more races: mean predicted 0.301</title></circle></g><g class="bar-row"><text class="grp" x="238" y="128" text-anchor="end">Native Hawaiian and Other Pacific Islander alone</text><line class="link" x1="481.5" y1="124" x2="482.9" y2="124" /><circle class="s1" cx="482.9" cy="124" r="5"><title>Native Hawaiian and Other Pacific Islander alone: observed 0.298</title></circle><circle class="s2" cx="481.5" cy="124" r="5"><title>Native Hawaiian and Other Pacific Islander alone: mean predicted 0.296</title></circle></g><g class="bar-row"><text class="grp" x="238" y="158" text-anchor="end">American Indian alone</text><line class="link" x1="465.9" y1="154" x2="471.2" y2="154" /><circle class="s1" cx="471.2" cy="154" r="5"><title>American Indian alone: observed 0.283</title></circle><circle class="s2" cx="465.9" cy="154" r="5"><title>American Indian alone: mean predicted 0.276</title></circle></g><g class="bar-row"><text class="grp" x="238" y="188" text-anchor="end">Black or African American alone</text><line class="link" x1="460.4" y1="184" x2="466.3" y2="184" /><circle class="s1" cx="466.3" cy="184" r="5"><title>Black or African American alone: observed 0.277</title></circle><circle class="s2" cx="460.4" cy="184" r="5"><title>Black or African American alone: mean predicted 0.269</title></circle></g><g class="bar-row"><text class="grp" x="238" y="218" text-anchor="end">American Indian and Alaska Native tribes specified</text><line class="link" x1="402.0" y1="214" x2="414.6" y2="214" /><circle class="s1" cx="402.0" cy="214" r="5"><title>American Indian and Alaska Native tribes specified: observed 0.194</title></circle><circle class="s2" cx="414.6" cy="214" r="5"><title>American Indian and Alaska Native tribes specified: mean predicted 0.210</title></circle></g><g class="bar-row"><text class="grp" x="238" y="248" text-anchor="end">Some other race alone</text><line class="link" x1="388.5" y1="244" x2="397.2" y2="244" /><circle class="s1" cx="397.2" cy="244" r="5"><title>Some other race alone: observed 0.188</title></circle><circle class="s2" cx="388.5" cy="244" r="5"><title>Some other race alone: mean predicted 0.177</title></circle></g></svg>
+  </div>
+  <p class="note">A calibrated model puts the two dots on top of each other. The
+    distance is the calibration gap for that group, and it is bounded by policy rather
+    than assumed away.</p>
+
+  <h2>Performance across splits</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th scope="col">Split</th><th scope="col">n</th><th scope="col">AUC</th>
+        <th scope="col">AP</th><th scope="col">Brier</th><th scope="col">ECE</th>
+        <th scope="col">Accuracy</th><th scope="col">Majority</th></tr></thead>
+      <tbody><tr><th scope='row'>val</th><td>583,297</td><td>0.9002</td><td>0.8293</td><td>0.1220</td><td>0.0000</td><td>0.8117</td><td class='muted'>0.6414</td></tr><tr><th scope='row'>test</th><td>600,551</td><td>0.8881</td><td>0.8244</td><td>0.1329</td><td>0.0257</td><td>0.8021</td><td class='muted'>0.6140</td></tr><tr><th scope='row'>shift</th><td>43,101</td><td>0.8642</td><td>0.7356</td><td>0.1355</td><td>0.0351</td><td>0.7712</td><td class='muted'>0.6980</td></tr></tbody>
+    </table>
+  </div>
+  <p class="note">The validation ECE is near zero because the calibrator was fitted on
+    that split. It is not a result. Calibration error grows on the later year and grows
+    again on the four held-out states.</p>
+
+  <footer>
+    Generated 2026-09-22T20:04:27+00:00 from commit
+    <code>f5ea780</code>, pipeline
+    <code>73993259971ef0b3</code>.
+    This page is written by <code>scripts/run_audit.py</code> and is verified against the
+    audit on every commit. Editing it by hand fails the build.
+    <br>Not a deployable system. No decision about any person should be made with it.
+  </footer>
+
+</div>
+</body>
+</html>

@@ -20,6 +20,7 @@ PIPELINE_SOURCES = [
     "src/data.py",
     "src/model.py",
     "src/fairness.py",
+    "src/dashboard.py",
     "scripts/run_audit.py",
 ]
 

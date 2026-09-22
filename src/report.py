@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from src import dashboard
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_DIR = REPO_ROOT / "docs"
 RESULTS_DIR = REPO_ROOT / "results"
@@ -388,3 +390,4 @@ def write_all(result: dict, tables: dict[str, pd.DataFrame]) -> None:
     (DOCS_DIR / "annex_iv.md").write_text(annex_iv(result, tables), encoding="utf-8")
     (DOCS_DIR / "dpia.md").write_text(dpia(result), encoding="utf-8")
     (RESULTS_DIR / "checks.md").write_text(checks_doc(result), encoding="utf-8")
+    dashboard.write(result, tables)
