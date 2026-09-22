@@ -1,0 +1,17 @@
+# Raw ACS data. ~3 GB of census CSVs, cached outside the repo by scripts/download_data.py.
+data/
+*.csv
+
+# Generated artifacts are committed on purpose (results/ and docs/ hold the evidence),
+# but model binaries are not: they are rebuilt by scripts/run_audit.py.
+models/
+*.joblib
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+.env
