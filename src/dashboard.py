@@ -627,8 +627,9 @@ nav .right {{ margin-left:auto; display:flex; align-items:center; gap:14px; }}
 @media (max-width:860px) {{ nav ul {{ display:none; }} }}
 
 /* hero */
-.hero {{ min-height:calc(100dvh - 64px); display:flex; flex-direction:column;
-  justify-content:center; padding:72px 0 64px; position:relative; overflow:hidden; }}
+.hero {{ min-height:min(calc(100dvh - 64px), 880px); display:flex;
+  flex-direction:column; justify-content:center; padding:64px 0 72px;
+  position:relative; overflow:hidden; }}
 .hero::before {{ content:""; position:absolute; inset:-20% -10% auto auto;
   width:min(78vw,900px); aspect-ratio:1; pointer-events:none; z-index:0;
   background:radial-gradient(circle at 62% 34%,
@@ -791,7 +792,9 @@ svg.chart .slope {{ stroke-width:2.5; fill:none; opacity:.85; }}
 svg.chart .s1l {{ stroke:var(--s1); }} svg.chart .s2l {{ stroke:var(--s2); }}
 
 /* charts breathe: fill the panel rather than sitting in it */
-.chartbox {{ padding:26px 12px 10px; }}
+.chartbox {{ padding:26px 14px 12px; }}
+.chartbox svg.chart {{ max-height:560px; }}
+.split .chartbox svg.chart {{ max-height:460px; }}
 .chartbox .legend {{ padding-left:14px; }}
 
 .legend {{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ink-2);
@@ -948,6 +951,95 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
   padding:3px 10px; }}
 @media (max-width:620px) {{ .srcs {{ grid-template-columns:1fr; }} }}
 
+/* ---- animated mesh: four colour fields drifting over the dark plane ----
+   Kept inside our own palette rather than a rainbow. A cheerful gradient would fight
+   the subject, and a fifth hue would break the rule that colour means one thing here. */
+.mesh {{ position:absolute; inset:-30%; z-index:0; pointer-events:none;
+  filter:blur(52px) saturate(120%); opacity:.5; }}
+.mesh i {{ position:absolute; display:block; border-radius:50%; }}
+.mesh .m1 {{ width:52%; aspect-ratio:1; left:4%; top:6%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--vc) 62%, transparent),
+    transparent 66%); }}
+.mesh .m2 {{ width:46%; aspect-ratio:1; right:2%; top:0%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--s1) 58%, transparent),
+    transparent 66%); }}
+.mesh .m3 {{ width:44%; aspect-ratio:1; left:26%; bottom:2%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--acid) 30%, transparent),
+    transparent 68%); }}
+.mesh .m4 {{ width:38%; aspect-ratio:1; right:16%; bottom:8%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--s2) 44%, transparent),
+    transparent 66%); }}
+@media (prefers-reduced-motion: no-preference) {{
+  .mesh .m1 {{ animation:float1 28s ease-in-out infinite alternate; }}
+  .mesh .m2 {{ animation:float2 34s ease-in-out infinite alternate; }}
+  .mesh .m3 {{ animation:float3 24s ease-in-out infinite alternate; }}
+  .mesh .m4 {{ animation:float4 40s ease-in-out infinite alternate; }}
+}}
+@keyframes float1 {{ to {{ transform:translate3d(16%, 12%, 0) scale(1.18); }} }}
+@keyframes float2 {{ to {{ transform:translate3d(-18%, 16%, 0) scale(.86); }} }}
+@keyframes float3 {{ to {{ transform:translate3d(12%, -16%, 0) scale(1.22); }} }}
+@keyframes float4 {{ to {{ transform:translate3d(-12%, -10%, 0) scale(1.1); }} }}
+:root[data-theme="light"] .mesh {{ opacity:.34; filter:blur(64px) saturate(130%); }}
+
+/* ---- floating pill nav ---- */
+nav {{ position:fixed; top:14px; left:50%; transform:translateX(-50%);
+  width:min(1120px, calc(100% - 32px)); height:56px; border-radius:999px;
+  border:1px solid var(--hair-2); padding:0 10px 0 20px;
+  background:color-mix(in srgb, var(--plane) 72%, transparent);
+  box-shadow:0 10px 34px rgba(0,0,0,.34), inset 0 1px 0 var(--hair-2); }}
+nav ul {{ margin:0 auto; }}
+body {{ padding-top:0; }}
+.hero {{ padding-top:104px; }}
+
+/* ---- motion layer: all of it scroll-driven CSS, none of it load-bearing ----
+   animation-timeline drives these off the scroller itself, so there is no scroll
+   listener, no rAF loop and no main-thread work per frame. Browsers without support
+   simply get the static page, which is why nothing here hides content. */
+
+.prog {{ position:fixed; top:0; left:0; right:0; height:2px; z-index:30;
+  background:var(--acid); transform-origin:0 50%; transform:scaleX(0); }}
+
+@supports (animation-timeline: scroll()) {{
+  @media (prefers-reduced-motion: no-preference) {{
+    .prog {{ animation:prog linear both; animation-timeline:scroll(root); }}
+
+    /* parallax: the texture drifts slower than the page, the glow drifts faster */
+    .hero .topo {{ animation:drift linear both; animation-timeline:scroll(root);
+      animation-range:0 110vh; }}
+    .hero::before {{ animation:driftfast linear both; animation-timeline:scroll(root);
+      animation-range:0 110vh; }}
+    .acid .topo {{ animation:driftslow linear both; animation-timeline:view();
+      animation-range:cover 0% cover 100%; }}
+
+    /* the headline settles as you leave it */
+    .hero .mega-wrap {{ animation:settle linear both; animation-timeline:scroll(root);
+      animation-range:0 80vh; }}
+
+    /* charts wipe in from the left, which reads as the bars being drawn */
+    .chartbox svg.chart {{ animation:wipe cubic-bezier(.23,1,.32,1) both;
+      animation-timeline:view(); animation-range:entry 8% cover 26%; }}
+
+    /* the acid wall lifts in rather than cutting */
+    .acid-in {{ animation:liftin cubic-bezier(.23,1,.32,1) both;
+      animation-timeline:view(); animation-range:entry 0% cover 24%; }}
+  }}
+}}
+@keyframes prog {{ to {{ transform:scaleX(1); }} }}
+@keyframes drift {{ to {{ transform:translateY(16%) scale(1.1); opacity:.06; }} }}
+@keyframes driftslow {{ from {{ transform:translateY(-6%); }}
+  to {{ transform:translateY(6%); }} }}
+@keyframes driftfast {{ to {{ transform:translateY(-22%); opacity:.4; }} }}
+@keyframes settle {{ to {{ transform:translateY(-4%) scale(1.14); opacity:.14; }} }}
+@keyframes wipe {{ from {{ clip-path:inset(0 100% 0 0); }}
+  to {{ clip-path:inset(0 0 0 0); }} }}
+@keyframes liftin {{ from {{ transform:translateY(34px); opacity:.35; }} }}
+
+/* switching a control cross-fades rather than cutting, where the browser supports it */
+@view-transition {{ navigation:auto; }}
+::view-transition-old(pane), ::view-transition-new(pane) {{
+  animation-duration:280ms; animation-timing-function:cubic-bezier(.23,1,.32,1); }}
+.pane.is-on {{ view-transition-name:pane; }}
+
 /* Reveal is scroll-driven CSS, not script. If the browser cannot do it, content is
    simply visible: an entrance animation must never be load-bearing for legibility. */
 @supports (animation-timeline: view()) {{
@@ -975,6 +1067,7 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
 </head>
 <body class="v-{esc(v)}">
 
+<div class="prog" aria-hidden="true"></div>
 <div class="dither" aria-hidden="true"></div>
 <svg class="grain" aria-hidden="true" focusable="false">
   <filter id="gr"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="4"
@@ -999,6 +1092,8 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
 </nav>
 
 <header class="hero">
+  <div class="mesh" aria-hidden="true"><i class="m1"></i><i class="m2"></i>
+    <i class="m3"></i><i class="m4"></i></div>
   {topo_lines()}
   <div class="shell">
     <p class="kicker">A fairness gate &#183; American Community Survey &#183;
@@ -1373,13 +1468,22 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
         p.dataset.attr === state.attr && p.dataset.split === state.split);
     }});
   }}
+  // Cross-fade the swap where the browser can, cut where it cannot. Either way the
+  // pane changes, so the transition is decoration and never a dependency.
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function swap(fn) {{
+    if (document.startViewTransition && !reduce) {{ document.startViewTransition(fn); }}
+    else {{ fn(); }}
+  }}
   document.querySelectorAll('.seg').forEach(function (b) {{
     b.addEventListener('click', function () {{
-      state[b.dataset.k] = b.dataset.v;
-      b.parentNode.querySelectorAll('.seg').forEach(function (o) {{
-        o.classList.toggle('is-on', o === b);
+      swap(function () {{
+        state[b.dataset.k] = b.dataset.v;
+        b.parentNode.querySelectorAll('.seg').forEach(function (o) {{
+          o.classList.toggle('is-on', o === b);
+        }});
+        sync();
       }});
-      sync();
     }});
   }});
 
