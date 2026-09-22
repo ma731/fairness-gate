@@ -180,6 +180,81 @@ def calib_chart(table: pd.DataFrame, attribute: str) -> str:
     )
 
 
+def _marquee(cost: pd.DataFrame) -> str:
+    """The scrolling band says something. Each entry is a group and how many of every
+    hundred qualifying people the model overlooks there."""
+    return "".join(
+        f'<span>{esc(r["group"])} <em>{round(r['per_100'])}</em></span>'
+        for _, r in cost.iterrows()
+    )
+
+
+def topo_lines(n: int = 16, seed: int = 7) -> str:
+    """Concentric irregular contours, the way a survey map draws elevation.
+
+    Deterministic by seed: the page has to render byte-identically every time.
+    """
+    import math
+
+    paths = []
+    for i in range(n):
+        k = i / n
+        rx, ry = 20 + k * 74, 12 + k * 52
+        pts = []
+        for j in range(72):
+            a = j / 72 * math.tau
+            # a couple of fixed harmonics so the ring wobbles like a real contour
+            wob = (
+                1
+                + 0.085 * math.sin(a * 3 + i * 0.55 + seed)
+                + 0.05 * math.sin(a * 5 - i * 0.31)
+            )
+            pts.append(f"{50 + rx * wob * math.cos(a):.2f},{50 + ry * wob * math.sin(a):.2f}")
+        paths.append(f'<path d="M{"L".join(pts)}Z"/>')
+    return (
+        '<svg class="topo" viewBox="0 0 100 100" preserveAspectRatio="none" '
+        f'aria-hidden="true" focusable="false">{"".join(paths)}</svg>'
+    )
+
+
+def human_cost(table: pd.DataFrame, attribute: str = "RAC1P") -> pd.DataFrame:
+    """Turn rates into people.
+
+    A true positive rate of 0.542 is a statistic. "Out of every hundred people who
+    genuinely qualify, forty-six are overlooked" is the same number said in a way a
+    person can feel, and it is arithmetic, not rhetoric: qualified = n * base rate,
+    overlooked = qualified * (1 - true positive rate).
+    """
+    sub = table[(table["attribute"] == attribute) & table["reportable"]].copy()
+    sub["qualified"] = sub["n"] * sub["base_rate"]
+    sub["overlooked"] = sub["qualified"] * (1 - sub["tpr"])
+    sub["per_100"] = (1 - sub["tpr"]) * 100
+    return sub.sort_values("per_100", ascending=False).reset_index(drop=True)
+
+
+def dot_field(missed_per_100: float, cols: int = 20, rows: int = 5) -> str:
+    """One hundred dots, one hundred qualifying people. The lit ones are overlooked.
+
+    A unit chart rather than a bar, because the unit here is a person and the point of
+    the section is that the denominator is people.
+    """
+    lit = round(missed_per_100)
+    r, gap = 5.0, 19.0
+    w, h = cols * gap, rows * gap
+    dots = ""
+    for i in range(cols * rows):
+        cx = round((i % cols) * gap + gap / 2, 1)
+        cy = round((i // cols) * gap + gap / 2, 1)
+        cls = "on" if i < lit else "off"
+        # Stagger only the lit dots, left to right, so the eye reads the count forming.
+        delay = f' style="--d:{i * 14}ms"' if cls == "on" else ""
+        dots += f'<circle class="{cls}" cx="{cx}" cy="{cy}" r="{r}"{delay}/>'
+    return (
+        f'<svg class="dots" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="{lit} of every 100 qualifying people are overlooked">{dots}</svg>'
+    )
+
+
 def group_table(table: pd.DataFrame, attribute: str) -> str:
     sub = (
         table[(table["attribute"] == attribute) & table["reportable"]]
@@ -278,15 +353,20 @@ def _splits_compact(result: dict) -> str:
 def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
     test = tables["test"]
     race = next(s for s in result["fairness"]["test"] if s["attribute"] == "RAC1P")
+    sex = next(s for s in result["fairness"]["test"] if s["attribute"] == "SEX")
     sub = test[(test["attribute"] == "RAC1P") & test["reportable"]]
-    best, worst = sub.loc[sub["tpr"].idxmax()], sub.loc[sub["tpr"].idxmin()]
+
+    cost = human_cost(test)
+    hurt, spared = cost.iloc[0], cost.iloc[-1]
+    ratio = hurt["per_100"] / spared["per_100"] if spared["per_100"] else 0.0
+    overlooked_total = cost["overlooked"].sum()
 
     counts = {"pass": 0, "warn": 0, "fail": 0}
     for c in result["checks"]:
         counts[c["status"]] += 1
     v = result["policy_verdict"]
     d = result["design"]
-    ts = result["scores"]["test"]
+    ts, sh = (result["scores"][k] for k in ("test", "shift"))
 
     return f"""<!doctype html>
 <html lang="en" data-theme="dark">
@@ -294,175 +374,170 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fairness gate</title>
-<meta name="description" content="Policy gate for the ACS income model. {counts['pass']} pass, {counts['warn']} warn, {counts['fail']} fail.">
+<meta name="description" content="A CI gate for model fairness. Declared thresholds, a measured audit, and a build that fails when a disparity crosses the line.">
 <style>
 :root, :root[data-theme="dark"] {{
   color-scheme: dark;
-  --plane:#08090a; --surface:#101214; --raised:#16191d; --hair:rgba(255,255,255,.075);
-  --hair-2:rgba(255,255,255,.14);
-  --ink:#f3f5f6; --ink-2:#9aa1a7; --mut:#6b7176;
-  --grid:#1e2226; --axis:#2b3035;
+  --plane:#070809; --surface:#0f1113; --raised:#15181b;
+  --hair:rgba(255,255,255,.07); --hair-2:rgba(255,255,255,.15);
+  --ink:#f4f6f7; --ink-2:#9ba2a8; --mut:#6a7075;
+  --grid:#1d2125; --axis:#2a2f34;
   --s1:#3987e5; --s2:#d95926;
   --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
-  --glow:rgba(57,135,229,.16);
+  --glow:rgba(57,135,229,.15);
+  /* Narrative accent. Used only in the story sections, never in the gate, where a
+     colour has to mean pass, warn or fail and nothing else. */
+  --acid:#ccff00; --acid-ink:#0a0b00;
+  --grain:.055;
 }}
 :root[data-theme="light"] {{
   color-scheme: light;
-  --plane:#f4f4f2; --surface:#fcfcfb; --raised:#ffffff; --hair:rgba(11,11,11,.10);
-  --hair-2:rgba(11,11,11,.18);
+  --plane:#f2f2f0; --surface:#fcfcfb; --raised:#ffffff;
+  --hair:rgba(11,11,11,.09); --hair-2:rgba(11,11,11,.18);
   --ink:#0b0b0b; --ink-2:#52514e; --mut:#898781;
   --grid:#e6e5df; --axis:#c3c2b7;
   --s1:#2a78d6; --s2:#eb6834;
   --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
   --glow:rgba(42,120,214,.10);
+  --acid:#5c7400; --acid-ink:#ffffff;
+  --grain:.03;
 }}
 *,*::before,*::after {{ box-sizing:border-box; }}
-html {{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; }}
+html {{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; scroll-padding-top:80px; }}
+/* 100vw bleeds are wider than the content box once a vertical scrollbar exists. */
+html, body {{ overflow-x:clip; max-width:100%; }}
 body {{
   margin:0; background:var(--plane); color:var(--ink);
   font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
-  font-size:15px; line-height:1.5; letter-spacing:-.005em;
+  font-size:16px; line-height:1.55; letter-spacing:-.006em;
   font-feature-settings:"kern" 1; text-rendering:optimizeLegibility;
-  background-image:radial-gradient(900px 480px at 78% -8%, var(--glow), transparent 70%);
-  background-repeat:no-repeat;
 }}
-.mono, code, .num, table {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+.mono, code, table, .num {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-variant-numeric:tabular-nums lining-nums; }}
-.wrap {{ max-width:1160px; margin:0 auto; padding:0 24px 96px; }}
+.shell {{ max-width:1240px; margin:0 auto; padding:0 32px; }}
 .mut {{ color:var(--mut); }}
+h2 {{ font-size:clamp(30px,3.6vw,46px); line-height:1.06; letter-spacing:-.035em;
+  font-weight:660; margin:0 0 18px; max-width:18ch; }}
+.kicker {{ font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--mut); margin:0 0 18px; }}
+.say {{ max-width:60ch; font-size:17px; color:var(--ink-2); margin:0 0 30px; }}
+.say b {{ color:var(--ink); font-weight:600; }}
 
-/* bar */
-.bar {{ position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:14px;
-  padding:13px 24px; background:color-mix(in srgb, var(--plane) 86%, transparent);
-  backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--hair); }}
-.brand {{ font-size:13px; font-weight:650; letter-spacing:.02em; }}
-.brand span {{ color:var(--mut); font-weight:400; }}
-.bar .fp {{ margin-left:auto; font-size:11.5px; color:var(--mut);
+/* nav */
+nav {{ position:sticky; top:0; z-index:20; height:64px; display:flex; align-items:center;
+  gap:30px; padding:0 32px; border-bottom:1px solid var(--hair);
+  background:color-mix(in srgb, var(--plane) 82%, transparent);
+  backdrop-filter:blur(16px) saturate(140%);
+  -webkit-backdrop-filter:blur(16px) saturate(140%); }}
+nav .mark {{ font-size:14px; font-weight:660; letter-spacing:-.015em; }}
+nav .mark i {{ font-style:normal; color:var(--mut); font-weight:400; }}
+nav ul {{ display:flex; gap:26px; list-style:none; margin:0; padding:0; }}
+nav a {{ color:var(--ink-2); text-decoration:none; font-size:13.5px;
+  transition:color 150ms ease; }}
+nav a:hover {{ color:var(--ink); }}
+nav .right {{ margin-left:auto; display:flex; align-items:center; gap:14px; }}
+.pill {{ display:inline-flex; align-items:center; gap:7px; font-size:12px;
+  padding:5px 12px; border-radius:999px; border:1px solid var(--hair-2);
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
+.pill i {{ width:7px; height:7px; border-radius:50%; background:var(--vc); font-style:normal; }}
 .tgl {{ appearance:none; border:1px solid var(--hair-2); background:transparent;
-  color:var(--ink-2); border-radius:7px; padding:5px 11px; font-size:12px; cursor:pointer;
-  transition:transform 140ms cubic-bezier(.23,1,.32,1), color 140ms ease,
-             border-color 140ms ease; }}
+  color:var(--ink-2); border-radius:8px; padding:6px 12px; font:inherit; font-size:12.5px;
+  cursor:pointer; transition:transform 130ms cubic-bezier(.23,1,.32,1),
+    color 150ms ease, border-color 150ms ease; }}
 .tgl:hover {{ color:var(--ink); border-color:var(--ink-2); }}
 .tgl:active {{ transform:scale(.96); }}
+@media (max-width:860px) {{ nav ul {{ display:none; }} }}
 
 /* hero */
-.hero {{ padding:68px 0 44px; border-bottom:1px solid var(--hair); }}
-.eyebrow {{ font-size:11.5px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--mut); margin:0 0 20px; }}
-.verdict {{ display:flex; align-items:baseline; gap:20px; flex-wrap:wrap; }}
-.verdict h1 {{ font-size:clamp(52px,9vw,104px); line-height:.88; letter-spacing:-.045em;
-  margin:0; font-weight:680; }}
-.verdict .tally {{ font-size:15px; color:var(--ink-2);
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
-.v-pass h1 {{ color:var(--good); }} .v-warn h1 {{ color:var(--warn); }}
-.v-fail h1 {{ color:var(--crit); }}
-.lede {{ max-width:60ch; font-size:17px; line-height:1.55; color:var(--ink-2);
-  margin:26px 0 0; }}
-.lede b {{ color:var(--ink); font-weight:600; }}
-
-/* tiles */
-.tiles {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
-  gap:14px; margin:34px 0 0; }}
-.tile {{ background:linear-gradient(180deg,var(--raised),var(--surface));
-  border:1px solid var(--hair); border-radius:14px; padding:18px 20px 20px;
-  box-shadow:inset 0 1px 0 var(--hair-2); }}
-.tile .k {{ font-size:11px; letter-spacing:.1em; text-transform:uppercase;
-  color:var(--mut); }}
-.tile .v {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  font-variant-numeric:tabular-nums; font-size:34px; letter-spacing:-.035em;
-  line-height:1.1; margin-top:10px; }}
-.tile .c {{ font-size:12px; color:var(--mut); margin-top:5px; }}
-
-h2 {{ font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--mut);
-  font-weight:600; margin:64px 0 6px; }}
-.h2sub {{ max-width:64ch; color:var(--ink-2); margin:0 0 20px; font-size:14.5px; }}
-
-.card {{ background:var(--surface); border:1px solid var(--hair); border-radius:16px;
-  padding:22px 24px; box-shadow:inset 0 1px 0 var(--hair-2); }}
-
-/* Bento: one grid, cells of different spans. Exactly as many cells as there is
-   content for, so nothing is padded out with a blank tile. */
-.bento {{ display:grid; grid-template-columns:repeat(12,1fr); gap:12px; margin-top:12px; }}
-.cell {{ background:var(--surface); border:1px solid var(--hair); border-radius:16px;
-  padding:20px 22px; box-shadow:inset 0 1px 0 var(--hair-2); min-width:0;
-  transition:border-color 180ms cubic-bezier(.23,1,.32,1); }}
-@media (hover:hover) and (pointer:fine) {{ .cell:hover {{ border-color:var(--hair-2); }} }}
-.c3 {{ grid-column:span 3; }} .c4 {{ grid-column:span 4; }} .c5 {{ grid-column:span 5; }}
-.c6 {{ grid-column:span 6; }} .c7 {{ grid-column:span 7; }} .c8 {{ grid-column:span 8; }}
-.c12 {{ grid-column:span 12; }}
-.cell.tall {{ grid-row:span 2; display:flex; flex-direction:column;
-  justify-content:space-between; }}
-.cell.flush {{ padding:20px 10px 8px; }}
-.cell-k {{ font-size:10.5px; letter-spacing:.11em; text-transform:uppercase;
-  color:var(--mut); margin:0 0 14px; }}
-
-/* the verdict cell carries the only large colour field on the page */
-.cell.verdict-cell {{ position:relative; overflow:hidden; }}
-.cell.verdict-cell::after {{ content:""; position:absolute; inset:0; pointer-events:none;
-  background:radial-gradient(420px 220px at 12% 112%,
-    color-mix(in srgb, var(--vc) 22%, transparent), transparent 70%); }}
+.hero {{ min-height:calc(100dvh - 64px); display:flex; flex-direction:column;
+  justify-content:center; padding:72px 0 64px; position:relative; overflow:hidden; }}
+.hero::before {{ content:""; position:absolute; inset:-20% -10% auto auto;
+  width:min(78vw,900px); aspect-ratio:1; pointer-events:none; z-index:0;
+  background:radial-gradient(circle at 62% 34%,
+    color-mix(in srgb, var(--vc) 15%, transparent), transparent 62%); }}
+.hero > * {{ position:relative; z-index:1; }}
 .v-pass {{ --vc:var(--good); }} .v-warn {{ --vc:var(--warn); }} .v-fail {{ --vc:var(--crit); }}
-.verdict-cell h1 {{ font-size:clamp(46px,6.4vw,78px); line-height:.86; letter-spacing:-.045em;
-  margin:0; font-weight:680; color:var(--vc); position:relative; z-index:1; }}
-.verdict-cell .tally {{ font-size:13px; color:var(--ink-2); margin-top:16px;
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; position:relative;
-  z-index:1; }}
-.stat .v {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  font-variant-numeric:tabular-nums; font-size:clamp(26px,3.1vw,36px);
-  letter-spacing:-.035em; line-height:1.05; }}
-.stat .c {{ font-size:11.5px; color:var(--mut); margin-top:7px; }}
-@media (max-width:980px) {{
-  .c3,.c4,.c5,.c6,.c7,.c8 {{ grid-column:span 6; }}
-  .cell.tall {{ grid-row:auto; }}
-}}
-@media (max-width:620px) {{
-  .bento {{ gap:10px; }}
-  .c3,.c4,.c5,.c6,.c7,.c8,.c12 {{ grid-column:span 12; }}
-}}
+.hero h1 {{ font-size:clamp(76px,15.5vw,224px); line-height:.82; letter-spacing:-.055em;
+  font-weight:700; margin:0; color:var(--vc); }}
+.hero .under {{ display:flex; align-items:baseline; gap:20px; flex-wrap:wrap;
+  margin-top:26px; }}
+.hero .lead {{ max-width:54ch; font-size:clamp(18px,2vw,23px); line-height:1.42;
+  color:var(--ink-2); letter-spacing:-.015em; margin:30px 0 0; }}
+.hero .lead b {{ color:var(--ink); font-weight:600; }}
+.tally {{ font-size:14px; color:var(--ink-2);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
 
-/* controls */
-.controls {{ display:flex; align-items:center; gap:26px; flex-wrap:wrap;
-  margin:0 0 18px; }}
-.ctl {{ display:flex; align-items:center; gap:10px; }}
-.ctl-k {{ font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--mut); }}
-.segs {{ display:inline-flex; background:var(--surface); border:1px solid var(--hair);
-  border-radius:9px; padding:3px; gap:2px; }}
-.seg {{ appearance:none; border:0; background:transparent; color:var(--ink-2);
-  font:inherit; font-size:13px; padding:5px 13px; border-radius:6px; cursor:pointer;
-  transition:background 150ms cubic-bezier(.23,1,.32,1), color 150ms ease,
-             transform 120ms cubic-bezier(.23,1,.32,1); }}
-.seg:hover {{ color:var(--ink); }}
-.seg:active {{ transform:scale(.97); }}
-.seg.is-on {{ background:var(--raised); color:var(--ink);
-  box-shadow:inset 0 1px 0 var(--hair-2), 0 1px 2px rgba(0,0,0,.28); }}
-.ctl-note {{ font-size:12.5px; color:var(--mut); margin:0 0 0 auto; }}
-.pane {{ display:none; }} .pane.is-on {{ display:block; }}
+/* the finding: a full-bleed contrast band */
+.band {{ background:var(--surface); border-block:1px solid var(--hair); margin-top:0; }}
+.band-in {{ padding:104px 0; }}
+.duel {{ display:grid; grid-template-columns:1fr 1fr; gap:56px; margin-top:44px; }}
+.duel > div {{ border-top:2px solid currentColor; padding-top:20px; }}
+.duel .hi {{ color:var(--s1); }} .duel .lo {{ color:var(--s2); }}
+.duel .fig {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(44px,7vw,84px); line-height:1; letter-spacing:-.05em; }}
+.duel .who {{ color:var(--ink); font-size:16px; margin-top:12px; font-weight:560; }}
+.duel .what {{ color:var(--mut); font-size:13.5px; margin-top:4px; }}
+@media (max-width:760px) {{ .duel {{ grid-template-columns:1fr; gap:34px; }} }}
+
+/* stat band: numbers on hairlines, no cards */
+section {{ padding:104px 0; }}
+.numbers {{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+  background:var(--hair); border-block:1px solid var(--hair); }}
+.numbers > div {{ background:var(--plane); padding:30px 26px 34px; }}
+.numbers .k {{ font-size:10.5px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--mut); }}
+.numbers .v {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums; font-size:clamp(30px,3.6vw,44px);
+  letter-spacing:-.04em; line-height:1.08; margin-top:14px; }}
+.numbers .c {{ font-size:12.5px; color:var(--mut); margin-top:8px; }}
+@media (max-width:900px) {{ .numbers {{ grid-template-columns:repeat(2,1fr); }} }}
+@media (max-width:520px) {{ .numbers {{ grid-template-columns:1fr; }} }}
+
+.panel {{ background:var(--surface); border:1px solid var(--hair); border-radius:18px;
+  padding:26px 28px; box-shadow:inset 0 1px 0 var(--hair-2); }}
+.split {{ display:grid; grid-template-columns:1.35fr 1fr; gap:22px; align-items:start; }}
+@media (max-width:960px) {{ .split {{ grid-template-columns:1fr; }} }}
 
 /* checks */
-.checks {{ list-style:none; margin:0; padding:0; display:grid; gap:2px; }}
-.chk {{ padding:15px 0; border-bottom:1px solid var(--hair); }}
+.checks {{ list-style:none; margin:0; padding:0; }}
+.chk {{ padding:17px 0; border-bottom:1px solid var(--hair); }}
 .chk:last-child {{ border-bottom:0; }}
-.chk-top {{ display:flex; align-items:center; gap:12px; margin-bottom:9px; }}
-.chk-top code {{ font-size:12.5px; color:var(--ink-2); }}
+.chk-top {{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }}
+.chk-top code {{ font-size:13px; color:var(--ink-2); }}
 .tag {{ margin-left:auto; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
-  padding:3px 9px; border-radius:999px; border:1px solid var(--hair-2); color:var(--mut); }}
-.s-warn .tag {{ color:var(--warn); border-color:color-mix(in srgb,var(--warn) 40%,transparent); }}
-.s-fail .tag {{ color:var(--crit); border-color:color-mix(in srgb,var(--crit) 45%,transparent); }}
-.s-pass .tag {{ color:var(--good); border-color:color-mix(in srgb,var(--good) 40%,transparent); }}
-.chk-bot {{ display:flex; align-items:baseline; gap:20px; margin-top:9px; font-size:12px;
+  padding:3px 10px; border-radius:999px; border:1px solid var(--hair-2); color:var(--mut); }}
+.s-warn .tag {{ color:var(--warn); border-color:color-mix(in srgb,var(--warn) 42%,transparent); }}
+.s-fail .tag {{ color:var(--crit); border-color:color-mix(in srgb,var(--crit) 46%,transparent); }}
+.s-pass .tag {{ color:var(--good); border-color:color-mix(in srgb,var(--good) 42%,transparent); }}
+.chk-bot {{ display:flex; align-items:baseline; gap:22px; margin-top:10px; font-size:12px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--mut); }}
-.chk-bot .big {{ font-size:15px; color:var(--ink); letter-spacing:-.02em; }}
+.chk-bot .big {{ font-size:16px; color:var(--ink); letter-spacing:-.02em; }}
 svg.bullet {{ display:block; }}
 svg.bullet .trk {{ fill:var(--grid); }}
-svg.bullet .fil {{ transition:width 420ms cubic-bezier(.23,1,.32,1); }}
+svg.bullet .fil {{ transition:width 480ms cubic-bezier(.23,1,.32,1); }}
 .s-pass svg.bullet .fil {{ fill:var(--good); }}
 .s-warn svg.bullet .fil {{ fill:var(--warn); }}
 .s-fail svg.bullet .fil {{ fill:var(--crit); }}
 svg.bullet line {{ stroke:var(--ink); stroke-width:2; vector-effect:non-scaling-stroke; }}
 svg.bullet .t-warn line {{ opacity:.4; stroke-dasharray:3 3; }}
 svg.bullet .t-fail line {{ opacity:.75; }}
+
+/* controls */
+.controls {{ display:flex; align-items:center; gap:26px; flex-wrap:wrap; margin:0 0 24px; }}
+.ctl {{ display:flex; align-items:center; gap:10px; }}
+.ctl-k {{ font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--mut); }}
+.segs {{ display:inline-flex; background:var(--surface); border:1px solid var(--hair);
+  border-radius:10px; padding:3px; gap:2px; }}
+.seg {{ appearance:none; border:0; background:transparent; color:var(--ink-2); font:inherit;
+  font-size:13px; padding:6px 14px; border-radius:7px; cursor:pointer;
+  transition:background 160ms cubic-bezier(.23,1,.32,1), color 150ms ease,
+    transform 120ms cubic-bezier(.23,1,.32,1); }}
+.seg:hover {{ color:var(--ink); }}
+.seg:active {{ transform:scale(.97); }}
+.seg.is-on {{ background:var(--raised); color:var(--ink);
+  box-shadow:inset 0 1px 0 var(--hair-2), 0 1px 3px rgba(0,0,0,.3); }}
+.ctl-note {{ font-size:12.5px; color:var(--mut); margin:0 0 0 auto; }}
+.pane {{ display:none; }} .pane.is-on {{ display:block; }}
 
 /* charts */
 svg.chart {{ display:block; overflow:visible; }}
@@ -477,18 +552,17 @@ svg.chart .s2, svg.chart .d2 {{ fill:var(--s2); }}
 svg.chart .lnk {{ stroke:var(--axis); stroke-width:2.5; }}
 svg.chart .row {{ transition:opacity 150ms cubic-bezier(.23,1,.32,1); }}
 @media (hover:hover) and (pointer:fine) {{
-  svg.chart:hover .row {{ opacity:.38; }}
+  svg.chart:hover .row {{ opacity:.35; }}
   svg.chart .row:hover {{ opacity:1; }}
 }}
 .legend {{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ink-2);
-  margin:0 0 14px; }}
+  margin:0 0 16px; }}
 .key {{ width:11px; height:11px; border-radius:3px; display:inline-block; }}
 .k1 {{ background:var(--s1); }} .k2 {{ background:var(--s2); margin-left:16px; }}
 .empty {{ color:var(--mut); font-size:13px; margin:0; }}
 
-/* tables */
 table {{ border-collapse:collapse; width:100%; font-size:12.5px; }}
-th, td {{ padding:9px 12px; text-align:right; white-space:nowrap; }}
+th, td {{ padding:10px 12px; text-align:right; white-space:nowrap; }}
 thead th {{ font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
   color:var(--mut); font-weight:600; border-bottom:1px solid var(--axis); }}
 tbody th {{ text-align:left; font-weight:500; color:var(--ink);
@@ -497,144 +571,438 @@ tbody tr {{ transition:background 130ms ease; }}
 tbody tr:hover {{ background:var(--raised); }}
 tbody tr + tr th, tbody tr + tr td {{ border-top:1px solid var(--hair); }}
 .scroll-x {{ overflow-x:auto; }}
-
 .note {{ font-size:13.5px; color:var(--ink-2); border-left:2px solid var(--axis);
-  padding-left:15px; margin:18px 0 0; max-width:66ch; }}
-footer {{ margin-top:72px; padding-top:22px; border-top:1px solid var(--hair);
-  font-size:12px; color:var(--mut); line-height:1.7; }}
-footer code {{ color:var(--ink-2); }}
+  padding-left:16px; margin:22px 0 0; max-width:66ch; }}
 
-.rise {{ animation:rise 460ms cubic-bezier(.23,1,.32,1) backwards; }}
-.rise:nth-child(2) {{ animation-delay:50ms; }}
-.rise:nth-child(3) {{ animation-delay:100ms; }}
-.rise:nth-child(4) {{ animation-delay:150ms; }}
-@keyframes rise {{ from {{ opacity:0; transform:translateY(10px); }} }}
+/* method: a numbered narrative, not cards */
+.steps {{ counter-reset:s; display:grid; gap:2px; margin-top:40px; }}
+.step {{ display:grid; grid-template-columns:64px 1fr; gap:24px; padding:26px 0;
+  border-top:1px solid var(--hair); align-items:start; }}
+.step::before {{ counter-increment:s; content:counter(s,decimal-leading-zero);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px;
+  color:var(--mut); padding-top:4px; }}
+.step h3 {{ font-size:19px; margin:0 0 8px; font-weight:600; letter-spacing:-.02em; }}
+.step p {{ margin:0; color:var(--ink-2); max-width:64ch; font-size:15px; }}
+@media (max-width:620px) {{ .step {{ grid-template-columns:1fr; gap:8px; }} }}
+
+footer {{ border-top:1px solid var(--hair); padding:44px 0 64px; font-size:13px;
+  color:var(--mut); line-height:1.75; }}
+footer code {{ color:var(--ink-2); }}
+footer strong {{ color:var(--ink-2); font-weight:600; }}
+
+.grain {{ position:fixed; inset:0; z-index:90; pointer-events:none;
+  opacity:var(--grain); mix-blend-mode:overlay; }}
+
+/* ---- full-bleed acid field: the single dominant colour moment ---- */
+.acid {{ background:var(--acid); color:var(--acid-ink); position:relative;
+  overflow:hidden; padding:0; }}
+.acid .kicker, .acid .yr {{ color:color-mix(in srgb, var(--acid-ink) 58%, transparent); }}
+.acid .say, .acid p {{ color:color-mix(in srgb, var(--acid-ink) 78%, transparent); }}
+.acid .say b, .acid b {{ color:var(--acid-ink); }}
+.topo {{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
+  opacity:.16; }}
+.topo path {{ fill:none; stroke:currentColor; stroke-width:1.2;
+  vector-effect:non-scaling-stroke; }}
+.acid-in {{ position:relative; z-index:1; padding:120px 0 128px; }}
+
+/* ---- type that runs off both edges, the way a poster does ---- */
+.mega {{ font-size:clamp(84px,21vw,300px); line-height:.78; letter-spacing:-.065em;
+  font-weight:800; margin:0; white-space:nowrap; }}
+.bleed {{ width:100vw; margin-left:calc(50% - 50vw); padding:0 24px; }}
+.mega-wrap {{ overflow:hidden; }}
+.mega.cut {{ margin-left:-.06em; }}
+
+/* horizontal slice displacement, the way the reference slices a portrait */
+.sliced {{ position:relative; display:inline-block; }}
+.sliced > span {{ display:block; }}
+.sliced .sl {{ position:absolute; left:0; top:0; white-space:nowrap;
+  clip-path:inset(var(--a) 0 var(--b) 0); transform:translateX(var(--x)); }}
+.sliced .sl1 {{ --a:16%; --b:62%; --x:2.2%; opacity:.9; }}
+.sliced .sl2 {{ --a:44%; --b:34%; --x:-3.4%; opacity:.82; }}
+.sliced .sl3 {{ --a:70%; --b:8%;  --x:1.4%; opacity:.94; }}
+
+/* ---- one marquee, and only one ---- */
+.mq {{ width:100vw; margin-left:calc(50% - 50vw); overflow:hidden; padding:22px 0;
+  border-block:1px solid currentColor; }}
+.mq-track {{ display:flex; gap:56px; width:max-content;
+  animation:slide 34s linear infinite; }}
+.mq span {{ font-size:clamp(22px,3.4vw,46px); font-weight:700; letter-spacing:-.03em;
+  white-space:nowrap; }}
+.mq em {{ font-style:normal; opacity:.42; }}
+@keyframes slide {{ to {{ transform:translateX(-50%); }} }}
+@media (prefers-reduced-motion:reduce) {{ .mq-track {{ animation:none; }} }}
+
+/* ---- scale contrast: tiny chrome beside monumental figures ---- */
+.tiny {{ font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
+
+/* human cost */
+.cost {{ display:grid; grid-template-columns:1fr 1fr; gap:64px; margin-top:56px; }}
+.cost h3 {{ font-size:15px; font-weight:600; margin:0 0 6px; letter-spacing:-.01em; }}
+.cost .of {{ font-size:12.5px; color:var(--mut); margin:0 0 20px; }}
+.cost .count {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(46px,7.4vw,92px); line-height:.94; letter-spacing:-.05em;
+  margin:20px 0 4px; }}
+.cost .count.bad {{ color:var(--acid); }}
+.cost .cap {{ font-size:13.5px; color:var(--ink-2); max-width:34ch; }}
+svg.dots {{ display:block; overflow:visible; }}
+svg.dots .off {{ fill:var(--ink); opacity:.13; }}
+svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-box; }}
+@media (max-width:820px) {{ .cost {{ grid-template-columns:1fr; gap:48px; }} }}
+
+.ratio {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(84px,17vw,240px); line-height:.82; letter-spacing:-.06em;
+  color:var(--acid); margin:0; }}
+.ratio-say {{ max-width:30ch; font-size:clamp(18px,2.1vw,26px); line-height:1.38;
+  letter-spacing:-.02em; color:var(--ink); margin:26px 0 0; }}
+.total {{ border-top:1px solid var(--hair); margin-top:64px; padding-top:34px;
+  display:flex; align-items:baseline; gap:24px; flex-wrap:wrap; }}
+.total .n {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(38px,5.4vw,68px); letter-spacing:-.045em; line-height:1; }}
+.total p {{ margin:0; max-width:46ch; color:var(--ink-2); font-size:15px; }}
+
+/* sources */
+.srcs {{ list-style:none; margin:40px 0 0; padding:0; display:grid; gap:2px; }}
+.srcs li {{ border-top:1px solid var(--hair); padding:20px 0; display:grid;
+  grid-template-columns:1fr auto; gap:20px; align-items:baseline; }}
+.srcs a {{ color:var(--ink); text-decoration:none; font-size:16px; font-weight:560;
+  letter-spacing:-.015em; border-bottom:1px solid var(--hair-2); padding-bottom:1px;
+  transition:border-color 160ms ease, color 160ms ease; }}
+.srcs a:hover {{ color:var(--acid); border-color:var(--acid); }}
+.srcs .what {{ display:block; font-weight:400; font-size:13.5px; color:var(--mut);
+  margin-top:5px; border:0; }}
+.srcs .yr {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12.5px; color:var(--mut); }}
+@media (max-width:620px) {{ .srcs li {{ grid-template-columns:1fr; gap:6px; }} }}
+
+/* Reveal is scroll-driven CSS, not script. If the browser cannot do it, content is
+   simply visible: an entrance animation must never be load-bearing for legibility. */
+@supports (animation-timeline: view()) {{
+  @media (prefers-reduced-motion: no-preference) {{
+    .reveal {{ animation:rise both; animation-timeline:view();
+      animation-range:entry 0% cover 20%; }}
+    .cost svg.dots .on {{ animation:pop 420ms cubic-bezier(.23,1,.32,1) both;
+      animation-delay:var(--d,0ms); animation-timeline:view();
+      animation-range:entry 0% cover 16%; }}
+  }}
+}}
+@keyframes rise {{ from {{ opacity:0; transform:translateY(20px); }} }}
+@keyframes pop {{ from {{ opacity:0; transform:scale(.4); }} }}
 @media (prefers-reduced-motion:reduce) {{
-  .rise {{ animation:none; }} html {{ scroll-behavior:auto; }}
-  *, *::before, *::after {{ transition-duration:1ms !important; }}
+  html {{ scroll-behavior:auto; }}
+  *, *::before, *::after {{ transition-duration:1ms !important; animation:none !important; }}
 }}
-@media (max-width:760px) {{
-  .wrap {{ padding:0 16px 64px; }}
-  .ctl-note {{ margin-left:0; }}
-  .verdict h1 {{ font-size:clamp(44px,15vw,64px); }}
+@media (max-width:760px) {{ .shell {{ padding:0 20px; }} section, .band-in {{ padding:64px 0; }} }}
+@media print {{
+  body {{ background:#fff; }} nav, .controls {{ display:none; }}
+  .pane {{ display:block !important; }} .reveal {{ opacity:1; transform:none; }}
+  .hero {{ min-height:auto; }}
 }}
-@media print {{ body {{ background:#fff; }} .bar,.controls {{ display:none; }}
-  .pane {{ display:block !important; }} .card {{ break-inside:avoid; }} }}
 </style>
 </head>
-<body>
+<body class="v-{esc(v)}">
 
-<div class="bar">
-  <span class="brand">fairness&#8209;gate <span>/ ACS income</span></span>
-  <span class="fp">{esc(result.get('pipeline_fingerprint', 'n/a'))}</span>
-  <button type="button" class="tgl" id="themer" aria-label="Switch colour theme">Light</button>
+<svg class="grain" aria-hidden="true" focusable="false">
+  <filter id="gr"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="4"
+    stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  <rect width="100%" height="100%" filter="url(#gr)"/>
+</svg>
+
+<nav>
+  <span class="mark">fairness&#8209;gate <i>/ ACS income</i></span>
+  <ul>
+    <li><a href="#cost">Who it misses</a></li>
+    <li><a href="#checks">Checks</a></li>
+    <li><a href="#groups">Groups</a></li>
+    <li><a href="#method">Method</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ul>
+  <div class="right">
+    <span class="pill"><i></i>{esc(STATUS_LABEL[v])}</span>
+    <button type="button" class="tgl" id="themer" aria-label="Switch colour theme">Light</button>
+  </div>
+</nav>
+
+<header class="hero">
+  {topo_lines()}
+  <div class="shell">
+    <p class="kicker">A fairness gate &#183; American Community Survey &#183;
+      {ts['n']:,} people</p>
+  </div>
+  <div class="mega-wrap bleed">
+    <h1 class="mega cut sliced">
+      <span>{esc(STATUS_LABEL[v].upper())}</span>
+      <span class="sl sl1" aria-hidden="true">{esc(STATUS_LABEL[v].upper())}</span>
+      <span class="sl sl2" aria-hidden="true">{esc(STATUS_LABEL[v].upper())}</span>
+      <span class="sl sl3" aria-hidden="true">{esc(STATUS_LABEL[v].upper())}</span>
+    </h1>
+  </div>
+  <div class="shell">
+    <div class="under">
+      <span class="tally">{counts['pass']} pass &#183; {counts['warn']} warn &#183;
+        {counts['fail']} fail</span>
+    </div>
+    <p class="lead">A model decides who looks like they earn enough. It is wrong about
+      some people far more often than others. This page measures that, holds it to a
+      declared limit, and fails the build when the limit breaks.</p>
+  </div>
+</header>
+
+<div class="mq" aria-hidden="true">
+  <div class="mq-track">{_marquee(cost)}{_marquee(cost)}</div>
 </div>
 
-<div class="wrap">
+<div class="band" id="cost">
+  <div class="shell band-in reveal">
+    <p class="kicker">Who it misses</p>
+    <h2>Out of every hundred people who qualify.</h2>
+    <p class="say">A true positive rate is a statistic. Said another way: of a hundred
+      people who genuinely earn above the threshold, this is how many the model fails to
+      find. Each dot is one of those hundred people. The lit ones are overlooked.</p>
 
-  <p class="eyebrow">Policy gate &#183; ACS income model &#183; test year {esc(d['test_year'])}</p>
-
-  <div class="bento">
-
-    <div class="cell tall c5 verdict-cell v-{esc(v)}">
-      <div><p class="cell-k">Verdict</p>
-        <h1>{esc(STATUS_LABEL[v].upper())}</h1></div>
-      <p class="tally">{counts['pass']} pass &#183; {counts['warn']} warn &#183;
-        {counts['fail']} fail</p>
+    <div class="cost">
+      <div>
+        <h3>{esc(hurt['group'])}</h3>
+        <p class="of tiny">{int(hurt['n']):,} surveyed</p>
+        {dot_field(float(hurt['per_100']))}
+        <div class="count bad">{round(hurt['per_100'])}</div>
+        <p class="cap">overlooked out of every hundred who qualify, which is
+          {round(hurt['overlooked']):,} people in this survey year alone.</p>
+      </div>
+      <div>
+        <h3>{esc(spared['group'])}</h3>
+        <p class="of tiny">{int(spared['n']):,} surveyed</p>
+        {dot_field(float(spared['per_100']))}
+        <div class="count">{round(spared['per_100'])}</div>
+        <p class="cap">overlooked out of every hundred who qualify. The same model, the
+          same threshold, the same day.</p>
+      </div>
     </div>
 
-    <div class="cell c7">
-      <p class="cell-k">What the gap means</p>
-      <p class="lede">Among people who genuinely earn above the threshold, the model
-        finds <b>{pct(float(best['tpr']))}</b> of the {esc(best['group'])} group and
-        <b>{pct(float(worst['tpr']))}</b> of the {esc(worst['group'])} group. Accuracy
-        is nearly flat across groups, which is exactly why accuracy is the wrong thing
-        to look at.</p>
+    <div class="total">
+      <span class="n">{round(overlooked_total):,}</span>
+      <p>qualifying people overlooked across every reported group in this one survey
+        year. If a decision hung on this model, that is the size of the room.</p>
     </div>
+  </div>
+</div>
 
-    <div class="cell stat c3"><p class="cell-k">True positive gap</p>
-      <div class="v">{fmt(race['tpr_gap'])}</div>
-      <div class="c">target 0.150 &#183; limit 0.350</div></div>
-    <div class="cell stat c4"><p class="cell-k">Base rate gap</p>
-      <div class="v">{fmt(race['base_rate_gap'])}</div>
-      <div class="c">the part the data itself explains</div></div>
-
-    <div class="cell c12">
-      <p class="cell-k">Policy checks</p>
-      <p class="h2sub">Declared in <code>policy.yaml</code>. The solid tick is the limit
-        that fails the build; the dashed tick is the target being aimed at. The distance
-        between them is deliberate.</p>
-      <ul class="checks">{_checks(result)}</ul>
+<div class="acid">
+  {topo_lines(13, 3)}
+  <div class="acid-in">
+    <div class="shell"><p class="kicker tiny">The disparity</p></div>
+    <div class="mega-wrap bleed">
+      <p class="mega cut">{ratio:.1f}&#215; MORE LIKELY</p>
     </div>
+    <div class="shell">
+      <p class="ratio-say">Being in the {esc(hurt['group'])} group makes this model
+        <b>{ratio:.1f} times</b> more likely to miss you, even when you genuinely
+        qualify.</p>
+      <p class="say" style="margin-top:40px">Accuracy is nearly flat across all of these
+        groups, between {fmt(float(sub['accuracy'].min()), 2)} and
+        {fmt(float(sub['accuracy'].max()), 2)}. A model can be equally accurate
+        everywhere and still place its errors on the same people every time. That is why
+        one headline number is never an answer to this question.</p>
+    </div>
+  </div>
+</div>
 
-    <div class="cell c12">
-      <p class="cell-k">Error rates by group</p>
-      {_controls()}
+<section>
+  <div class="shell reveal">
+    <div class="numbers">
+      <div><div class="k">True positive gap</div><div class="v">{fmt(race['tpr_gap'])}</div>
+        <div class="c">target 0.150, limit 0.350</div></div>
+      <div><div class="k">Base rate gap</div><div class="v">{fmt(race['base_rate_gap'])}</div>
+        <div class="c">the part the data itself explains</div></div>
+      <div><div class="k">Gap by sex</div><div class="v">{fmt(sex['tpr_gap'])}</div>
+        <div class="c">same metric, second attribute</div></div>
+      <div><div class="k">AUC</div><div class="v">{fmt(ts['auc'], 3)}</div>
+        <div class="c">majority baseline {fmt(ts['majority_baseline'], 3)}</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="band" id="checks">
+  <div class="shell band-in reveal">
+    <p class="kicker">The gate</p>
+    <h2>Every threshold, measured on every commit.</h2>
+    <p class="say">The solid tick is the limit that fails the build. The dashed tick is
+      the target being aimed at. The distance between them is deliberate: a limit pinned
+      to wherever the model lands today would make the gate meaningless, and one pinned
+      to the aspiration would mean a permanently red build that everyone learns to
+      ignore.</p>
+    <div class="panel"><ul class="checks">{_checks(result)}</ul></div>
+  </div>
+</div>
+
+<section id="groups">
+  <div class="shell reveal">
+    <p class="kicker">By group</p>
+    <h2>Where the errors land.</h2>
+    <p class="say">Grouped rather than stacked, because these are two independent rates
+      and not parts of a whole. Sorted by group size so the ordering is not read as a
+      ranking of severity.</p>
+    {_controls()}
+    <div class="panel">
       <p class="legend"><span class="key k1"></span>Found, of those who qualify
         <span class="key k2"></span>Wrongly flagged</p>
       {_panes(tables, rate_chart)}
     </div>
-
-    <div class="cell c7">
-      <p class="cell-k">Predicted against observed</p>
-      <p class="legend"><span class="key k1"></span>Observed
-        <span class="key k2"></span>Predicted</p>
-      {_panes(tables, calib_chart)}
-      <p class="note">A calibrated model puts the two dots on top of each other. The
-        number beside each pair is the distance.</p>
-    </div>
-
-    <div class="cell c5 scroll-x">
-      <p class="cell-k">Across splits</p>
-      <table>
-        <thead><tr><th scope="col">Split</th><th scope="col">n</th>
-          <th scope="col">AUC</th><th scope="col">ECE</th>
-          <th scope="col">Acc</th><th scope="col">Base</th></tr></thead>
-        <tbody>{_splits_compact(result)}</tbody>
-      </table>
-      <p class="note">Validation ECE is near zero because the calibrator was fitted
-        there. It is not a result. Error grows on the later year and again on the
-        held-out states.</p>
-    </div>
-
-    <div class="cell c8 scroll-x">
-      <p class="cell-k">Every reported group</p>
-      {_panes(tables, group_table)}
-    </div>
-
-    <div class="cell c4 stat">
-      <p class="cell-k">Scale</p>
-      <div class="v">{ts['n']:,}</div>
-      <div class="c">people in the test year. {race['groups_suppressed']} group sits
-        below the 500-person reporting floor and is measured but never concluded
-        from.</div>
-      <div class="v" style="margin-top:22px">{fmt(ts['auc'], 3)}</div>
-      <div class="c">AUC, against a majority baseline of
-        {fmt(ts['majority_baseline'], 3)}</div>
-    </div>
-
   </div>
+</section>
 
-  <footer>
-    Generated {esc(result['generated_at'])} from commit
-    <code>{esc(result['git_sha'])}</code>, pipeline
-    <code>{esc(result.get('pipeline_fingerprint', 'n/a'))}</code>.
-    Written by <code>scripts/run_audit.py</code> and verified against the audit on every
-    commit, so editing this page by hand fails the build.
-    <br>Not a deployable system. No decision about any person should be made with it.
-  </footer>
+<div class="band">
+  <div class="shell band-in reveal">
+    <p class="kicker">Calibration</p>
+    <h2>Does a probability mean the same thing for everyone?</h2>
+    <div class="split">
+      <div class="panel">
+        <p class="legend"><span class="key k1"></span>Observed
+          <span class="key k2"></span>Predicted</p>
+        {_panes(tables, calib_chart)}
+      </div>
+      <div class="panel scroll-x">
+        <table>
+          <thead><tr><th scope="col">Split</th><th scope="col">n</th>
+            <th scope="col">AUC</th><th scope="col">ECE</th>
+            <th scope="col">Acc</th><th scope="col">Base</th></tr></thead>
+          <tbody>{_splits_compact(result)}</tbody>
+        </table>
+        <p class="note">Validation ECE is near zero because the calibrator was fitted
+          there. It is not a result. Error grows on the later year, and again on the
+          four states held out entirely.</p>
+      </div>
+    </div>
+  </div>
 </div>
 
+<section>
+  <div class="shell reveal">
+    <p class="kicker">Full detail</p>
+    <h2>Every reported group.</h2>
+    <p class="say">Groups below 500 people are measured, then withheld from every table
+      and every summary gap. A rate computed on a few hundred people is mostly noise,
+      and publishing it as though it were a finding would be its own kind of harm.</p>
+    <div class="panel scroll-x">{_panes(tables, group_table)}</div>
+  </div>
+</section>
+
+<div class="band" id="method">
+  <div class="shell band-in reveal">
+    <p class="kicker">Method</p>
+    <h2>Four decisions that shaped every number above.</h2>
+    <div class="steps">
+      <div class="step"><div>
+        <h3>The split is temporal, not random</h3>
+        <p>Fitted on {esc(d['train_year'])}, tuned on {esc(d['threshold_chosen_on'])},
+          tested on {esc(d['test_year'])}, which is how a model like this is actually
+          used: built on the past, applied to the present. A random split of a single
+          year would have hidden the drift entirely.</p></div></div>
+      <div class="step"><div>
+        <h3>Four states are held out completely</h3>
+        <p>Geographic shift on top of temporal shift. The positive rate falls to
+          {fmt(result['splits']['shift']['positive_rate'])} there against
+          {fmt(result['splits']['test']['positive_rate'])} in the test states, and AUC
+          falls from {fmt(ts['auc'], 3)} to {fmt(sh['auc'], 3)}. That decay is measured
+          rather than assumed away.</p></div></div>
+      <div class="step"><div>
+        <h3>Protected attributes are kept out of the features</h3>
+        <p>Race and sex are held separately and used only to measure disparity, never to
+          predict. An attribute is protected whether or not the model is allowed to see
+          it, so the audit runs either way.</p></div></div>
+      <div class="step"><div>
+        <h3>Three fairness criteria are reported together</h3>
+        <p>Demographic parity, equalised odds and calibration cannot all hold when base
+          rates differ across groups, and here they differ by
+          {fmt(race['base_rate_gap'])}. Quoting one number alone would be a choice about
+          which unfairness to make invisible.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="band" id="sources">
+  <div class="shell band-in reveal">
+    <p class="kicker">Sources</p>
+    <h2>Where the data and the definitions come from.</h2>
+    <p class="say">Nothing on this page is invented. The people are real survey
+      respondents, the fairness criteria are the standard ones, and the reason they
+      cannot all be satisfied at once is a proved result, not an opinion.</p>
+    <ul class="srcs">
+      <li><div>
+        <a href="https://www.census.gov/programs-surveys/acs/microdata.html">
+          American Community Survey, Public Use Microdata</a>
+        <span class="what">US Census Bureau. The survey responses behind every number
+          here, published de-identified for exactly this kind of analysis.</span>
+      </div><span class="yr">{esc(d['train_year'])}&#8211;{esc(d['test_year'])}</span></li>
+
+      <li><div>
+        <a href="https://arxiv.org/abs/2108.04884">Retiring Adult: New Datasets for Fair
+          Machine Learning</a>
+        <span class="what">Ding, Hardt, Miller and Schmidt. The paper behind
+          <code>folktables</code>, which defines this prediction task and argues for
+          exactly the temporal and geographic splits used here.</span>
+      </div><span class="yr">2021</span></li>
+
+      <li><div>
+        <a href="https://arxiv.org/abs/1610.02413">Equality of Opportunity in Supervised
+          Learning</a>
+        <span class="what">Hardt, Price and Srebro. Defines equalised odds, the criterion
+          the true positive gap on this page is measured against.</span>
+      </div><span class="yr">2016</span></li>
+
+      <li><div>
+        <a href="https://arxiv.org/abs/1609.05807">Inherent Trade-Offs in the Fair
+          Determination of Risk Scores</a>
+        <span class="what">Kleinberg, Mullainathan and Raghavan. Proves that calibration
+          and equal error rates cannot hold together when base rates differ, which is why
+          this page reports three criteria instead of choosing one.</span>
+      </div><span class="yr">2016</span></li>
+
+      <li><div>
+        <a href="https://arxiv.org/abs/1703.00056">Fair Prediction with Disparate Impact</a>
+        <span class="what">Chouldechova. The same impossibility reached independently,
+          in the context of recidivism scoring.</span>
+      </div><span class="yr">2017</span></li>
+
+      <li><div>
+        <a href="https://fairmlbook.org">Fairness and Machine Learning</a>
+        <span class="what">Barocas, Hardt and Narayanan. The standard textbook, free
+          online, and the source for treating a protected attribute as something you
+          audit against rather than something you delete.</span>
+      </div><span class="yr">2023</span></li>
+
+      <li><div>
+        <a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj">EU Artificial
+          Intelligence Act</a>
+        <span class="what">Regulation 2024/1689. Annex IV sets the structure of the
+          technical documentation this project generates alongside the page.</span>
+      </div><span class="yr">2024</span></li>
+    </ul>
+  </div>
+</div>
+
+<footer>
+  <div class="shell">
+    <p><strong>Generated, not written.</strong> This page, the model card, the Annex IV
+      technical documentation and the DPIA all come out of
+      <code>scripts/run_audit.py</code>. Continuous integration regenerates each of them
+      and requires a byte-identical match, so editing any number by hand fails the
+      build.</p>
+    <p>Run {esc(result['generated_at'])} &#183; commit <code>{esc(result['git_sha'])}</code>
+      &#183; pipeline <code>{esc(result.get('pipeline_fingerprint', 'n/a'))}</code>
+      &#183; Python {esc(result['python'])}</p>
+    <p>Not a deployable system, and not a product. Income prediction on census microdata
+      is a benchmark. No decision about any person should be made with it.</p>
+  </div>
+</footer>
+
 <script>
-// Two behaviours, both tiny and both optional: the page is complete without them.
 (function () {{
   var root = document.documentElement;
   var btn = document.getElementById('themer');
   function label() {{ btn.textContent = root.dataset.theme === 'dark' ? 'Light' : 'Dark'; }}
-  try {{
-    var saved = localStorage.getItem('fg-theme');
-    if (saved) root.dataset.theme = saved;
-  }} catch (e) {{ /* private mode: keep the default */ }}
+  try {{ var saved = localStorage.getItem('fg-theme'); if (saved) root.dataset.theme = saved; }}
+  catch (e) {{ /* private mode: keep the default */ }}
   label();
   btn.addEventListener('click', function () {{
     root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -659,6 +1027,7 @@ footer code {{ color:var(--ink-2); }}
       sync();
     }});
   }});
+
 }})();
 </script>
 </body>
