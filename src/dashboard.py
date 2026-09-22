@@ -29,6 +29,7 @@ from src.charts_extra import (
     reliability,
     ridgeline,
     sankey,
+    short,
     treemap,
 )
 
@@ -99,7 +100,7 @@ def rate_chart(table: pd.DataFrame, attribute: str) -> str:
     if sub.empty:
         return '<p class="empty">No group large enough to report.</p>'
 
-    row_h, bar_h, gap, lab_w, pad_r, plot_w = 54, 15, 5, 280, 62, 520
+    row_h, bar_h, gap, lab_w, pad_r, plot_w = 54, 15, 5, 190, 66, 610
     h = len(sub) * row_h + 40
     w = lab_w + plot_w + pad_r
 
@@ -118,7 +119,8 @@ def rate_chart(table: pd.DataFrame, attribute: str) -> str:
         rows += (
             f'<g class="row">'
             f'<text class="gl" x="{lab_w - 14}" y="{top + 14}" text-anchor="end">'
-            f'{esc(r["group"])}</text>'
+            f'{esc(short(int(r["code"]), attribute))}'
+            f'<title>{esc(r["group"])}</title></text>'
             f'<text class="gn" x="{lab_w - 14}" y="{top + 31}" text-anchor="end">'
             f'{int(r["n"]):,}</text>'
             f'<rect class="s1" x="{lab_w}" y="{top}" width="{tw}" height="{bar_h}" rx="3">'
@@ -147,7 +149,7 @@ def calib_chart(table: pd.DataFrame, attribute: str) -> str:
     if sub.empty:
         return '<p class="empty">No group large enough to report.</p>'
 
-    row_h, lab_w, pad_r, plot_w = 36, 280, 62, 520
+    row_h, lab_w, pad_r, plot_w = 36, 190, 66, 610
     h = len(sub) * row_h + 40
     w = lab_w + plot_w + pad_r
     hi = max(float(sub["base_rate"].max()), float(sub["mean_predicted"].max()))
@@ -171,7 +173,8 @@ def calib_chart(table: pd.DataFrame, attribute: str) -> str:
         rows += (
             f'<g class="row">'
             f'<text class="gl" x="{lab_w - 14}" y="{cy + 4}" text-anchor="end">'
-            f'{esc(r["group"])}</text>'
+            f'{esc(short(int(r["code"]), attribute))}'
+            f'<title>{esc(r["group"])}</title></text>'
             f'<line class="lnk" x1="{min(xa, xp)}" y1="{cy}" x2="{max(xa, xp)}" y2="{cy}"/>'
             f'<circle class="d1" cx="{xa}" cy="{cy}" r="5.5">'
             f'<title>{esc(r["group"])}: observed {fmt(r["base_rate"])}</title></circle>'
@@ -275,7 +278,7 @@ def scatter_chart(table: pd.DataFrame, attribute: str) -> str:
         return '<p class="empty">No group large enough to report.</p>'
 
     w, h = 780, 440
-    pad_l, pad_b, pad_t, pad_r = 66, 54, 22, 150
+    pad_l, pad_b, pad_t, pad_r = 66, 54, 22, 190
     px, py = w - pad_l - pad_r, h - pad_t - pad_b
     xmax = max(0.55, float(sub["base_rate"].max()) * 1.2)
     ymin = min(0.45, float(sub["tpr"].min()) * 0.9)
@@ -311,7 +314,7 @@ def scatter_chart(table: pd.DataFrame, attribute: str) -> str:
             f'<title>{esc(r["group"])}: {int(r["n"]):,} people, base rate '
             f'{fmt(r["base_rate"])}, found {pct(r["tpr"])}</title></circle>'
             f'<text class="vl" x="{round(cx + rad + 9, 1)}" y="{cy + 4}">'
-            f'{esc(r["group"])}</text></g>'
+            f'{esc(short(int(r["code"]), attribute))}</text></g>'
         )
 
     return (
@@ -338,7 +341,7 @@ def diverging_chart(table: pd.DataFrame, attribute: str) -> str:
     sub["delta"] = sub["selection_rate"] - sub["base_rate"]
     sub = sub.sort_values("delta").reset_index(drop=True)
 
-    row_h, lab_w, half, pad_r = 42, 290, 220, 80
+    row_h, lab_w, half, pad_r = 42, 190, 250, 82
     h = len(sub) * row_h + 38
     w = lab_w + half * 2 + pad_r
     zero = lab_w + half
@@ -361,7 +364,8 @@ def diverging_chart(table: pd.DataFrame, attribute: str) -> str:
         out += (
             f'<g class="row">'
             f'<text class="gl" x="{lab_w - 16}" y="{top + 15}" text-anchor="end">'
-            f'{esc(r["group"])}</text>'
+            f'{esc(short(int(r["code"]), attribute))}'
+            f'<title>{esc(r["group"])}</title></text>'
             f'<rect class="{cls}" x="{x0}" y="{top + 2}" width="{wid}" height="18" rx="3">'
             f'<title>{esc(r["group"])}: selected {fmt(r["selection_rate"])} against a '
             f'base rate of {fmt(r["base_rate"])}</title></rect>'
@@ -383,7 +387,7 @@ def slope_chart(tables: dict, attribute: str) -> str:
     """
     a = tables["test"]
     b = tables["shift"]
-    a = a[(a["attribute"] == attribute) & a["reportable"]][["group", "tpr"]]
+    a = a[(a["attribute"] == attribute) & a["reportable"]][["group", "code", "tpr"]]
     b = b[(b["attribute"] == attribute) & b["reportable"]][["group", "tpr"]]
     m = a.merge(b, on="group", suffixes=("_test", "_shift"))
     if m.empty:
@@ -391,7 +395,7 @@ def slope_chart(tables: dict, attribute: str) -> str:
     m = m.sort_values("tpr_test", ascending=False).reset_index(drop=True)
 
     w, h = 780, 430
-    left, right = 270, 500
+    left, right = 190, 520
     top, bot = 46, h - 30
     lo = float(min(m["tpr_test"].min(), m["tpr_shift"].min())) * 0.93
     hi = float(max(m["tpr_test"].max(), m["tpr_shift"].max())) * 1.04
@@ -413,7 +417,8 @@ def slope_chart(tables: dict, attribute: str) -> str:
         out += (
             f'<g class="row">'
             f'<text class="gl" x="{left - 18}" y="{y1 + 4}" text-anchor="end">'
-            f'{esc(r["group"])}</text>'
+            f'{esc(short(int(r["code"]), attribute))}'
+            f'<title>{esc(r["group"])}</title></text>'
             f'<line class="slope {cls}l" x1="{left}" y1="{y1}" x2="{right}" y2="{y2}"/>'
             f'<circle class="{cls}" cx="{left}" cy="{y1}" r="4.5"/>'
             f'<circle class="{cls}" cx="{right}" cy="{y2}" r="4.5"/>'
@@ -728,7 +733,7 @@ svg.bullet .t-fail line {{ opacity:.75; }}
 .pane {{ display:none; }} .pane.is-on {{ display:block; }}
 
 /* charts */
-svg.chart {{ display:block; overflow:visible; height:auto; }}
+svg.chart {{ display:block; overflow:hidden; height:auto; }}
 svg.chart .gr {{ stroke:var(--grid); stroke-width:1; }}
 svg.chart .ax {{ fill:var(--mut); font-size:10.5px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
@@ -896,7 +901,7 @@ footer strong {{ color:var(--ink-2); font-weight:600; }}
   margin:20px 0 4px; }}
 .cost .count.bad {{ color:var(--acid); }}
 .cost .cap {{ font-size:13.5px; color:var(--ink-2); max-width:34ch; }}
-svg.dots {{ display:block; overflow:visible; height:auto; }}
+svg.dots {{ display:block; overflow:hidden; height:auto; }}
 svg.dots .off {{ fill:var(--ink); opacity:.13; }}
 svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-box; }}
 @media (max-width:820px) {{ .cost {{ grid-template-columns:1fr; gap:48px; }} }}
