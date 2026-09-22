@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-22T20:04:27+00:00",
-  "git_sha": "f5ea780",
+  "generated_at": "2026-09-22T20:12:09+00:00",
+  "git_sha": "9c23c18",
   "python": "3.14.3",
-  "pipeline_fingerprint": "73993259971ef0b3",
+  "pipeline_fingerprint": "539308d7908f6865",
   "design": {
     "train_year": "2015",
     "val_year": "2016",
