@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src import policy as pol
 from src.config import RESULTS_DIR, TEST_YEAR, TRAIN_STATES, TRAIN_YEAR, VAL_YEAR
 from src.data import PROTECTED, load_splits
+from src.distributions import build as build_distributions
 from src.fairness import audit
 from src.fingerprint import pipeline_fingerprint
 from src.model import baseline_rate, pick_threshold, predict_proba, score, train
@@ -60,7 +61,7 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
     threshold = pick_threshold(splits["val"].y.to_numpy(), p_val)
     print(f"  threshold chosen on {VAL_YEAR}: {threshold:.4f}", flush=True)
 
-    scores, group_tables, summaries = {}, {}, {}
+    scores, group_tables, summaries, dists = {}, {}, {}, {}
     for name in ("val", "test", "shift"):
         split = splits[name]
         p = predict_proba(model, split)
@@ -71,6 +72,16 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
             table, summary = audit(split.y, p, pred, split.A, PROTECTED)
             group_tables[name] = table
             summaries[name] = summary.to_dict(orient="records")
+            # Distribution series for the charts that need more than a summary row.
+            # Only groups above the reporting floor, so nothing noisy gets drawn.
+            dists[name] = {}
+            for attr in PROTECTED:
+                keep = set(
+                    table[(table["attribute"] == attr) & table["reportable"]]["code"]
+                )
+                dists[name][attr] = build_distributions(
+                    split.y, p, pred, split.A, attr, keep
+                )
         print(f"  {name}: auc={sc.auc:.4f} ece={sc.ece:.4f} acc={sc.accuracy:.4f}",
               flush=True)
 
@@ -118,6 +129,7 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
                    for k, v in splits.items()},
         "scores": scores,
         "fairness": summaries,
+        "distributions": dists,
         "policy_verdict": pol.verdict(checks),
         "checks": pol.as_records(checks),
     }

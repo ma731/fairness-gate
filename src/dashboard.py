@@ -24,6 +24,14 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.charts_extra import (
+    confusion_heatmap,
+    reliability,
+    ridgeline,
+    sankey,
+    treemap,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS_DIR = REPO_ROOT / "docs"
 
@@ -252,6 +260,172 @@ def dot_field(missed_per_100: float, cols: int = 20, rows: int = 5) -> str:
     return (
         f'<svg class="dots" viewBox="0 0 {w} {h}" width="100%" role="img" '
         f'aria-label="{lit} of every 100 qualifying people are overlooked">{dots}</svg>'
+    )
+
+
+def scatter_chart(table: pd.DataFrame, attribute: str) -> str:
+    """How common the outcome is, against how often the model finds it.
+
+    The chart that answers "is it just harder for rare positives?". Bubble area is group
+    size, so the eye is not misled by a 900-person group beside a 434,000-person one.
+    One series: colour carries nothing here, the axes carry it all.
+    """
+    sub = table[(table["attribute"] == attribute) & table["reportable"]]
+    if sub.empty:
+        return '<p class="empty">No group large enough to report.</p>'
+
+    w, h = 780, 440
+    pad_l, pad_b, pad_t, pad_r = 66, 54, 22, 150
+    px, py = w - pad_l - pad_r, h - pad_t - pad_b
+    xmax = max(0.55, float(sub["base_rate"].max()) * 1.2)
+    ymin = min(0.45, float(sub["tpr"].min()) * 0.9)
+
+    def X(v: float) -> float:
+        return round(pad_l + (v / xmax) * px, 1)
+
+    def Y(v: float) -> float:
+        return round(pad_t + (1 - (v - ymin) / (1 - ymin)) * py, 1)
+
+    grid = ""
+    for t in (0, 0.25, 0.5, 0.75, 1.0):
+        gx = round(pad_l + px * t, 1)
+        grid += (
+            f'<line class="gr" x1="{gx}" y1="{pad_t}" x2="{gx}" y2="{pad_t + py}"/>'
+            f'<text class="ax" x="{gx}" y="{pad_t + py + 20}" text-anchor="middle">'
+            f"{fmt(xmax * t, 2)}</text>"
+        )
+        gy = round(pad_t + py * t, 1)
+        grid += (
+            f'<line class="gr" x1="{pad_l}" y1="{gy}" x2="{pad_l + px}" y2="{gy}"/>'
+            f'<text class="ax" x="{pad_l - 10}" y="{gy + 4}" text-anchor="end">'
+            f"{fmt(ymin + (1 - t) * (1 - ymin), 2)}</text>"
+        )
+
+    biggest = float(sub["n"].max())
+    marks = ""
+    for _, r in sub.sort_values("n", ascending=False).iterrows():
+        cx, cy = X(float(r["base_rate"])), Y(float(r["tpr"]))
+        rad = round(7 + 26 * (float(r["n"]) / biggest) ** 0.5, 1)
+        marks += (
+            f'<g class="row"><circle class="bub" cx="{cx}" cy="{cy}" r="{rad}">'
+            f'<title>{esc(r["group"])}: {int(r["n"]):,} people, base rate '
+            f'{fmt(r["base_rate"])}, found {pct(r["tpr"])}</title></circle>'
+            f'<text class="vl" x="{round(cx + rad + 9, 1)}" y="{cy + 4}">'
+            f'{esc(r["group"])}</text></g>'
+        )
+
+    return (
+        f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="base rate against true positive rate by {esc(attribute)}">'
+        f"{grid}{marks}"
+        f'<text class="axt" x="{round(pad_l + px / 2, 1)}" y="{h - 8}" '
+        f'text-anchor="middle">How common the outcome is in this group</text>'
+        f'<text class="axt" transform="translate(16,{round(pad_t + py / 2, 1)}) '
+        f'rotate(-90)" text-anchor="middle">Share of them the model finds</text></svg>'
+    )
+
+
+def diverging_chart(table: pd.DataFrame, attribute: str) -> str:
+    """Selection rate minus base rate: who the model over- and under-selects.
+
+    Diverging because the quantity is signed and zero means something. Two hues with a
+    neutral zero line, never one ramp, so the direction of the error reads before any
+    number does.
+    """
+    sub = table[(table["attribute"] == attribute) & table["reportable"]].copy()
+    if sub.empty:
+        return '<p class="empty">No group large enough to report.</p>'
+    sub["delta"] = sub["selection_rate"] - sub["base_rate"]
+    sub = sub.sort_values("delta").reset_index(drop=True)
+
+    row_h, lab_w, half, pad_r = 42, 290, 220, 80
+    h = len(sub) * row_h + 38
+    w = lab_w + half * 2 + pad_r
+    zero = lab_w + half
+    span = max(0.09, float(sub["delta"].abs().max()) * 1.2)
+
+    out = (
+        f'<line class="zero" x1="{zero}" y1="20" x2="{zero}" y2="{h - 14}"/>'
+        f'<text class="ax" x="{zero}" y="12" text-anchor="middle">0</text>'
+        f'<text class="ax" x="{zero - half}" y="12" text-anchor="start">under-selected</text>'
+        f'<text class="ax" x="{zero + half}" y="12" text-anchor="end">over-selected</text>'
+    )
+    for i, r in sub.iterrows():
+        top = 28 + i * row_h
+        d = float(r["delta"])
+        wid = round(abs(d) / span * half, 1)
+        x0 = round(zero - wid, 1) if d < 0 else zero
+        cls = "s1" if d < 0 else "s2"
+        lx = round(zero - wid - 10, 1) if d < 0 else round(zero + wid + 10, 1)
+        anch = "end" if d < 0 else "start"
+        out += (
+            f'<g class="row">'
+            f'<text class="gl" x="{lab_w - 16}" y="{top + 15}" text-anchor="end">'
+            f'{esc(r["group"])}</text>'
+            f'<rect class="{cls}" x="{x0}" y="{top + 2}" width="{wid}" height="18" rx="3">'
+            f'<title>{esc(r["group"])}: selected {fmt(r["selection_rate"])} against a '
+            f'base rate of {fmt(r["base_rate"])}</title></rect>'
+            f'<text class="vl" x="{lx}" y="{top + 16}" text-anchor="{anch}">'
+            f"{d:+.3f}</text></g>"
+        )
+
+    return (
+        f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="selection rate minus base rate by {esc(attribute)}">{out}</svg>'
+    )
+
+
+def slope_chart(tables: dict, attribute: str) -> str:
+    """One line per group, test year to the states held out entirely.
+
+    A slope chart because the question is the direction and size of the change for every
+    group at once, which two bar charts make the reader compute in their head.
+    """
+    a = tables["test"]
+    b = tables["shift"]
+    a = a[(a["attribute"] == attribute) & a["reportable"]][["group", "tpr"]]
+    b = b[(b["attribute"] == attribute) & b["reportable"]][["group", "tpr"]]
+    m = a.merge(b, on="group", suffixes=("_test", "_shift"))
+    if m.empty:
+        return '<p class="empty">No group reportable in both populations.</p>'
+    m = m.sort_values("tpr_test", ascending=False).reset_index(drop=True)
+
+    w, h = 780, 430
+    left, right = 270, 500
+    top, bot = 46, h - 30
+    lo = float(min(m["tpr_test"].min(), m["tpr_shift"].min())) * 0.93
+    hi = float(max(m["tpr_test"].max(), m["tpr_shift"].max())) * 1.04
+
+    def Y(v: float) -> float:
+        return round(top + (1 - (v - lo) / (hi - lo)) * (bot - top), 1)
+
+    out = (
+        f'<line class="gr" x1="{left}" y1="{top - 16}" x2="{left}" y2="{bot + 10}"/>'
+        f'<line class="gr" x1="{right}" y1="{top - 16}" x2="{right}" y2="{bot + 10}"/>'
+        f'<text class="ax" x="{left}" y="{top - 24}" text-anchor="middle">Test year</text>'
+        f'<text class="ax" x="{right}" y="{top - 24}" text-anchor="middle">'
+        f"Held-out states</text>"
+    )
+    for _, r in m.iterrows():
+        y1, y2 = Y(float(r["tpr_test"])), Y(float(r["tpr_shift"]))
+        drop = float(r["tpr_shift"]) - float(r["tpr_test"])
+        cls = "s2" if drop < 0 else "s1"
+        out += (
+            f'<g class="row">'
+            f'<text class="gl" x="{left - 18}" y="{y1 + 4}" text-anchor="end">'
+            f'{esc(r["group"])}</text>'
+            f'<line class="slope {cls}l" x1="{left}" y1="{y1}" x2="{right}" y2="{y2}"/>'
+            f'<circle class="{cls}" cx="{left}" cy="{y1}" r="4.5"/>'
+            f'<circle class="{cls}" cx="{right}" cy="{y2}" r="4.5"/>'
+            f'<text class="vl" x="{right + 15}" y="{y2 + 4}">'
+            f'{pct(float(r["tpr_shift"]))} ({drop:+.1%})'
+            f'<title>{esc(r["group"])}</title></text></g>'
+        )
+
+    return (
+        f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="true positive rate from the test year to the held-out states">'
+        f"{out}</svg>"
     )
 
 
@@ -568,6 +742,58 @@ svg.chart .row {{ transition:opacity 150ms cubic-bezier(.23,1,.32,1); }}
   svg.chart:hover .row {{ opacity:.35; }}
   svg.chart .row:hover {{ opacity:1; }}
 }}
+/* sankey */
+svg.sankey .rb {{ opacity:.5; transition:opacity 180ms ease; }}
+svg.sankey .rb.ok {{ fill:var(--s1); }}
+svg.sankey .rb.bad {{ fill:var(--acid); opacity:.82; }}
+svg.sankey .rb.warnrb {{ fill:var(--s2); opacity:.62; }}
+svg.sankey:hover .rb {{ opacity:.22; }}
+svg.sankey .rb:hover {{ opacity:.95; }}
+svg.sankey .nd {{ fill:var(--ink); opacity:.85; }}
+svg.sankey .nl {{ fill:var(--ink); font-size:13px; font-weight:600; }}
+svg.sankey .nn {{ fill:var(--ink); font-size:16px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
+svg.sankey .ns {{ fill:var(--mut); font-size:11px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
+
+/* heatmap */
+svg.heat .cell {{ fill:var(--s1); fill-opacity:calc(.12 + var(--v) * .8); }}
+svg.heat .cell.bad {{ fill:var(--acid); fill-opacity:calc(.14 + var(--v) * 1.5); }}
+svg.heat .cv {{ fill:var(--ink); font-size:12px; font-weight:600;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  pointer-events:none; }}
+
+/* treemap */
+svg.tree .tm {{ fill:var(--s1); fill-opacity:calc(.2 + var(--v) * .7);
+  stroke:var(--surface); stroke-width:1; }}
+svg.tree .tml {{ fill:var(--ink); font-size:14px; font-weight:600; }}
+svg.tree .tmn {{ fill:var(--ink); opacity:.72; font-size:13px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
+
+/* reliability */
+svg.rel .diag {{ stroke:var(--ink); stroke-width:1.5; stroke-dasharray:5 5;
+  opacity:.34; }}
+svg.rel .cal {{ fill:none; stroke:var(--s1); stroke-width:2; opacity:.72; }}
+svg.rel .cdot {{ fill:var(--s1); }}
+
+/* ridgeline */
+svg.ridge-c .ridge {{ stroke-width:1.5; }}
+svg.ridge-c .neg {{ fill:var(--ink); fill-opacity:.1; stroke:var(--ink);
+  stroke-opacity:.3; }}
+svg.ridge-c .pos {{ fill:var(--acid); fill-opacity:.2; stroke:var(--acid);
+  stroke-opacity:.78; }}
+
+svg.chart .bub {{ fill:var(--s1); opacity:.78; stroke:var(--surface);
+  stroke-width:2; }}
+svg.chart .zero {{ stroke:var(--axis); stroke-width:1.5; }}
+svg.chart .axt {{ fill:var(--mut); font-size:11px; letter-spacing:.04em; }}
+svg.chart .slope {{ stroke-width:2.5; fill:none; opacity:.85; }}
+svg.chart .s1l {{ stroke:var(--s1); }} svg.chart .s2l {{ stroke:var(--s2); }}
+
+/* charts breathe: fill the panel rather than sitting in it */
+.chartbox {{ padding:26px 12px 10px; }}
+.chartbox .legend {{ padding-left:14px; }}
+
 .legend {{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ink-2);
   margin:0 0 16px; }}
 .key {{ width:11px; height:11px; border-radius:3px; display:inline-block; }}
@@ -684,18 +910,43 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
 .total p {{ margin:0; max-width:46ch; color:var(--ink-2); font-size:15px; }}
 
 /* sources */
-.srcs {{ list-style:none; margin:40px 0 0; padding:0; display:grid; gap:2px; }}
-.srcs li {{ border-top:1px solid var(--hair); padding:20px 0; display:grid;
-  grid-template-columns:1fr auto; gap:20px; align-items:baseline; }}
-.srcs a {{ color:var(--ink); text-decoration:none; font-size:16px; font-weight:560;
-  letter-spacing:-.015em; border-bottom:1px solid var(--hair-2); padding-bottom:1px;
-  transition:border-color 160ms ease, color 160ms ease; }}
-.srcs a:hover {{ color:var(--acid); border-color:var(--acid); }}
+/* Sources as cards with a numbered bubble. A list of hairline rows reads as fine
+   print; a card with a badge reads as something worth clicking. */
+.srcs {{ list-style:none; margin:44px 0 0; padding:0; display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }}
+.srcs li {{ position:relative; }}
+.srcs a.card {{ display:grid; grid-template-columns:44px 1fr; gap:16px;
+  align-items:start; padding:22px 22px 24px; border-radius:18px;
+  background:var(--raised); border:1px solid var(--hair);
+  box-shadow:inset 0 1px 0 var(--hair-2); text-decoration:none; color:inherit;
+  height:100%; position:relative; overflow:hidden;
+  transition:transform 200ms cubic-bezier(.23,1,.32,1),
+    border-color 200ms ease, box-shadow 200ms ease; }}
+.srcs a.card::after {{ content:""; position:absolute; inset:0; pointer-events:none;
+  opacity:0; transition:opacity 220ms ease;
+  background:radial-gradient(360px 180px at 88% -10%,
+    color-mix(in srgb, var(--acid) 16%, transparent), transparent 66%); }}
+@media (hover:hover) and (pointer:fine) {{
+  .srcs a.card:hover {{ transform:translateY(-3px); border-color:var(--hair-2);
+    box-shadow:inset 0 1px 0 var(--hair-2), 0 14px 34px rgba(0,0,0,.34); }}
+  .srcs a.card:hover::after {{ opacity:1; }}
+  .srcs a.card:hover .bubble {{ background:var(--acid); color:var(--acid-ink);
+    border-color:var(--acid); }}
+}}
+.srcs a.card:active {{ transform:translateY(-1px) scale(.995); }}
+.bubble {{ width:44px; height:44px; border-radius:999px; display:grid;
+  place-items:center; border:1px solid var(--hair-2); color:var(--ink-2);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px;
+  transition:background 200ms ease, color 200ms ease, border-color 200ms ease; }}
+.srcs .ttl {{ font-size:16.5px; font-weight:600; letter-spacing:-.018em;
+  line-height:1.25; display:block; }}
 .srcs .what {{ display:block; font-weight:400; font-size:13.5px; color:var(--mut);
-  margin-top:5px; border:0; }}
+  margin-top:9px; line-height:1.5; }}
 .srcs .yr {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  font-size:12.5px; color:var(--mut); }}
-@media (max-width:620px) {{ .srcs li {{ grid-template-columns:1fr; gap:6px; }} }}
+  font-size:11px; color:var(--mut); letter-spacing:.1em; margin-top:12px;
+  display:inline-block; border:1px solid var(--hair); border-radius:999px;
+  padding:3px 10px; }}
+@media (max-width:620px) {{ .srcs {{ grid-template-columns:1fr; }} }}
 
 /* Reveal is scroll-driven CSS, not script. If the browser cannot do it, content is
    simply visible: an entrance animation must never be load-bearing for legibility. */
@@ -737,6 +988,7 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
     <li><a href="#cost">Who it misses</a></li>
     <li><a href="#checks">Checks</a></li>
     <li><a href="#groups">Groups</a></li>
+    <li><a href="#flow">Flow</a></li>
     <li><a href="#method">Method</a></li>
     <li><a href="#sources">Sources</a></li>
   </ul>
@@ -907,6 +1159,86 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
       and every summary gap. A rate computed on a few hundred people is mostly noise,
       and publishing it as though it were a finding would be its own kind of harm.</p>
     <div class="panel scroll-x">{_panes(tables, group_table)}</div>
+  </div>
+</section>
+
+<section id="flow">
+  <div class="shell reveal">
+    <p class="kicker">The whole population</p>
+    <h2>Where every person actually goes.</h2>
+    <p class="say">Each ribbon is people, and the total is conserved: everybody leaves one
+      box and arrives in exactly one other. The two error ribbons are the ones that
+      matter. Hover any ribbon to isolate it.</p>
+    <div class="panel chartbox">{sankey(result)}</div>
+  </div>
+</section>
+
+<div class="band">
+  <div class="shell band-in reveal">
+    <p class="kicker">Composition</p>
+    <h2>The same four outcomes, group by group.</h2>
+    <p class="say">Rows are normalised within each group, because the question is
+      composition and not size. Overlooked and wrongly picked are shaded in the error
+      colour.</p>
+    <div class="panel chartbox">{confusion_heatmap(result)}</div>
+  </div>
+</div>
+
+<section>
+  <div class="shell reveal">
+    <p class="kicker">Denominators</p>
+    <h2>Who is actually in this data.</h2>
+    <p class="say">Every rate on this page is computed on a wildly different number of
+      people. Area is the honest way to show that before anyone reads a percentage.</p>
+    <div class="panel chartbox">{treemap(result)}</div>
+  </div>
+</section>
+
+<div class="band">
+  <div class="shell band-in reveal">
+    <p class="kicker">Mechanism</p>
+    <h2>Why the gap exists at all.</h2>
+    <p class="say">Two shapes per group: the people who qualify, in the error colour, and
+      everyone else. Where they overlap is where the model genuinely cannot tell them
+      apart. That overlap being wider for some groups than others is the mechanism
+      behind every gap on this page.</p>
+    <div class="panel chartbox">{ridgeline(result)}</div>
+  </div>
+</div>
+
+<section>
+  <div class="shell reveal">
+    <p class="kicker">Diagnostics</p>
+    <h2>Rarity against recall, and reliability.</h2>
+    <p class="say">On the left, how common the outcome is in a group against how much of
+      it the model finds, with bubble area as group size. On the right, predicted against
+      observed per bin: a calibrated model traces the dashed diagonal.</p>
+    <div class="split">
+      <div class="panel chartbox">{_panes(tables, scatter_chart)}</div>
+      <div class="panel chartbox">{reliability(result)}</div>
+    </div>
+  </div>
+</section>
+
+<div class="band">
+  <div class="shell band-in reveal">
+    <p class="kicker">Direction of error</p>
+    <h2>Over-selected, under-selected.</h2>
+    <p class="say">Selection rate minus base rate. Zero is the neutral line: bars to the
+      left are groups the model picks less often than the data warrants, bars to the
+      right are groups it picks more often.</p>
+    <div class="panel chartbox">{_panes(tables, diverging_chart)}</div>
+  </div>
+</div>
+
+<section>
+  <div class="shell reveal">
+    <p class="kicker">Under shift</p>
+    <h2>What happens on states it never saw.</h2>
+    <p class="say">One line per group, from the test year to the four states held out of
+      training entirely. Direction and size of the change at once, which two separate bar
+      charts would make you compute in your head.</p>
+    <div class="panel chartbox">{slope_chart(tables, 'RAC1P')}</div>
   </div>
 </section>
 
