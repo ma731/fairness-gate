@@ -1,0 +1,98 @@
+# The declared standard this model is held to.
+#
+# This file is the point of the project. A fairness report is a document someone reads
+# once; a policy file is a promise the build checks on every commit. Changing a number
+# here is a visible, reviewable act, which is exactly what it should be.
+#
+# Two levels, deliberately:
+#
+#   fail  breaks the build. The model is not acceptable at all below this.
+#   warn  the standard we actually want. Reported loudly, does not break the build.
+#
+# The current model sits BETWEEN them on the race gaps. That is not an oversight. Setting
+# the failing threshold at wherever the model happens to land today would make the gate
+# meaningless, and setting it at the aspiration would mean shipping a permanently red
+# build that everyone learns to ignore. Both numbers are stated so the distance between
+# "tolerated" and "wanted" is visible instead of quietly collapsed.
+
+version: 1
+
+# Which split the gates are evaluated on. The test year is read once, at the end.
+evaluated_on: test
+
+reporting:
+  # Groups smaller than this are computed and shown, but never concluded from and never
+  # used in a summary gap. A 900-person group's TPR is mostly noise.
+  min_group_n: 500
+
+performance:
+  # Below this the model is not worth auditing for fairness, because it is not worth
+  # using. AUC 0.85 is a floor, not a target.
+  min_auc:
+    fail: 0.85
+    warn: 0.88
+  # Calibration matters more than accuracy for anything that feeds a decision, because a
+  # probability nobody can trust is worse than no probability.
+  max_ece:
+    fail: 0.05
+    warn: 0.03
+  # The model must beat always-predicting-the-majority-class by this margin. Without it,
+  # a high accuracy on an imbalanced problem means nothing.
+  min_accuracy_over_majority:
+    fail: 0.10
+    warn: 0.15
+
+fairness:
+  # Gaps are max-minus-min across reportable groups.
+  RAC1P:
+    # The one that matters most here. Among people who genuinely are positive, how
+    # differently does the model find them? Unlike a selection-rate gap, this cannot be
+    # explained away by real differences in base rates.
+    max_tpr_gap:
+      fail: 0.35
+      warn: 0.15
+    # Wrongly flagging people at different rates across groups.
+    max_fpr_gap:
+      fail: 0.20
+      warn: 0.10
+    # Predicted probabilities should mean the same thing for everyone.
+    max_calibration_gap:
+      fail: 0.08
+      warn: 0.04
+    # Selection rate parity. Held loosely ON PURPOSE: the base rate gap in this data is
+    # 0.270, so demanding parity would require the model to be wrong about individuals in
+    # order to look equal in aggregate. Reported, bounded, not optimised for.
+    max_demographic_parity_difference:
+      fail: 0.45
+      warn: 0.30
+  SEX:
+    max_tpr_gap:
+      fail: 0.20
+      warn: 0.08
+    max_fpr_gap:
+      fail: 0.15
+      warn: 0.08
+    max_calibration_gap:
+      fail: 0.08
+      warn: 0.04
+    max_demographic_parity_difference:
+      fail: 0.25
+      warn: 0.15
+
+# Guards against silent drift between runs. Compared against the committed baseline in
+# results/baseline.json, which is updated deliberately, never automatically.
+regression:
+  max_auc_drop: 0.010
+  max_ece_increase: 0.010
+  max_gap_increase: 0.020
+
+# The shifted split is the canary. It is not gated as hard as the test split, because a
+# model is allowed to be worse on populations it was not fitted for. It is not allowed to
+# collapse there without anyone noticing.
+shift_canary:
+  min_auc:
+    fail: 0.80
+    warn: 0.85
+  max_tpr_gap_increase_vs_test:
+    fail: 0.15
+    warn: 0.08

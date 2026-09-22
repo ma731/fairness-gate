@@ -75,16 +75,13 @@ def _align_categories(splits: list[Split]) -> list[Split]:
     Without this, a category that appears in 2018 but not 2015 becomes a silent NaN
     at prediction time and the model looks better than it is.
     """
-    out = []
     for col in CATEGORICAL:
         levels = sorted(
             set().union(*[set(s.X[col].cat.categories.tolist()) for s in splits])
         )
         for s in splits:
             s.X[col] = s.X[col].cat.set_categories(levels)
-    for s in splits:
-        out.append(s)
-    return out
+    return splits
 
 
 def load_splits(drop_protected: bool = False) -> dict[str, Split]:

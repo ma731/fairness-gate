@@ -1,17 +1,51 @@
-# Responsible AI evidence pack
+# fairness-gate
 
-An income classifier built on real US Census data, and the compliance evidence a
-Responsible AI review would actually ask for: group fairness metrics, a mitigation with
-its cost stated, a model card, EU AI Act Annex IV technical documentation and a DPIA
-section.
+A CI gate for model fairness. Declared thresholds live in `policy.yaml`, an audit run
+measures the model against them, and a breach fails the build.
 
-The point is not the model. The point is that **the governance artifacts are generated
-from the audit run and enforced in CI**, so they cannot quietly stop being true.
+The model underneath is an income classifier on real US Census data, trained on one year
+and tested on a later one. It is there to have something real to gate. The part that
+matters is the enforcement: the model card, the EU AI Act Annex IV documentation and the
+DPIA section are **generated from the audit run**, so a document cannot quietly stop being
+true about the model it describes, and a threshold cannot be loosened without it showing
+up in a diff someone has to approve.
 
-> **Status: in progress.** The data, splits, model and fairness audit work and the numbers
-> below are real. The generated compliance artifacts and the CI policy gate are being
-> built. Nothing here is a product, and nothing here should be used to make a decision
-> about a real person.
+> **Status: in progress.** The pipeline, the audit, the generated documents and the gate
+> all work, and every number below is measured. Still to come: a mitigation with its cost
+> measured, and an LLM-drafted narrative layer whose numeric claims are verified against
+> the audit before they are allowed into a document. Nothing here is a product, and
+> nothing here should be used to make a decision about a real person.
+
+## The gate
+
+```bash
+python scripts/run_audit.py --gate     # full run, ~3 GB of data, exits non-zero on breach
+python scripts/check_policy.py         # seconds, no data, what CI runs on every commit
+```
+
+`policy.yaml` declares two levels for every metric. `fail` breaks the build. `warn` is the
+standard the project is actually aiming at. The current model sits between them on the
+race gaps, which is deliberate: pinning `fail` to wherever the model happens to land today
+would make the gate meaningless, and pinning it to the aspiration would mean a permanently
+red build that everyone learns to ignore. Both numbers are stated so the distance between
+"tolerated" and "wanted" is visible rather than quietly collapsed.
+
+The current run is **7 pass, 6 warn, 0 fail**.
+
+`scripts/check_policy.py` enforces three things on every commit:
+
+1. **The committed results still satisfy `policy.yaml`**, re-evaluated rather than trusted,
+   because the stored verdict was produced under whatever the policy said at the time.
+2. **Every document is exactly what the results generate.** The model card, Annex IV
+   document and DPIA are regenerated and compared byte for byte. Hand-edit a number in the
+   model card and the build fails. This is what makes "generated, not written" a fact
+   rather than a claim.
+3. **The results match the code that produced them**, by content fingerprint over the
+   pipeline files. Change the model and forget to re-run, and the results stop counting as
+   evidence about the code they sit next to.
+
+A scheduled workflow re-runs the whole thing monthly and opens an issue if a threshold
+breaks.
 
 ---
 

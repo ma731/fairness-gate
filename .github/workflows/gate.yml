@@ -1,0 +1,64 @@
+name: gate
+
+# The fast path. Runs on every push and pull request, needs no data, takes seconds.
+# It checks the committed audit against the declared policy and requires that every
+# generated document still matches what the results produce.
+#
+# The full audit needs ~3 GB of census data and lives in audit-scheduled.yml.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests/ -q
+
+  policy-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the staleness check can diff the audit's commit against HEAD.
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+
+      - name: Check the model against its declared policy
+        run: python scripts/check_policy.py
+
+      - name: Publish the gate result to the job summary
+        if: always()
+        run: |
+          {
+            echo "## Fairness gate"
+            echo
+            cat results/checks.md | sed '/^<!--/,/-->$/d'
+          } >> "$GITHUB_STEP_SUMMARY"

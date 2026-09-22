@@ -1,6 +1,9 @@
 # Raw ACS data. ~3 GB of census CSVs, cached outside the repo by scripts/download_data.py.
 data/
 *.csv
+# ...but the audit's own group tables are evidence and are committed. CI reads them to
+# regenerate the documents and prove they were not hand-edited.
+!results/*.csv
 
 # Generated artifacts are committed on purpose (results/ and docs/ hold the evidence),
 # but model binaries are not: they are rebuilt by scripts/run_audit.py.

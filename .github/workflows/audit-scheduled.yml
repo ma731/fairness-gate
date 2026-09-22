@@ -1,0 +1,100 @@
+name: scheduled audit
+
+# The slow path. Downloads the census data, retrains, re-audits, and opens an issue if a
+# declared threshold is breached.
+#
+# Why this exists: a model that was fair when it was committed is not therefore fair now.
+# Nothing here retrains automatically, so this job is not watching the model drift, it is
+# watching whether the pipeline still reproduces the numbers the repository claims. A
+# result that cannot be reproduced six months later was never evidence.
+
+on:
+  schedule:
+    # 06:00 UTC on the first of each month.
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  full-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Cache the ACS download
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/folktables
+          key: acs-${{ hashFiles('src/config.py') }}
+
+      - name: Download the census data
+        run: python scripts/download_data.py
+
+      - name: Run the full audit
+        id: audit
+        run: python scripts/run_audit.py --gate
+        continue-on-error: true
+
+      - name: Show what moved
+        if: always()
+        run: |
+          git --no-pager diff --stat -- results/ docs/ || true
+
+      - name: Publish the result
+        if: always()
+        run: |
+          {
+            echo "## Scheduled audit"
+            echo
+            cat results/checks.md | sed '/^<!--/,/-->$/d'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open an issue if the gate failed
+        if: steps.audit.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('results/checks.md', 'utf8')
+              .replace(/<!--[\s\S]*?-->/g, '');
+            const title = `Scheduled audit failed the policy gate (${new Date().toISOString().slice(0,10)})`;
+
+            // Do not pile up duplicates: reuse the open issue if there is one.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'fairness-gate',
+            });
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `Still failing as of this run.\n\n${body}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: `The scheduled re-audit breached a threshold declared in \`policy.yaml\`.\n\n${body}\n\nRun locally with \`python scripts/run_audit.py\` to reproduce.`,
+                labels: ['fairness-gate'],
+              });
+            }
+
+      - name: Fail the job if the gate failed
+        if: steps.audit.outcome == 'failure'
+        run: exit 1
