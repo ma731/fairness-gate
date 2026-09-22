@@ -124,7 +124,7 @@ def rate_chart(table: pd.DataFrame, attribute: str) -> str:
         )
 
     return (
-        f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" height="{h}" '
+        f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" '
         f'role="img" aria-label="error rates by {esc(attribute)}">{grid}{rows}</svg>'
     )
 
@@ -175,7 +175,7 @@ def calib_chart(table: pd.DataFrame, attribute: str) -> str:
         )
 
     return (
-        f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" height="{h}" '
+        f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" '
         f'role="img" aria-label="calibration by {esc(attribute)}">{grid}{rows}</svg>'
     )
 
@@ -380,7 +380,7 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   color-scheme: dark;
   --plane:#070809; --surface:#0f1113; --raised:#15181b;
   --hair:rgba(255,255,255,.07); --hair-2:rgba(255,255,255,.15);
-  --ink:#f4f6f7; --ink-2:#9ba2a8; --mut:#6a7075;
+  --ink:#f6f8f9; --ink-2:#b4bbc1; --mut:#7d848a;
   --grid:#1d2125; --axis:#2a2f34;
   --s1:#3987e5; --s2:#d95926;
   --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
@@ -409,18 +409,20 @@ html, body {{ overflow-x:clip; max-width:100%; }}
 body {{
   margin:0; background:var(--plane); color:var(--ink);
   font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
-  font-size:16px; line-height:1.55; letter-spacing:-.006em;
+  font-size:17px; line-height:1.6; letter-spacing:-.008em;
   font-feature-settings:"kern" 1; text-rendering:optimizeLegibility;
 }}
 .mono, code, table, .num {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-variant-numeric:tabular-nums lining-nums; }}
 .shell {{ max-width:1240px; margin:0 auto; padding:0 32px; }}
 .mut {{ color:var(--mut); }}
-h2 {{ font-size:clamp(30px,3.6vw,46px); line-height:1.06; letter-spacing:-.035em;
-  font-weight:660; margin:0 0 18px; max-width:18ch; }}
-.kicker {{ font-size:11px; letter-spacing:.16em; text-transform:uppercase;
-  color:var(--mut); margin:0 0 18px; }}
-.say {{ max-width:60ch; font-size:17px; color:var(--ink-2); margin:0 0 30px; }}
+h2 {{ font-size:clamp(32px,3.9vw,52px); line-height:1.02; letter-spacing:-.04em;
+  font-weight:900; margin:0 0 18px; max-width:18ch; }}
+.kicker {{ font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--mut); margin:0 0 20px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
+.say {{ max-width:58ch; font-size:18px; line-height:1.6; color:var(--ink-2);
+  margin:0 0 32px; }}
 .say b {{ color:var(--ink); font-weight:600; }}
 
 /* nav */
@@ -432,7 +434,9 @@ nav {{ position:sticky; top:0; z-index:20; height:64px; display:flex; align-item
 nav .mark {{ font-size:14px; font-weight:660; letter-spacing:-.015em; }}
 nav .mark i {{ font-style:normal; color:var(--mut); font-weight:400; }}
 nav ul {{ display:flex; gap:26px; list-style:none; margin:0; padding:0; }}
-nav a {{ color:var(--ink-2); text-decoration:none; font-size:13.5px;
+nav a {{ color:var(--ink-2); text-decoration:none; font-size:12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.06em; text-transform:uppercase;
   transition:color 150ms ease; }}
 nav a:hover {{ color:var(--ink); }}
 nav .right {{ margin-left:auto; display:flex; align-items:center; gap:14px; }}
@@ -457,8 +461,8 @@ nav .right {{ margin-left:auto; display:flex; align-items:center; gap:14px; }}
     color-mix(in srgb, var(--vc) 15%, transparent), transparent 62%); }}
 .hero > * {{ position:relative; z-index:1; }}
 .v-pass {{ --vc:var(--good); }} .v-warn {{ --vc:var(--warn); }} .v-fail {{ --vc:var(--crit); }}
-.hero h1 {{ font-size:clamp(76px,15.5vw,224px); line-height:.82; letter-spacing:-.055em;
-  font-weight:700; margin:0; color:var(--vc); }}
+.hero h1 {{ font-size:clamp(76px,16vw,232px); line-height:.8; letter-spacing:-.07em;
+  font-weight:900; margin:0; color:var(--vc); }}
 .hero .under {{ display:flex; align-items:baseline; gap:20px; flex-wrap:wrap;
   margin-top:26px; }}
 .hero .lead {{ max-width:54ch; font-size:clamp(18px,2vw,23px); line-height:1.42;
@@ -468,7 +472,16 @@ nav .right {{ margin-left:auto; display:flex; align-items:center; gap:14px; }}
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
 
 /* the finding: a full-bleed contrast band */
-.band {{ background:var(--surface); border-block:1px solid var(--hair); margin-top:0; }}
+.band {{ background:var(--surface); border-block:1px solid var(--hair); margin-top:0;
+  position:relative; }}
+/* corner ticks: drafting marks, not decoration for its own sake. They mark where the
+   measured content starts and stops. */
+.band::before, .band::after {{ content:""; position:absolute; width:11px; height:11px;
+  pointer-events:none; opacity:.5; }}
+.band::before {{ top:-1px; left:24px; border-top:1px solid var(--acid);
+  border-left:1px solid var(--acid); }}
+.band::after {{ bottom:-1px; right:24px; border-bottom:1px solid var(--acid);
+  border-right:1px solid var(--acid); }}
 .band-in {{ padding:104px 0; }}
 .duel {{ display:grid; grid-template-columns:1fr 1fr; gap:56px; margin-top:44px; }}
 .duel > div {{ border-top:2px solid currentColor; padding-top:20px; }}
@@ -484,8 +497,8 @@ section {{ padding:104px 0; }}
 .numbers {{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
   background:var(--hair); border-block:1px solid var(--hair); }}
 .numbers > div {{ background:var(--plane); padding:30px 26px 34px; }}
-.numbers .k {{ font-size:10.5px; letter-spacing:.13em; text-transform:uppercase;
-  color:var(--mut); }}
+.numbers .k {{ font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
 .numbers .v {{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   font-variant-numeric:tabular-nums; font-size:clamp(30px,3.6vw,44px);
   letter-spacing:-.04em; line-height:1.08; margin-top:14px; }}
@@ -540,7 +553,7 @@ svg.bullet .t-fail line {{ opacity:.75; }}
 .pane {{ display:none; }} .pane.is-on {{ display:block; }}
 
 /* charts */
-svg.chart {{ display:block; overflow:visible; }}
+svg.chart {{ display:block; overflow:visible; height:auto; }}
 svg.chart .gr {{ stroke:var(--grid); stroke-width:1; }}
 svg.chart .ax {{ fill:var(--mut); font-size:10.5px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }}
@@ -592,6 +605,11 @@ footer strong {{ color:var(--ink-2); font-weight:600; }}
 
 .grain {{ position:fixed; inset:0; z-index:90; pointer-events:none;
   opacity:var(--grain); mix-blend-mode:overlay; }}
+/* Dither: shade simulated with a dot pattern on a limited palette, which is also what
+   the unit chart further down does with people. Same device, two scales. */
+.dither {{ position:fixed; inset:0; z-index:89; pointer-events:none; opacity:.5;
+  background-image:radial-gradient(currentColor .5px, transparent .5px);
+  background-size:3px 3px; color:var(--ink); mix-blend-mode:soft-light; }}
 
 /* ---- full-bleed acid field: the single dominant colour moment ---- */
 .acid {{ background:var(--acid); color:var(--acid-ink); position:relative;
@@ -606,20 +624,24 @@ footer strong {{ color:var(--ink-2); font-weight:600; }}
 .acid-in {{ position:relative; z-index:1; padding:120px 0 128px; }}
 
 /* ---- type that runs off both edges, the way a poster does ---- */
-.mega {{ font-size:clamp(84px,21vw,300px); line-height:.78; letter-spacing:-.065em;
-  font-weight:800; margin:0; white-space:nowrap; }}
+.mega {{ font-size:clamp(84px,21vw,300px); line-height:.78; letter-spacing:-.07em;
+  font-weight:900; margin:0; white-space:nowrap; }}
 .bleed {{ width:100vw; margin-left:calc(50% - 50vw); padding:0 24px; }}
 .mega-wrap {{ overflow:hidden; }}
 .mega.cut {{ margin-left:-.06em; }}
 
 /* horizontal slice displacement, the way the reference slices a portrait */
-.sliced {{ position:relative; display:inline-block; }}
-.sliced > span {{ display:block; }}
-.sliced .sl {{ position:absolute; left:0; top:0; white-space:nowrap;
-  clip-path:inset(var(--a) 0 var(--b) 0); transform:translateX(var(--x)); }}
-.sliced .sl1 {{ --a:16%; --b:62%; --x:2.2%; opacity:.9; }}
-.sliced .sl2 {{ --a:44%; --b:34%; --x:-3.4%; opacity:.82; }}
-.sliced .sl3 {{ --a:70%; --b:8%;  --x:1.4%; opacity:.94; }}
+.sliced {{ position:relative; display:inline-block; isolation:isolate; }}
+.sliced > span {{ display:block; position:relative; z-index:2; }}
+.sliced .sl {{ position:absolute; left:0; top:0; white-space:nowrap; z-index:1; }}
+/* two inks, slightly out of register, the way a risograph misprints */
+.sliced .sl1 {{ transform:translate(.9%, .055em); color:var(--acid); opacity:.85;
+  mix-blend-mode:screen; }}
+.sliced .sl2 {{ transform:translate(-.7%, -.045em); color:var(--s1); opacity:.7;
+  mix-blend-mode:screen; }}
+.sliced .sl3 {{ display:none; }}
+:root[data-theme="light"] .sliced .sl1,
+:root[data-theme="light"] .sliced .sl2 {{ mix-blend-mode:multiply; opacity:.5; }}
 
 /* ---- one marquee, and only one ---- */
 .mq {{ width:100vw; margin-left:calc(50% - 50vw); overflow:hidden; padding:22px 0;
@@ -645,7 +667,7 @@ footer strong {{ color:var(--ink-2); font-weight:600; }}
   margin:20px 0 4px; }}
 .cost .count.bad {{ color:var(--acid); }}
 .cost .cap {{ font-size:13.5px; color:var(--ink-2); max-width:34ch; }}
-svg.dots {{ display:block; overflow:visible; }}
+svg.dots {{ display:block; overflow:visible; height:auto; }}
 svg.dots .off {{ fill:var(--ink); opacity:.13; }}
 svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-box; }}
 @media (max-width:820px) {{ .cost {{ grid-template-columns:1fr; gap:48px; }} }}
@@ -702,6 +724,7 @@ svg.dots .on {{ fill:var(--acid); transform-origin:center; transform-box:fill-bo
 </head>
 <body class="v-{esc(v)}">
 
+<div class="dither" aria-hidden="true"></div>
 <svg class="grain" aria-hidden="true" focusable="false">
   <filter id="gr"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="4"
     stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
