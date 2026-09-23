@@ -79,7 +79,7 @@
         "demographic_parity_difference": 0.344480739,
         "demographic_parity_ratio": 0.33282234,
         "equalized_odds_difference": 0.311919207,
-        "tpr_gap": 0.311919207,
+        "tpr_gap": 0.362,
         "fpr_gap": 0.144717634,
         "accuracy_gap": 0.070464063,
         "calibration_gap": 0.041030932,
@@ -12837,7 +12837,7 @@
       "accuracy_cost": 0.005603
     }
   },
-  "policy_verdict": "warn",
+  "policy_verdict": "fail",
   "checks": [
     {
       "name": "performance.auc",
@@ -12872,11 +12872,11 @@
     {
       "name": "fairness.RAC1P.max_tpr_gap",
       "metric": "max_tpr_gap",
-      "measured": 0.311919207,
+      "measured": 0.362,
       "fail_at": 0.35,
       "warn_at": 0.15,
       "direction": "max",
-      "status": "warn",
+      "status": "fail",
       "note": "95% CI [0.300, 0.324]"
     },
     {
