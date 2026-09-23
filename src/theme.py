@@ -327,10 +327,7 @@ tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
 .note { font-size:13.5px; color:var(--ink-2); border-left:2px solid var(--axis);
   padding-left:16px; margin:22px 0 0; max-width:66ch; }
 
-/* ---- the generated summary and its receipt ----
-   The text gets the weight of a pull quote, because it is meant to be read. The receipt
-   sits beside it in the register of a footnote, because the claim is not "a model wrote
-   this" but "a model wrote this and here is what stopped it lying". */
+/* ---- the generated summary, with a short note on how it was checked ---- */
 .narr { display:grid; grid-template-columns:1.5fr 1fr; gap:48px; align-items:start;
   margin-top:40px; }
 @media (max-width:900px) { .narr { grid-template-columns:1fr; gap:30px; } }
@@ -343,9 +340,7 @@ tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
   color:var(--acid); }
 .narr-receipt p { margin:0; font-size:14px; line-height:1.58; color:var(--ink-2); }
 
-/* ---- page header (every page but the front one) ----
-   The front page keeps the full-height hero. Repeating that five times would make each
-   page feel like its own landing page and push the content below the fold every time. */
+/* ---- page header: every page except the front, which keeps the full hero ---- */
 .phead { position:relative; overflow:hidden; padding:150px 0 62px;
   border-bottom:1px solid var(--hair); }
 .phead .mesh { opacity:.4; }
@@ -356,9 +351,7 @@ tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
   margin:0; }
 @media (max-width:760px) { .phead { padding:120px 0 48px; } }
 
-/* ---- the link onward ----
-   The pages are an argument in order, so the foot of each one names the next step
-   rather than dropping the reader at a dead end. */
+/* ---- link to the next page ---- */
 .onward { border-top:1px solid var(--hair); }
 .onward-in { display:grid; gap:7px; text-decoration:none; padding:34px 0;
   border-radius:16px; }
@@ -527,9 +520,7 @@ svg.dots .on { fill:var(--acid); transform-origin:center; transform-box:fill-box
   padding:3px 10px; }
 @media (max-width:620px) { .srcs { grid-template-columns:1fr; } }
 
-/* ---- animated mesh: four colour fields drifting over the dark plane ----
-   Kept inside our own palette rather than a rainbow. A cheerful gradient would fight
-   the subject, and a fifth hue would break the rule that colour means one thing here. */
+/* ---- animated mesh: four colour fields from the site palette, nothing extra ---- */
 .field { position:absolute; inset:0; width:100%; height:100%; z-index:1;
   pointer-events:none; display:block; }
 .hero .shell, .hero .mega-wrap { position:relative; z-index:2; }
@@ -571,10 +562,8 @@ nav ul { margin:0 auto; }
 body { padding-top:0; }
 .hero { padding-top:104px; }
 
-/* ---- motion layer: all of it scroll-driven CSS, none of it load-bearing ----
-   animation-timeline drives these off the scroller itself, so there is no scroll
-   listener, no rAF loop and no main-thread work per frame. Browsers without support
-   simply get the static page, which is why nothing here hides content. */
+/* ---- motion: scroll-driven CSS only, no JS. Unsupported browsers get the
+   static page, so nothing here may hide content. */
 
 .prog { position:fixed; top:0; left:0; right:0; height:2px; z-index:30;
   background:var(--acid); transform-origin:0 50%; transform:scaleX(0); }

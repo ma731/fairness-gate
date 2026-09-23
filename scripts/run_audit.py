@@ -1,12 +1,10 @@
-"""Run the whole audit and write every artifact. One command, no hidden steps.
+"""Run the whole audit and write every artifact.
 
-    python scripts/run_audit.py            # run, write results and docs
-    python scripts/run_audit.py --gate     # ...and exit non-zero if policy fails
+    python scripts/run_audit.py              # results and docs
+    python scripts/run_audit.py --gate       # also exit non-zero if policy fails
     python scripts/run_audit.py --set-baseline
 
-Everything downstream reads results/audit.json. The model card, the Annex IV document and
-the DPIA are generated from it, so a document cannot drift away from the model it claims
-to describe: regenerating is the only way to change them.
+Everything downstream reads results/audit.json.
 """
 
 from __future__ import annotations
@@ -51,18 +49,9 @@ def _git_sha() -> str:
         return "unknown"
 
 
-# Results get committed, so two machines running the same audit have to produce the
-# same file. They nearly do: every rate agreed exactly between my laptop and CI, but a
-# few figures built from long sums drifted in the thirteenth decimal, because floating
-# point addition depends on the order the hardware happens to add things up.
-#
-# That is not a disagreement about anything. It is far below the sampling error on
-# 600,000 people, which lives around the third decimal. Left alone it would make the
-# monthly job commit a diff every single time and mean nothing by it, and a reviewer who
-# sees meaningless diffs every month stops reading them.
-#
-# So stored numbers are rounded to nine places. Still absurdly finer than anything the
-# data can actually support, and identical everywhere.
+# Long float sums differed in the 13th decimal between Windows and Linux CI, which made
+# the monthly job commit a meaningless diff every run. Nine places is still far finer
+# than the sampling error, and identical everywhere.
 STORED_PLACES = 9
 
 

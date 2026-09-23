@@ -1,15 +1,10 @@
-"""Group metrics and disparity summaries.
+"""Per-group metrics and the gaps between them.
 
-Three different ideas of what fair means, in plain terms:
-
+Three ideas of fair, all reported:
 - demographic parity: does it say yes to each group at the same rate
-- equalised odds: does it make each kind of mistake at the same rate in each group
+- equalised odds: does it make each kind of mistake at the same rate
 - calibration: when it says 70%, is it right about 70% of the time, in every group
-
-Deliberately reports all three. They cannot all hold at once when groups genuinely
-differ in how often the outcome occurs, which here they do, by 0.270. That is a proved
-result, not a limitation of this code. Reporting one of them and calling the model fair
-would be choosing which unfairness to hide.
+They can't all hold when base rates differ, and here they do.
 """
 
 from __future__ import annotations

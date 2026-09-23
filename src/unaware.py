@@ -1,19 +1,8 @@
-"""Does deleting race and sex from the features actually help?
+"""The same model trained without race and sex: does removing them help?
 
-This is the first thing nearly everybody suggests, including me before I measured it.
-It has a name, fairness through unawareness: if the model cannot see the attribute, it
-cannot discriminate on it. The intuition is clean, it is what most people reach for, and
-it is testable, so it gets tested rather than argued about.
-
-The shipped model does use race and sex, because they are part of the standard ACSIncome
-feature set and because pretending otherwise would have hidden exactly the question worth
-asking. This module trains the same model a second time with those two columns removed,
-scores it the same way, and reports the difference.
-
-Everything here is chosen on the validation year and applied to the test year, same as
-the main pipeline. The second model gets its own threshold, picked on validation, because
-holding the first model's threshold would confound the comparison: the two models produce
-differently shaped score distributions, so the same cut means different things.
+This is fairness through unawareness, the fix most people suggest first. The second
+model gets its own threshold on validation and is scored on the same test year. Groups
+under the reporting floor are left out here too.
 """
 
 from __future__ import annotations
@@ -30,9 +19,7 @@ REPORTING_FLOOR = 500
 def _gaps(y: np.ndarray, pred: np.ndarray, groups: pd.Series, floor: int) -> dict:
     """Recall and false positive rate per group, and the spread between them.
 
-    Groups under the floor are excluded here for the same reason they are excluded
-    everywhere else: a rate from a few hundred people is mostly noise, and a comparison
-    built on noise would let this experiment say whatever I wanted it to.
+    Groups under the reporting floor are left out, same as everywhere else.
     """
     counts = groups.value_counts()
     tprs, fprs, per_group = [], [], {}

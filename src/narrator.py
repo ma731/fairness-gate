@@ -1,37 +1,10 @@
-"""A written summary of the audit, and the verifier that decides whether to publish it.
+"""The generated summary, and the verifier that decides whether it may publish.
 
-The rest of this project generates its prose from templates, which cannot be wrong and
-also cannot say anything a template author did not think of. A language model writes
-better summaries than a template and will, given the chance, state a number that is not
-in the data. On a page whose entire argument is that you should check what your model is
-doing, publishing unverified generated text would be the joke writing itself.
-
-So the model never publishes. It proposes, and `verify()` decides:
-
-1. **Every number has to trace to the audit.** Not approximately, not plausibly. Each
-   numeric token in the draft must match a measured value, its percentage form, or a
-   rounding of one. Anything else is an invented statistic, which is the failure mode
-   that actually matters here.
-2. **Superlatives have to be right.** "The group it overlooks most" names a specific
-   group, and there is exactly one correct answer in the data.
-3. **Suppressed groups stay suppressed.** Six race-by-sex cells are below the reporting
-   floor. A draft that quotes a rate for one of them has published a number the rest of
-   the project deliberately withheld.
-4. **The mitigation was not adopted.** It was measured and refused. A summary saying it
-   was applied would invert the finding.
-5. **No claim the model is fair.** It is not, and no summary of this audit gets to say
-   otherwise.
-6. **No findings about attributes this audit never measured.** Hispanic origin, age,
-   disability and the rest are not in here, and a confident sentence about one of them
-   is fabrication regardless of whether it sounds reasonable.
-
-A draft with any violation is rejected and regenerated, up to a limit. If nothing
-verifies, nothing is published and the page falls back to the template prose it already
-had. Failing closed is the only option that is consistent with the rest of the project.
-
-The generation half needs an API key and runs by hand. The verifier needs neither, so it
-runs in CI against a suite of drafts with known planted errors (`evals/`), which is what
-stops the guardrail quietly rotting.
+The model proposes and verify() decides. Every number must match a measured value at the
+precision it's written, superlatives must name the right group, suppressed groups stay
+suppressed, the fix is never described as adopted, the model is never called fair, and
+nothing is said about attributes this audit didn't measure. If no draft passes, nothing
+publishes. The checks are scored in CI against the drafts in evals/.
 """
 
 from __future__ import annotations
@@ -115,18 +88,11 @@ def _add(into: set, value) -> None:
 
 
 def facts(result: dict, tables: dict[str, pd.DataFrame]) -> Facts:
-    """The allowed universe: the specific quantities a summary may cite.
+    """The specific quantities a summary is allowed to cite.
 
-    The first version of this walked every number in audit.json, which sounded thorough
-    and was useless. The audit contains a 41 point threshold sweep and a pile of
-    histogram bins, so the allowed set ran to thousands of values and almost any two or
-    three decimal number found something to match. Three planted errors sailed through
-    the evals because of it.
-
-    So the set is built by hand from the headline quantities: the gaps, the per-group
-    rates, the model scores, the policy limits, the mitigation summary and the counts.
-    A summary citing a single point off an internal sweep is not summarising, and the
-    verifier is allowed to be strict about that.
+    Built by hand from the headline figures. The first version walked every number in
+    audit.json, including a 41-point sweep, and three planted errors matched something and
+    passed.
     """
     numbers: set = set()
 
@@ -245,11 +211,9 @@ def facts(result: dict, tables: dict[str, pd.DataFrame]) -> Facts:
 
 
 def _tokens(text: str) -> list[tuple[str, float, int, bool]]:
-    """Numeric tokens as (literal, value, decimals written, was a percentage).
+    """Numeric tokens as (literal, value, decimals written, had a % sign).
 
-    How many decimals someone wrote matters. "0.31" claims three significant figures and
-    "0.3119" claims five, so they are not the same claim and cannot be checked the same
-    way.
+    The decimals matter: "0.31" and "0.3119" are different claims.
     """
     out = []
     for match in re.finditer(r"(\d[\d,]*(?:\.(\d+))?)\s*(%?)", text):
@@ -268,23 +232,11 @@ def _tokens(text: str) -> list[tuple[str, float, int, bool]]:
 
 
 def _supported(value: float, decimals: int, percent: bool, known: set) -> bool:
-    """Does this number trace to something measured?
+    """Is this number a measured value, or a rounding of one at the precision written?
 
-    A number is supported when it is a measured value, or a *rounding* of one to the
-    precision it was actually written at. That second part is what makes this usable:
-    a summary writing 0.312 for 0.311919 is rounding, not inventing, and a verifier that
-    rejects it would be switched off within a day.
-
-    The precision has to travel with the number, though. Comparing every literal to
-    every fact with one loose tolerance was the first version, and it let 0.447 through
-    by matching some unrelated calibration error four decimal places away. Now 0.312
-    is only accepted if some measured value actually rounds to 0.312 at three places.
-
-    Two readings are allowed for a bare number: the value itself, and the percentage
-    reading, because prose says "54%" and "finds 54 in another" for a recall of 0.5420.
-    The percentage reading is only offered when it makes sense, which is when the token
-    carried a percent sign or is at least 1. Offering it for every small decimal is how
-    the loose version leaked.
+    0.312 passes only if some measured value rounds to 0.312 at three places. A bare
+    number may also be read as a percentage (54 for 0.542), but only if it's at least 1 or
+    has a % sign. Allowing that for every small decimal let 0.447 match an unrelated value.
     """
     readings = []
     if percent:
@@ -409,16 +361,11 @@ def _decimals(literal: str) -> int:
 
 
 def check_claims(text: str, f: Facts) -> list[Violation]:
-    """Is the number being used for the thing it says it is?
+    """Is the number being used for what it says it is?
 
-    Membership in the audit is necessary and not sufficient, and this is where I found
-    that out. "Accuracy between 0.79 and 0.84" passed the number check because 0.79 is
-    a rounding of a shift-split AUC sitting elsewhere in the file. The number existed.
-    The claim was still false: the measured range starts at 0.77.
-
-    That was not a hypothetical. It was the figure sitting in my own README, and this
-    check is what caught it. So the claims with a single correct answer get compared
-    against that answer rather than against the whole haystack.
+    Existing somewhere in the audit isn't enough. "Accuracy between 0.79 and 0.84" passed
+    the number check because 0.79 rounds from an unrelated AUC, but the real range starts
+    at 0.77. That stale figure was in the README.
     """
     out = []
     for sentence in _sentences(text):
@@ -532,11 +479,9 @@ Deleting race and sex from the features:
 
 def generate(result: dict, tables: dict[str, pd.DataFrame], call,
              attempts: int = MAX_ATTEMPTS) -> dict:
-    """Ask, verify, and ask again. Publish only a draft with nothing against it.
+    """Ask, verify, retry with the violations. Publish only a draft that passes clean.
 
-    `call(system, user)` returns a string. Kept as a parameter so the harness can drive
-    this with recorded drafts and no network, which is the only way the retry logic is
-    testable at all.
+    `call(system, user)` is a parameter so tests can drive it without a network.
     """
     f = facts(result, tables)
     question = prompt(result, tables)

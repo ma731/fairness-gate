@@ -1,13 +1,8 @@
-"""Train the classifier, calibrate it, and score it honestly.
+"""Train the classifier, calibrate it, and score it.
 
-Two things here are deliberate and worth defending in review:
-
-1. The threshold is chosen on the validation year, never on the test year.
-2. Probabilities are calibrated on the validation year too. Calibrated means the
-   number can be taken at face value: out of a thousand people it scores at 0.7, about
-   seven hundred should actually qualify. A model can rank people well (good AUC, which
-   only measures ordering) and still be badly wrong about the probability itself, and
-   the probability is what an actual decision hangs on.
+The threshold and the calibration are both fitted on the validation year, never the test
+year. Calibrated means a score of 0.7 is right about 70% of the time. That matters
+because ranking people well (AUC) doesn't guarantee the probabilities are usable.
 """
 
 from __future__ import annotations
@@ -73,11 +68,10 @@ def expected_calibration_error(y: np.ndarray, p: np.ndarray, bins: int = 15) -> 
 
 
 def pick_threshold(y: np.ndarray, p: np.ndarray) -> float:
-    """Threshold that maximises Youden's J on the validation year.
+    """The threshold that maximises Youden's J (recall minus false positive rate) on validation.
 
-    Chosen over 0.5 because the base rate is nowhere near 0.5, and over an F1 sweep
-    because J treats both error types symmetrically, which is easier to justify when
-    the same cut is applied to every demographic group.
+    Not 0.5, because the base rate is nowhere near 0.5. J weighs both errors equally, which
+    is easier to defend when one cut applies to every group.
     """
     grid = np.linspace(0.05, 0.95, 181)
     best, best_j = 0.5, -np.inf

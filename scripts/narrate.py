@@ -1,23 +1,9 @@
-"""Produce the written summary, verify it, and commit it only if it survives.
+"""Write the summary, verify it, and publish it only if it passes.
 
-Two ways in, because the interesting part is the verifier and it should not be gated on
-having an API key:
+    python scripts/narrate.py                       # ask a model, retry on rejection
+    python scripts/narrate.py --from-file draft.md  # verify a draft written elsewhere
 
-    python scripts/narrate.py                      # call a model, retry on rejection
-    python scripts/narrate.py --from-file draft.md # verify a draft written elsewhere
-
-Both paths go through exactly the same checks. A draft I typed myself gets no more
-benefit of the doubt than one a model produced, which is the point: the verifier does not
-know or care where the words came from, and a guardrail that trusts some authors is not
-a guardrail.
-
-Nothing is written unless the draft passes clean. On rejection the record still gets
-written, with every attempt and every violation, because a refusal that does not say what
-it saw is not auditable. The page then falls back to its template prose, which is what it
-had before any of this existed.
-
-`--from-file` records that the draft came from a file and who supplied it, so the
-provenance on the page is honest about how the words were actually produced.
+Both paths go through the same checks, and the record says where the words came from.
 """
 
 from __future__ import annotations

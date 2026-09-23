@@ -1,13 +1,8 @@
-"""Load ACS income data and build the train / validation / test splits.
+"""Load the ACS income data and build the splits.
 
-The task is the standard folktables ACSIncome problem: predict whether a person's
-income exceeds $50,000, from ten census variables. Real survey answers from real
-people, with the real answer recorded, which is what makes it possible to ask not just
-whether the model is right but who it is wrong about.
-
-The splits are by year and by state rather than at random, so the test set is genuinely
-a different time and different places. Shuffling one year and cutting it in half would
-score better and prove less, because it hides the fact that the world moves.
+The task is folktables ACSIncome: predict income above $50,000 from ten census
+variables. Splits are by year and by state rather than random, so the test set is a
+different time and place, which is how a model like this actually gets used.
 """
 
 from __future__ import annotations
@@ -99,13 +94,12 @@ def _align_categories(splits: list[Split]) -> list[Split]:
 def load_splits(drop_protected: bool = False) -> dict[str, Split]:
     """Build the four splits.
 
-    train        2015, five large states
-    val          2016, same states. Used for threshold and calibration choices.
-    test         2018, same states. Temporal shift only.
-    shift        2018, four different states. Temporal plus geographic shift.
+    train  2015, five large states
+    val    2016, same states; threshold and calibration are chosen here
+    test   2018, same states
+    shift  2018, four states never trained on
 
-    drop_protected removes race and sex from the features while keeping them for
-    auditing. That is the "fairness through unawareness" variant.
+    drop_protected removes race and sex from the features but keeps them for auditing.
     """
     specs = [
         ("train", TRAIN_YEAR, TRAIN_STATES),

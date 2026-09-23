@@ -15,8 +15,8 @@ TRAIN_STATES = ["CA", "TX", "NY", "FL", "IL"]
 # Held out entirely. Used once, at the end, to measure geographic shift.
 SHIFT_STATES = ["NV", "MS", "WV", "ME"]
 
-# Temporal design: fit on the earliest year, tune on the next, test on a later one.
-# This is the whole point of using ACS rather than a static benchmark.
+# Fit on the earliest year, tune on the next, test on a later one. Having several survey
+# years is why this uses ACS rather than a static benchmark.
 TRAIN_YEAR = "2015"
 VAL_YEAR = "2016"
 TEST_YEAR = "2018"

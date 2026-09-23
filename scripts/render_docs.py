@@ -1,14 +1,8 @@
-"""Regenerate every document from the committed results, without touching the data.
+"""Rebuild every document from the committed audit, without the census data.
 
-The numbers live in results/audit.json. The documents are a pure function of those
-numbers, so a change to how something is worded or drawn does not need the census
-files, the model, or the three gigabyte download. This script exists so that editing
-the site is cheap and re-running the audit stays a deliberate act.
-
-It cannot change a single figure. If you want different numbers, run the audit.
+For wording and design changes. It can't change a number; for that, run the audit.
 
     python scripts/render_docs.py
-    python scripts/check_policy.py    # then confirm nothing drifted
 """
 
 from __future__ import annotations

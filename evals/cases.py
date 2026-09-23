@@ -1,23 +1,8 @@
-"""Drafts with known problems, and the problems they are known to have.
+"""Drafts with known problems, and the violation each one should raise.
 
-This is the test suite for the guardrail rather than for the model. Every case is a
-summary somebody could plausibly write, most of them with exactly one thing wrong, and
-each one records which violation the verifier is supposed to raise.
-
-Two failure directions, and both are scored, because a guardrail is only useful if you
-know which way it errs:
-
-- a **miss** is a bad draft the verifier waved through, which is the dangerous one
-- a **false alarm** is a good draft it rejected, which is how a guardrail gets switched
-  off by whoever has to live with it
-
-The clean cases exist for the second reason. A verifier that rejects everything catches
-100% of the bad drafts and is worthless.
-
-Numbers here come from the committed audit. If the audit moves, these move with it,
-which is deliberate: a guardrail tested against numbers that no longer exist is testing
-nothing. Writing them out by hand also caught a stale figure in the README, which is
-about as good an argument for this file as I could ask for.
+This tests the guardrail, not the model. Misses (a bad draft let through) and false
+alarms (a good draft rejected) are both scored, which is why there are clean drafts too.
+Numbers come from the committed audit, so these move when it does.
 """
 
 from __future__ import annotations

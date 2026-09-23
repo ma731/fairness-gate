@@ -1,29 +1,10 @@
-"""A voice agent that can only say things the audit actually measured.
+"""The ask-out-loud panel. It can only say things the audit measured.
 
-You press the button, ask a question out loud, and it answers. The point is not the
-novelty. The point is that a page like this one is dense, and most people who open it
-will not read all of it, so being able to just ask "what did you find" and get the real
-number back is a better way in than scrolling.
-
-The rule this module exists to enforce: **every sentence it speaks is built here, in
-Python, from results/audit.json.** There is no model, no API call, no generated prose.
-The answers are assembled from the same figures the charts draw, at build time, so the
-agent cannot drift from the page and cannot invent a statistic. If a number changes, the
-audit reruns, and what the agent says changes with it.
-
-Matching a question to an answer is a list of regular expressions. That is a small
-grammar and it will not understand everything, which is the trade I wanted: a narrow
-thing that is always right beats a broad thing that is sometimes confidently wrong. On a
-page arguing that you should check what your model is doing, shipping an unverifiable
-chatbot would have been a bad joke.
-
-Two notes on being honest with whoever uses it:
-
-- Speech recognition in Chrome sends the audio to Google to transcribe. That is how the
-  browser API works and I cannot change it from here, so the panel says so before the
-  microphone is ever switched on.
-- Firefox and Safari do not implement recognition at all. Rather than hide the feature
-  there, the panel falls back to a text box and answers typed questions identically.
+Every answer is written here from results/audit.json at build time: no model, no API
+call. Questions are matched with a small regex grammar, which won't understand
+everything but can't make anything up. Answers play as pre-rendered clips
+(scripts/voice_audio.py), with the browser's own voice as a fallback. Where the browser
+can't do speech recognition, the panel falls back to a text box.
 """
 
 from __future__ import annotations
@@ -38,12 +19,7 @@ from src.dashboard import human_cost
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Where "take me to the intersections" should actually land.
-#
-# These are page plus anchor now that the site is five pages. If the target is on the
-# page you are already on, the panel scrolls; if it is not, it follows the link. The
-# spoken answer is identical either way, so asking a question never depends on having
-# landed in the right place first.
+# Where "take me to X" lands. Same page scrolls, another page navigates.
 SECTIONS = {
     "start": "index.html#plain", "plain": "index.html#plain",
     "basic": "index.html#plain", "beginning": "index.html#plain",
@@ -65,17 +41,9 @@ SECTIONS = {
     "source": "method.html#sources", "data": "method.html#sources",
 }
 
-# Question to answer, walked top to bottom, first match wins.
-#
-# Two things I got wrong on the first pass, both caught by the tests:
-#
-# 1. Order. "why did you not fix it" contains the word fix, so the broad rule matched
-#    first and the agent cheerfully described the mitigation it had refused to ship.
-#    That is the one answer that would misrepresent the project, so the refusal
-#    patterns sit above the fix ones.
-# 2. Word boundaries. I closed every pattern with \b, which meant "intersect" would not
-#    match "intersections" and "small group" would not match "small groups". People say
-#    the plural. A pattern meant to match a prefix does not get a closing \b.
+# Question to answer, first match wins, so order matters: "why did you not fix it"
+# contains "fix", so the refusal rule has to come first. Prefix patterns have no closing
+# \b, so "intersect" still matches "intersections".
 GRAMMAR = [
     (r"\b(help|what can (i|you)|options|commands)\b", "help"),
     # anything shaped like "why ... not ..." is asking about the rejection
@@ -340,14 +308,9 @@ SCRIPT = r"""
     log.scrollTop = log.scrollHeight;
   }
 
-  // Every answer already has an MP3 rendered at build time by scripts/voice_audio.py,
-  // in a Microsoft neural voice. That is what plays. No key ships with the page, no
-  // request leaves it, and the clip is on the CDN before anybody asks.
-  //
-  // A clip is only played if its recorded hash still matches the answer on this page.
-  // If an answer changed and nobody re-rendered, the clip is stale, and audio confidently
-  // reading a number that is no longer true is worse than a synthetic voice reading the
-  // right one. So a stale clip is skipped and the browser voice takes over.
+  // Answers play as MP3s rendered at build time (scripts/voice_audio.py). A clip only
+  // plays if its hash matches the answer on this page; a stale one falls back to the
+  // browser voice rather than read out an old number.
   var AUDIO = DATA.audio || {};
   var player = null;
 
@@ -358,11 +321,8 @@ SCRIPT = r"""
     return clip.sha === DATA.hashes[key] ? clip.file : null;
   }
 
-  // Fallback only. Picking the voice by hand, because the browser default is whatever
-  // the machine's locale happens to be. On a Windows box set to China that meant a
-  // Chinese voice reading American census figures, which sounds broken and, on this
-  // page of all pages, lands badly. Setting utterance.lang is not enough: it is a
-  // request, and the engine ignores it if the chosen voice cannot honour it.
+  // Fallback only. The voice is picked explicitly because the default follows the
+  // machine's locale, and setting utterance.lang alone doesn't force English.
   var VOICE_RANK = [
     function (v) { return /en(-|_)US/i.test(v.lang) && /natural|neural/i.test(v.name); },
     function (v) { return /^en/i.test(v.lang) && /natural|neural/i.test(v.name); },

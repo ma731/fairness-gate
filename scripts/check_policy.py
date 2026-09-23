@@ -1,16 +1,8 @@
-"""The gate. Runs in seconds, needs no data, and is what CI enforces on every commit.
+"""The gate. Needs no data, runs in seconds, and runs on every commit.
 
-Three things are checked:
-
-1. The committed audit result still satisfies policy.yaml. Loosening a threshold is then
-   a visible diff in a file a reviewer has to approve, not a quiet edit.
-2. The committed documents are exactly what the committed results generate. This is what
-   makes "the model card is generated, not written" a fact rather than a claim: hand-edit
-   the model card and this fails.
-3. The audit result is not stale relative to the code that produces it.
-
-The full audit lives in scripts/run_audit.py and needs ~3 GB of census data, so it runs
-locally and on a schedule, not on every push.
+It checks three things: the committed audit still satisfies policy.yaml, every generated
+document matches what the audit produces byte for byte, and the audit isn't stale
+against the code that made it. The full audit is scripts/run_audit.py.
 """
 
 from __future__ import annotations

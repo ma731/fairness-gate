@@ -1,13 +1,8 @@
-"""The chart forms that need distribution data rather than a summary row.
+"""Charts that need distribution data rather than a summary row.
 
-Every form here was chosen because it answers a question the summary tables cannot, not
-because it looks impressive. Where a form would have been decoration it was left out: a
-chord diagram encodes pairwise flow between entities and a transit map encodes network
-topology, and this data has neither, so drawing one would be an ornament wearing the
-costume of evidence.
-
-All rendering is server-side SVG with deterministic geometry, because the gate
-regenerates this page and requires a byte-identical match.
+Each one is here because it answers something a table can't. Chord diagrams and transit
+maps were left out: this data has no flows or network for them to show. Everything is
+server-side SVG with fixed geometry, so the gate's byte-identical check holds.
 """
 
 from __future__ import annotations
@@ -42,15 +37,10 @@ def _dist(result: dict, split: str, attribute: str) -> dict:
 # Sankey: where 600,000 people actually go
 # --------------------------------------------------------------------------- #
 def sankey(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
-    """Everyone in the split, flowing from truth into the model's decision.
+    """Everyone in the split, flowing from the true outcome to the model's decision.
 
-    A flow diagram is right here because the quantity is conserved: every person leaves
-    one box and arrives in exactly one other.
-
-    Each node box is sized as the sum of the ribbons that meet it, never computed
-    independently. Sizing them separately is what let rounding put a ribbon edge a
-    fraction outside its box, which is visible at this scale and reads as a broken
-    chart. Deriving the box from its ribbons makes the two agree by construction.
+    Each box is sized as the sum of its own ribbons. Sizing them separately let rounding
+    push a ribbon edge outside its box.
     """
     d = _dist(result, split, attribute)
     conf = d.get("confusion") or []
@@ -291,14 +281,10 @@ def treemap(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
 # Reliability diagram
 # --------------------------------------------------------------------------- #
 def reliability(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
-    """One small reliability panel per group, against the diagonal.
+    """One reliability panel per group, on identical axes.
 
-    Eight curves on one pair of axes in a single colour was unreadable: the lines
-    crossed, the labels collided, and nothing could be traced. Eight categorical hues
-    would not have fixed it either, because eight hues cannot clear the colour-vision
-    separation floor when every pair can appear together. Faceting is the sanctioned
-    answer to "too many series", so each group gets its own panel on identical axes and
-    comparison happens between panels rather than inside one.
+    Eight curves on one chart were unreadable, and eight hues can't all stay distinguishable
+    for colour-blind readers, so each group gets its own panel.
     """
     d = _dist(result, split, attribute)
     curves = [c for c in (d.get("calibration") or []) if len(c.get("points", [])) >= 2]
@@ -364,11 +350,9 @@ def reliability(result: dict, split: str = "test", attribute: str = "RAC1P") -> 
 # Ridgeline
 # --------------------------------------------------------------------------- #
 def ridgeline(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
-    """Score distributions per group, qualifiers against everyone else.
+    """Score distributions per group, people who qualify against everyone else.
 
-    Where the two shapes overlap is where the model genuinely cannot tell people apart.
-    That overlap being wider for some groups than others is the mechanism behind every
-    gap on this page, so it gets its own chart.
+    Where the two shapes overlap, the model can't tell people apart.
     """
     d = _dist(result, split, attribute)
     hists = d.get("histogram") or []
@@ -422,12 +406,10 @@ def ridgeline(result: dict, split: str = "test", attribute: str = "RAC1P") -> st
 # Intervals: what the precision is actually worth
 # --------------------------------------------------------------------------- #
 def interval_chart(result: dict, attribute: str = "RAC1P") -> str:
-    """Per-group recall with its 95% interval, ordered by how uncertain it is.
+    """Per-group recall with its 95% interval, most uncertain first.
 
-    The chart that stops a reader trusting three decimal places equally. Every other
-    chart here prints rates to the same precision whatever the group size; this one
-    shows what that precision is worth. The widest bars are the smallest groups, and
-    they sit at the top so the caveat arrives before the ranking.
+    The widest bars are the smallest groups, shown first so the caveat comes before the
+    ranking.
     """
     u = (result.get("uncertainty") or {}).get(attribute) or {}
     groups = u.get("tpr_by_group") or []
@@ -488,13 +470,8 @@ def interval_chart(result: dict, attribute: str = "RAC1P") -> str:
 def intersection_matrix(table, metric: str = "tpr") -> str:
     """Race down, sex across, one cell per combination.
 
-    A grid, because the data is a grid. Auditing race and sex separately can leave two
-    acceptable marginals sitting on top of a cell that is much worse than either, and a
-    pair of bar charts cannot show that because it never puts the two axes together.
-
-    Cells below the reporting floor are drawn hatched rather than dropped. Their absence
-    is a finding: the groups most likely to be harmed are the ones a survey is least
-    likely to have enough of to say anything about.
+    Cells under the reporting floor are hatched rather than dropped, so the gap in the data
+    stays visible.
     """
     sub = table[table["attribute"] == "RACExSEX"]
     if sub.empty:
@@ -573,13 +550,9 @@ def intersection_matrix(table, metric: str = "tpr") -> str:
 # The tradeoff frontier
 # --------------------------------------------------------------------------- #
 def tradeoff_curve(result: dict, attribute: str = "RAC1P") -> str:
-    """Accuracy against the recall gap, traced as the single threshold moves.
+    """Accuracy against the recall gap as the single threshold moves.
 
-    Every point on the line is the same model under a different global cut. The shape
-    is the argument: sliding one threshold does not buy fairness, it buys a worse model
-    that happens to select almost everyone. The per-group solution sits off the line
-    entirely, which is what "off the frontier" means, and it is marked separately
-    because it is not reachable by moving one number.
+    The per-group fix is marked separately because no single threshold can reach it.
     """
     m = (result.get("mitigation") or {}).get(attribute) or {}
     sweep = [s for s in (m.get("sweep") or []) if s.get("tpr_gap") is not None]

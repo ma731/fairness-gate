@@ -1,17 +1,8 @@
-"""Plain English for every check name on the site.
+"""Plain-English titles and explanations for every check name.
 
-A check is called `fairness.RAC1P.max_fpr_gap`, which is precise and tells a reader who
-does not already work on this absolutely nothing. RAC1P is a census column code. FPR is
-false positive rate. Neither is guessable, and a page that makes you guess is a page
-that only works for people who did not need it.
-
-So every check carries a readable title and a sentence saying what it measures and which
-direction is bad. The machine-readable name stays visible next to it, because that is
-the string you would grep for in `policy.yaml`, and hiding it would trade one kind of
-confusion for another.
-
-Kept apart from the renderers on purpose. The wording belongs in one place, so the page,
-the model card and the voice agent cannot end up explaining the same metric differently.
+`fairness.RAC1P.max_fpr_gap` is precise and means nothing to most readers. Every check
+gets a readable title and one sentence on what it measures, kept in one place so the
+site and the PR reviewer explain things the same way.
 """
 
 from __future__ import annotations

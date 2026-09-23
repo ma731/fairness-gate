@@ -1,22 +1,9 @@
 """Confidence intervals for every rate and every gap.
 
-A confidence interval is just the range a number could plausibly have been, given how
-many people it was worked out from. A recall of 0.694 computed on 926 people is not the
-same claim as one computed on 434,022, and printing both to three decimals pretends
-otherwise. Worse, a
-policy gate comparing a point estimate to a threshold can fire on noise, which is the
-one thing a gate must never do: a red build nobody believes is a gate that has already
-stopped working.
-
-Method: a parametric bootstrap over the binomial counts rather than resampling 600,000
-rows. For a rate metric the two are equivalent, because the only randomness that matters
-is how many successes fall out of a fixed number of trials, and the counts version runs
-in a second instead of minutes.
-
-The gap between groups is resampled jointly: each draw perturbs every group's rate, then
-the gap is recomputed from those perturbed rates. Bootstrapping the maximum and the
-minimum separately would understate the spread, because which group is the extreme is
-itself uncertain.
+A recall from 926 people is a weaker claim than one from 434,022, and the gate runs on
+the interval so it can't fail on noise. Intervals come from a parametric bootstrap over
+the counts, which is equivalent for rates and takes seconds instead of minutes. Gaps are
+resampled jointly, because which group is the extreme is itself uncertain.
 """
 
 from __future__ import annotations

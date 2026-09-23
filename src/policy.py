@@ -133,12 +133,9 @@ def check_fairness(policy: dict, summaries: list[dict],
                 _direction(metric),
             )
 
-            # Gate on the interval, not the point estimate. A gap of 0.312 measured on
-            # a few hundred people and one measured on four hundred thousand are not
-            # the same claim, and a build that goes red on sampling noise is a build
-            # everyone learns to re-run until it passes. So a FAIL requires the whole
-            # interval to clear the limit; a point estimate over it is a WARN, which
-            # says "probably too big, not yet certain".
+            # A FAIL needs the whole interval past the limit. An estimate over the
+            # line with an interval that straddles it is a WARN, so noise can't turn
+            # the build red.
             ci = (uncertainty or {}).get(attribute, {}).get(_CI_KEY.get(metric, ""))
             if ci and check.status == FAIL and check.fail_at is not None:
                 confident = (

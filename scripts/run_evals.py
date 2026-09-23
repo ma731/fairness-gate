@@ -1,13 +1,8 @@
-"""Run the verifier against the drafts in evals/ and score it.
+"""Score the narrator's verifier against the drafts in evals/.
 
-Needs no API key and no data. It answers one question: does the guardrail still catch
-the things it was built to catch, and does it still let a good draft through.
+Needs no API key and no data. Reports misses and false alarms, since a verifier that
+rejects everything would catch every error and still be useless.
 
-Both directions are scored, because only reporting one is how a guardrail ends up
-useless. A verifier that rejects every draft catches 100% of bad ones and is worthless,
-and a verifier that accepts everything never annoys anybody.
-
-    python scripts/run_evals.py
     python scripts/run_evals.py --verbose
 """
 

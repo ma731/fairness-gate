@@ -1,12 +1,8 @@
 """Tests for the voice agent.
 
-The agent is only defensible if it cannot say anything the audit did not measure, so
-that is what gets tested: every answer is reachable, every number in it traces back to
-results/audit.json, and the questions people will actually ask route to the right reply.
-
-The grammar is applied in the browser by JavaScript, but the patterns themselves are
-plain enough that Python's `re` agrees with JS on all of them, so routing can be checked
-here rather than in a headless browser.
+Checks that every number it can say comes from the audit, and that common questions
+route to the right answer. The grammar runs as JavaScript in the browser, but the
+patterns are simple enough that Python's re agrees with it.
 """
 
 from __future__ import annotations

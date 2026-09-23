@@ -22,11 +22,9 @@ def _safe(v) -> float:
 
 def score_histogram(y: np.ndarray, p: np.ndarray, groups: pd.Series,
                     keep: set, bins: int = SCORE_BINS) -> list[dict]:
-    """Predicted-probability distribution per group, split by the true outcome.
+    """Predicted-probability histogram per group, split by the true outcome.
 
-    This is what a ridgeline plot draws. Two overlapping shapes per group: the people who
-    qualify and the people who do not. Where they overlap is where the model cannot tell
-    them apart, and that overlap differing by group is the whole story.
+    Feeds the ridgeline chart.
     """
     edges = np.linspace(0.0, 1.0, bins + 1)
     out = []

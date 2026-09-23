@@ -1,15 +1,7 @@
-"""Generate the compliance documents from a completed audit run.
+"""Generate the model card, Annex IV documentation, DPIA and checks summary.
 
-Every number in every document comes from results/audit.json. Nothing is typed by hand,
-which is the only reliable way to stop a model card from slowly becoming fiction: the
-document cannot be edited into agreement with a model that changed, it can only be
-regenerated.
-
-Documents produced:
-  docs/model_card.md   what the model is, how it performs, and for whom it performs worse
-  docs/annex_iv.md     EU AI Act Annex IV technical documentation
-  docs/dpia.md         the data protection impact assessment section
-  results/checks.md    the policy gate result, human readable
+Every number comes from results/audit.json, so a document can't be edited into agreement
+with a model that changed. It can only be regenerated.
 """
 
 from __future__ import annotations

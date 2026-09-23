@@ -1,18 +1,9 @@
-"""A WebGL point cloud of the people the model judged.
+"""The WebGL point cloud behind the hero: one point per person the model judged.
 
-Why raw WebGL2 rather than Three.js: the dependency is the problem, not the technique.
-A CDN script in a compliance artifact is a supply-chain surface and stops the page from
-opening offline in five years; vendoring Three.js puts 600KB of someone else's code in a
-repository whose whole argument is that everything in it is checked. This is about 4KB
-and has no dependencies at all.
-
-What it draws is the data, not an ornament. Every point is a person, sampled in the
-exact proportions of the real confusion counts, and the ones the model overlooks are the
-ones that glow. If WebGL is unavailable the canvas stays empty and the CSS mesh behind
-it carries the hero, so nothing on the page depends on this.
-
-The HTML it emits is deterministic: four integers and a fixed seed. Geometry is computed
-in the browser from that seed, so the gate's byte-identical check still holds.
+Raw WebGL2, about 4KB, instead of 600KB of Three.js. Points are sampled in the real
+confusion proportions and the overlooked ones glow. The HTML only carries four counts
+and a fixed seed, so the output is deterministic. Without WebGL the page just shows the
+background behind it.
 """
 
 from __future__ import annotations

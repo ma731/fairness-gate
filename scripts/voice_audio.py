@@ -1,30 +1,11 @@
-"""Render every spoken answer to an audio file, once, at build time.
+"""Render every spoken answer to MP3 once, at build time.
 
-The voice panel used the browser's own speech synthesis, which is free and sounds like
-it. The obvious upgrade is a hosted text-to-speech API, and the obvious problem with one
-on a static site is that an API key in a public page is a published API key. There is no
-server here to hide it behind.
+A hosted speech API would need a key, and a key in a public page is a published key. The
+answers are fixed at build time, so they're rendered here with edge-tts (Microsoft neural
+voices, no key needed). Each clip stores a hash of its text, and the page won't play a
+clip whose hash no longer matches.
 
-So nothing is synthesised in the browser at all. Every answer is already written in
-Python from `results/audit.json`, which means the set of sentences the page can say is
-finite and known before anyone visits. They get rendered to MP3 here, committed, and
-played as ordinary files. No key ships, no request leaves the page, and the clip is
-already on the CDN by the time somebody asks.
-
-The voices are Microsoft's neural ones through `edge-tts`, which needs no key and no
-account. They are genuinely good, and being free matters more than it sounds: a voice
-that costs money per play is a voice that quietly gets switched off.
-
-**Every clip records the hash of the text it was made from.** If an answer changes and
-nobody re-renders, the hash stops matching and the page falls back to the browser voice
-for that answer rather than reading out a number that is no longer true. Stale audio
-saying an old figure with total confidence is worse than a synthetic voice saying the
-right one, and it is exactly the failure this project exists to complain about.
-
-    python scripts/voice_audio.py              # only what changed
-    python scripts/voice_audio.py --all        # everything
-    python scripts/voice_audio.py --voice en-US-AvaMultilingualNeural
-    python scripts/voice_audio.py --list       # what voices are available
+    python scripts/voice_audio.py [--all] [--voice NAME] [--list]
 """
 
 from __future__ import annotations

@@ -1,20 +1,9 @@
-"""Render the audit as a single self-contained HTML page.
+"""Render the audit as a five-page static site.
 
-Constraints, in order of weight:
-
-1. **Deterministic output.** The gate regenerates this file and requires a byte-identical
-   match, so everything is rendered server-side. A client-side chart library would move
-   the numbers out of the diff and back into trust.
-2. **No dependencies.** No CDN, no runtime font fetch, no JavaScript needed to read a
-   number. A compliance artifact that phones out to three origins is a supply-chain
-   surface, and this one has to still open in five years, offline.
-3. **Interactive anyway.** Every view is rendered up front and the controls toggle
-   between them, so filtering works without shipping a renderer to the client and the
-   page still reads with JavaScript disabled.
-
-Dark-first: this is an instrument panel, and the status colors carry more weight against
-a dark plane. Colors are the validated categorical palette (blue and orange, worst
-adjacent CVD delta E 24.7) plus the fixed status set, which never doubles as a series.
+Everything is rendered server-side, with no CDN and no runtime fetches, so the gate can
+regenerate each page and require a byte-identical match, and the site still opens
+offline. Interactive views are all pre-rendered and the controls just toggle between
+them, so every number is readable with JavaScript off.
 """
 
 from __future__ import annotations
@@ -248,12 +237,9 @@ def topo_lines(n: int = 16, seed: int = 7) -> str:
 
 
 def human_cost(table: pd.DataFrame, attribute: str = "RAC1P") -> pd.DataFrame:
-    """Turn rates into people.
+    """Turn rates into people: how many qualifying people each group has overlooked.
 
-    A true positive rate of 0.542 is a statistic. "Out of every hundred people who
-    genuinely qualify, forty-six are overlooked" is the same number said in a way a
-    person can feel, and it is arithmetic, not rhetoric: qualified = n * base rate,
-    overlooked = qualified * (1 - true positive rate).
+    qualified = n * base rate, overlooked = qualified * (1 - recall).
     """
     sub = table[(table["attribute"] == attribute) & table["reportable"]].copy()
     sub["qualified"] = sub["n"] * sub["base_rate"]
@@ -286,11 +272,10 @@ def dot_field(missed_per_100: float, cols: int = 20, rows: int = 5) -> str:
 
 
 def scatter_chart(table: pd.DataFrame, attribute: str) -> str:
-    """How common the outcome is, against how often the model finds it.
+    """How common the outcome is in each group, against how often the model finds it.
 
-    The chart that answers "is it just harder for rare positives?". Bubble area is group
-    size, so the eye is not misled by a 900-person group beside a 434,000-person one.
-    One series: colour carries nothing here, the axes carry it all.
+    Bubble area is group size, so a 900-person group doesn't look as weighty as a
+    434,000-person one.
     """
     sub = table[(table["attribute"] == attribute) & table["reportable"]]
     if sub.empty:
@@ -374,9 +359,7 @@ def scatter_chart(table: pd.DataFrame, attribute: str) -> str:
 def diverging_chart(table: pd.DataFrame, attribute: str) -> str:
     """Selection rate minus base rate: who the model over- and under-selects.
 
-    Diverging because the quantity is signed and zero means something. Two hues with a
-    neutral zero line, never one ramp, so the direction of the error reads before any
-    number does.
+    Two hues around a zero line, because the sign is the point.
     """
     sub = table[(table["attribute"] == attribute) & table["reportable"]].copy()
     if sub.empty:
@@ -510,12 +493,9 @@ def narration_block() -> str:
 
 def arm_slope(result: dict, table: pd.DataFrame, arm_key: str,
               left: str, right: str, attribute: str = "RAC1P") -> str:
-    """Recall per group under the shipped model, and under some other arm.
+    """Recall per group under the shipped model against another arm (unaware, linear).
 
-    A slope chart because in both places it is used the expected shape *is* the finding.
-    If deleting race and sex worked, or if the algorithm were the problem, these lines
-    would converge. They do not, and a reader can see that faster than they can be
-    argued into it.
+    If the other arm fixed the problem, the lines would converge.
     """
     arm = (result.get(arm_key) or {})
     groups = arm.get("groups") or {}
@@ -1446,12 +1426,7 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
 # ---------------------------------------------------------------------------- #
 # Pages
 # ---------------------------------------------------------------------------- #
-# It was one endless scroll and it asked too much of a reader. Now it is five pages in
-# the order the argument actually runs: here is what I found, here is the evidence,
-# here is how I measured it, here is the fix and why I refused it, here is why I care.
-#
-# Every page is a real file rather than a tab, so links go straight to a section, the
-# browser back button behaves, and nothing depends on JavaScript to show you content.
+# Real files rather than tabs, so links and the back button work without JavaScript.
 NAV = [
     ("index.html", "The finding"),
     ("evidence.html", "Evidence"),

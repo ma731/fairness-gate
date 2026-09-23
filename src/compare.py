@@ -1,27 +1,9 @@
-"""A second model family, to ask whether the disparity belongs to the model or the data.
+"""A second model family: is the gap in the algorithm or in the data?
 
-Every number on this site comes from one gradient boosted tree. That is a real weakness
-in the argument, and the obvious question from anyone reading it is whether a different
-model would simply not have this problem. Boosting is good at finding interactions, and
-an interaction between occupation, region and hours is exactly the shape of thing that
-could reconstruct race without being told.
-
-So this trains a plain logistic regression on the identical splits and the identical
-features. Linear, additive, no interactions unless you build them, and about as different
-from a boosted forest as you can get while still predicting the same thing.
-
-If the gap follows the model family, the finding is "this algorithm has a problem" and
-the answer is to pick another algorithm. If the gap stays put, the finding is "this data
-encodes an inequality and any model fitting it will inherit it", which is a much harder
-thing to fix and a much more useful thing to know.
-
-The categorical columns are one-hot encoded because a linear model reads an integer code
-as a magnitude, and occupation code 500 is not five times occupation code 100. The tree
-never needed this, which is itself part of why the two families are worth comparing.
-
-Its threshold is chosen on the validation year, like everything else here. Reusing the
-tree's cut-off would have compared two models at two different operating points and
-called the difference an effect.
+Fits a logistic regression on the same splits and features as the boosted trees.
+Categoricals are one-hot encoded, since a linear model would otherwise read occupation
+code 500 as five times code 100. The threshold is picked on validation like everything
+else.
 """
 
 from __future__ import annotations
@@ -117,11 +99,10 @@ def compare(tree: dict, linear: dict) -> dict:
 
 
 def rank_correlation(tree_groups: dict, linear_groups: dict) -> float | None:
-    """Do the two families hurt the same groups, or merely hurt similarly hard?
+    """Spearman correlation of the groups' recall ranks under the two models.
 
-    A matching gap could still mean the two models are failing different people. This
-    ranks the groups by recall under each and correlates the orders, so "the same groups
-    end up at the bottom" is something measured rather than eyeballed off a chart.
+    Equal gaps could still come from failing different people. This checks it's the same
+    groups at the bottom.
     """
     shared = sorted(set(tree_groups) & set(linear_groups))
     if len(shared) < 3:

@@ -13,18 +13,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Only the code that produces a number belongs here.
-#
-# Two things are deliberately left out. policy.yaml, because the policy is what the
-# results get judged against, not what makes them. And everything that draws the site
-# (dashboard, pages, theme), because a colour or a sentence cannot move a figure, and
-# the documents are already guarded by a stronger check: check_policy.py regenerates
-# every one of them and requires a byte-identical match, so changing how something is
-# rendered without re-rendering it fails immediately and for the right reason.
-#
-# Having presentation in here made every cosmetic edit mark the results stale and
-# demand a three gigabyte re-run to fix, which taught me to reach for --skip-staleness.
-# A check people routinely switch off has stopped being a check.
+# Only code that produces a number. policy.yaml is left out because results are judged
+# against it, not made by it. The site's rendering code is left out because the
+# byte-identical document check already covers it, and including it made every cosmetic
+# edit demand a 3 GB re-run.
 PIPELINE_SOURCES = [
     "src/config.py",
     "src/data.py",

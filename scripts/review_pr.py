@@ -1,20 +1,9 @@
-"""Compare two audits and write the review comment a pull request should get.
+"""Write the pull request comment: what moved between main's audit and this one.
 
-A green build tells you nothing moved past a limit. It does not tell you what moved, in
-which direction, or which group absorbed it, and that is the part a reviewer actually
-has to think about. A change can keep every check inside its limit and still take four
-points of recall off one group, and I did not want to be the person who merged that
-because the tick was green.
+A green build only says nothing crossed a limit. This says which checks changed status,
+which numbers moved past the noise floor, and which gap is behind it. It never fails
+the build; that stays with the gate.
 
-So this reads the audit on the base branch and the audit on the branch, and writes what
-changed in plain language: which checks changed status, which numbers moved more than a
-threshold worth mentioning, and which groups are behind the movement.
-
-It makes no judgement the policy does not already make. Passing or failing stays the
-gate's job in check_policy.py. This only says what is different, because a reviewer who
-can see what moved will ask better questions than one reading a tick.
-
-    python scripts/review_pr.py --base before.json --head after.json
     python scripts/review_pr.py --base before.json --head after.json --out comment.md
 """
 

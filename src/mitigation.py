@@ -1,26 +1,9 @@
-"""What it would take to close the gap, and what closing it costs.
+"""What closing the gap would take, and what it would cost.
 
-The site spent a lot of effort proving a disparity exists and never once tried to fix
-it, which is the easy half. This module does the hard half and reports the bill.
-
-Two things are measured, and the contrast between them is the point:
-
-1. **Sweeping the single global threshold.** The obvious first move, and it does not
-   work. Moving one cut up or down trades recall against false positives for everybody
-   at once; it barely touches the difference between groups. Showing that is what earns
-   the right to reach for something more invasive.
-
-2. **Per-group thresholds** chosen to equalise recall (equal opportunity, Hardt et al.).
-   This does close the gap, and it costs accuracy, and it needs the protected attribute
-   at the moment of prediction. That last requirement is not a footnote. In hiring, in
-   lending, in most of the places anyone would want this, using race at decision time is
-   either unlawful or is itself the harm. A mitigation that can only run by doing the
-   thing you were trying to avoid belongs in the documentation as a rejected option with
-   its reasoning, not in the pipeline.
-
-Every threshold here is chosen on the validation year and applied unchanged to the test
-year, the same discipline as the rest of the project. Choosing them on test would be
-fitting the fix to the exam.
+Two things are measured. Sweeping the single threshold barely moves the gap, and only by
+wrecking accuracy. Per-group thresholds that equalise recall close most of it, but need
+race at decision time, so they're reported and not shipped. Thresholds are chosen on the
+validation year and applied to the test year unchanged.
 """
 
 from __future__ import annotations
@@ -73,10 +56,8 @@ def global_sweep(y, p, groups, keep, points: int = SWEEP_POINTS) -> list[dict]:
 def equal_opportunity_thresholds(y_val, p_val, groups_val, keep, target: float) -> dict:
     """One threshold per group, chosen on validation so each group hits `target` recall.
 
-    Picked by searching each group's own score distribution for the cut that puts its
-    recall closest to the target. The target is the recall the current single threshold
-    already achieves overall, so the comparison is "same headline recall, distributed
-    differently" rather than "we quietly raised recall for everyone".
+    The target is the overall recall the single threshold already gets, so the fix
+    redistributes recall rather than quietly raising it for everyone.
     """
     y_val = np.asarray(y_val)
     p_val = np.asarray(p_val)
