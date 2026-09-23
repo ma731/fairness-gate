@@ -38,6 +38,21 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest tests/ -q
 
+  evals:
+    # The verifier that decides whether generated prose may be published. It needs no
+    # API key and no data, so the guardrail is checked on every commit even though the
+    # generation half only runs by hand.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Score the narrator's guardrail
+        run: python scripts/run_evals.py --verbose
+
   policy-gate:
     runs-on: ubuntu-latest
     steps:

@@ -53,7 +53,7 @@ On 600,551 people in the year I held back for testing:
 | | |
 |---|---|
 | Recall gap between racial groups | **0.312** (95% confidence interval 0.300 to 0.324) |
-| Accuracy across those same groups | 0.79 to 0.84, almost identical |
+| Accuracy across those same groups | 0.77 to 0.84, almost identical |
 | Qualifying people the model overlooks | **42,517** in a single survey year |
 | False positive gap, race on its own | 0.145 |
 | False positive gap, **race and sex together** | **0.221** |
