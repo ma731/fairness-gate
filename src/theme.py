@@ -583,6 +583,61 @@ body { padding-top:0; }
   html { scroll-behavior:auto; }
   *, *::before, *::after { transition-duration:1ms !important; animation:none !important; }
 }
+/* ---- ask the audit ---- */
+.vx-fab { position:fixed; right:22px; bottom:22px; z-index:60; display:flex;
+  align-items:center; gap:9px; padding:12px 18px 12px 14px; border-radius:999px;
+  border:1px solid var(--hair-2); background:var(--acid); color:var(--acid-ink);
+  font:inherit; font-size:13px; font-weight:640; letter-spacing:-.01em; cursor:pointer;
+  box-shadow:0 12px 30px rgba(0,0,0,.34); }
+.vx-fab:hover { transform:translateY(-1px); }
+.vx-fab svg { width:17px; height:17px; fill:none; stroke:currentColor;
+  stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
+.vx { position:fixed; right:22px; bottom:80px; z-index:61; width:min(392px,
+  calc(100vw - 44px)); max-height:min(560px, calc(100vh - 120px)); display:flex;
+  flex-direction:column; border-radius:20px; border:1px solid var(--hair-2);
+  background:var(--plane); box-shadow:0 26px 60px rgba(0,0,0,.44); overflow:hidden; }
+.vx[hidden] { display:none; }
+.vx header { display:flex; align-items:center; justify-content:space-between;
+  padding:14px 12px 14px 18px; border-bottom:1px solid var(--hair); }
+.vx-title { font-size:13px; font-weight:640; letter-spacing:-.01em; }
+.vx-x { background:none; border:0; color:var(--mut); font-size:20px; line-height:1;
+  cursor:pointer; padding:2px 8px; }
+.vx-x:hover { color:var(--ink); }
+
+.vx-log { flex:1; overflow-y:auto; padding:16px 18px; display:grid; gap:12px;
+  align-content:start; }
+.vx-log p { margin:0; font-size:14px; line-height:1.58; }
+/* the question reads as an aside, the answer as the page's own voice */
+.vx-q { color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
+  monospace; font-size:12px; letter-spacing:.02em; }
+.vx-q::before { content:"you: "; color:var(--acid); }
+.vx-a { color:var(--ink-2); }
+
+.vx-note { margin:0; padding:0 18px 12px; font-size:11.5px; line-height:1.5;
+  color:var(--mut); }
+.vx-bar { display:grid; gap:8px; padding:0 14px 14px; }
+.vx-mic { width:100%; padding:11px; border-radius:12px; border:1px solid var(--hair-2);
+  background:var(--surface); color:var(--ink); font:inherit; font-size:13px;
+  font-weight:600; cursor:pointer; }
+.vx-mic:hover { border-color:var(--acid); }
+.vx-mic.is-live { background:var(--acid); color:var(--acid-ink);
+  border-color:var(--acid); }
+.vx-form { display:flex; gap:8px; }
+.vx-form input { flex:1; min-width:0; padding:10px 13px; border-radius:12px;
+  border:1px solid var(--hair); background:var(--surface); color:var(--ink);
+  font:inherit; font-size:13px; }
+.vx-form input:focus { outline:none; border-color:var(--acid); }
+.vx-form button { padding:10px 15px; border-radius:12px; border:1px solid var(--hair-2);
+  background:var(--surface); color:var(--ink); font:inherit; cursor:pointer; }
+.vx-form button:hover { border-color:var(--acid); }
+
+@media (max-width:520px) {
+  .vx-fab span { display:none; }
+  .vx-fab { padding:13px; }
+}
+@media print { .vx, .vx-fab { display:none; } }
+
 @media (max-width:760px) { .shell { padding:0 20px; } section, .band-in { padding:64px 0; } }
 @media print {
   body { background:#fff; } nav, .controls { display:none; }

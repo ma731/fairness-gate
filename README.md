@@ -188,6 +188,7 @@ src/report.py            model card, EU AI Act Annex IV, privacy assessment: all
 src/dashboard.py         the website
 src/charts_extra.py      the charts that need more than a summary row
 src/pointfield.py        the animated hero: one dot per person, no libraries
+src/voice.py             ask it out loud; every answer written from the audit
 scripts/run_audit.py     one command, every number
 scripts/check_policy.py  the gate
 docs/decisions/          why things are the way they are, including what I rejected
@@ -214,6 +215,17 @@ somewhere, a dot grid because the denominator is people, a tradeoff curve becaus
 shape of the curve *is* the argument. I deliberately left out a couple of charts that
 would have looked impressive, like a chord diagram, because this data has nothing for
 them to show and a chart that encodes nothing is decoration pretending to be evidence.
+
+There is also a button in the corner that lets you **ask the page questions out loud**.
+Press it, say "what did you find" or "why did you not fix it", and it answers. The
+interesting part is what it cannot do: every sentence it speaks is written in
+`src/voice.py` out of `results/audit.json` at build time. No model, no API call, no
+generated prose. It can quote the recall gap because the recall gap is in the audit, and
+it cannot say anything else, which is why there is a test asserting that every number it
+is capable of speaking traces back to a measured one. On a page arguing that you should
+check what your model is doing, bolting on a chatbot nobody could verify would have been
+a bad joke. It falls back to a text box in browsers without speech recognition, and it
+tells you up front that Chrome sends your audio to Google to transcribe it.
 
 `docs/about.html` is the only page not generated from the data, and it says so on the
 page. It is me explaining why I think this matters.

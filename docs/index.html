@@ -582,6 +582,61 @@ body { padding-top:0; }
   html { scroll-behavior:auto; }
   *, *::before, *::after { transition-duration:1ms !important; animation:none !important; }
 }
+/* ---- ask the audit ---- */
+.vx-fab { position:fixed; right:22px; bottom:22px; z-index:60; display:flex;
+  align-items:center; gap:9px; padding:12px 18px 12px 14px; border-radius:999px;
+  border:1px solid var(--hair-2); background:var(--acid); color:var(--acid-ink);
+  font:inherit; font-size:13px; font-weight:640; letter-spacing:-.01em; cursor:pointer;
+  box-shadow:0 12px 30px rgba(0,0,0,.34); }
+.vx-fab:hover { transform:translateY(-1px); }
+.vx-fab svg { width:17px; height:17px; fill:none; stroke:currentColor;
+  stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
+.vx { position:fixed; right:22px; bottom:80px; z-index:61; width:min(392px,
+  calc(100vw - 44px)); max-height:min(560px, calc(100vh - 120px)); display:flex;
+  flex-direction:column; border-radius:20px; border:1px solid var(--hair-2);
+  background:var(--plane); box-shadow:0 26px 60px rgba(0,0,0,.44); overflow:hidden; }
+.vx[hidden] { display:none; }
+.vx header { display:flex; align-items:center; justify-content:space-between;
+  padding:14px 12px 14px 18px; border-bottom:1px solid var(--hair); }
+.vx-title { font-size:13px; font-weight:640; letter-spacing:-.01em; }
+.vx-x { background:none; border:0; color:var(--mut); font-size:20px; line-height:1;
+  cursor:pointer; padding:2px 8px; }
+.vx-x:hover { color:var(--ink); }
+
+.vx-log { flex:1; overflow-y:auto; padding:16px 18px; display:grid; gap:12px;
+  align-content:start; }
+.vx-log p { margin:0; font-size:14px; line-height:1.58; }
+/* the question reads as an aside, the answer as the page's own voice */
+.vx-q { color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
+  monospace; font-size:12px; letter-spacing:.02em; }
+.vx-q::before { content:"you: "; color:var(--acid); }
+.vx-a { color:var(--ink-2); }
+
+.vx-note { margin:0; padding:0 18px 12px; font-size:11.5px; line-height:1.5;
+  color:var(--mut); }
+.vx-bar { display:grid; gap:8px; padding:0 14px 14px; }
+.vx-mic { width:100%; padding:11px; border-radius:12px; border:1px solid var(--hair-2);
+  background:var(--surface); color:var(--ink); font:inherit; font-size:13px;
+  font-weight:600; cursor:pointer; }
+.vx-mic:hover { border-color:var(--acid); }
+.vx-mic.is-live { background:var(--acid); color:var(--acid-ink);
+  border-color:var(--acid); }
+.vx-form { display:flex; gap:8px; }
+.vx-form input { flex:1; min-width:0; padding:10px 13px; border-radius:12px;
+  border:1px solid var(--hair); background:var(--surface); color:var(--ink);
+  font:inherit; font-size:13px; }
+.vx-form input:focus { outline:none; border-color:var(--acid); }
+.vx-form button { padding:10px 15px; border-radius:12px; border:1px solid var(--hair-2);
+  background:var(--surface); color:var(--ink); font:inherit; cursor:pointer; }
+.vx-form button:hover { border-color:var(--acid); }
+
+@media (max-width:520px) {
+  .vx-fab span { display:none; }
+  .vx-fab { padding:13px; }
+}
+@media print { .vx, .vx-fab { display:none; } }
+
 @media (max-width:760px) { .shell { padding:0 20px; } section, .band-in { padding:64px 0; } }
 @media print {
   body { background:#fff; } nav, .controls { display:none; }
@@ -1116,6 +1171,165 @@ body { padding-top:0; }
       is a benchmark. No decision about any person should be made with it.</p>
   </div>
 </footer>
+
+
+<button type="button" class="vx-fab" id="vx-open" aria-expanded="false"
+        aria-controls="vx" aria-label="Ask about this audit">
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/>
+    <path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
+  </svg>
+  <span>Ask</span>
+</button>
+
+<aside class="vx" id="vx" hidden aria-live="polite">
+  <header>
+    <span class="vx-title">Ask the audit</span>
+    <button type="button" class="vx-x" id="vx-close" aria-label="Close">&#215;</button>
+  </header>
+  <div class="vx-log" id="vx-log"></div>
+  <p class="vx-note" id="vx-note"></p>
+  <div class="vx-bar">
+    <button type="button" class="vx-mic" id="vx-mic">Hold to speak</button>
+    <form class="vx-form" id="vx-form">
+      <input type="text" id="vx-text" autocomplete="off"
+             placeholder="or type a question" aria-label="Type a question">
+      <button type="submit" aria-label="Send">&#8594;</button>
+    </form>
+  </div>
+</aside>
+<script>
+(function () {
+  var DATA = {"answers": {"gate": "Continuous integration is a robot that runs a list of checks every time somebody changes the code. A gate is a check with the authority to refuse. Teams already block code that fails a test, but almost nobody blocks a model that fails a fairness check, because that check usually lives in a document nobody opens again. So here the fairness limits sit in a file next to the code, and if the model crosses one, the build turns red like a broken test. Right now the gate is at warn, with 7 checks passing, 9 warning and 0 failing.", "finding": "Out of every hundred people who genuinely earn above the threshold, this model finds about 85 in the Asian alone group and about 54 in the Some other race alone group. That is a recall gap of 0.312. The ninety five percent interval runs from 0.300 to 0.324, so it is not a quirk of the sample. And the accuracy is nearly identical across those groups, between 0.77 and 0.84. A model can be equally accurate everywhere and still put its mistakes on the same people every time.", "people": "42,517 qualifying people are overlooked across every reported group, in a single survey year, out of 600,551 tested. If a real decision hung on this model, that is the size of the room.", "recall": "Recall is the share of people who genuinely qualify that the model actually finds. If a hundred people really do earn above the line and it flags fifty four of them, recall is fifty four percent, and the other forty six are overlooked. It is the measure that tells you who gets missed, which is the question accuracy cannot answer.", "accuracy": "Accuracy sits between 0.77 and 0.84 across the racial groups, which is almost flat. That is exactly the trap. Accuracy is the number most projects report, and by that number this model looks even handed. It is not. It is equally accurate everywhere while placing its errors on the same people.", "intersection": "Audit race on its own and the false positive gap is 0.145. Audit sex on its own and it is 0.080. Cross the two together and it is 0.221. Two acceptable averages with a much worse cell hiding underneath them. Auditing one attribute at a time will never find that.", "fix": "Yes, partly. Giving each group its own cut-off takes the recall gap from 0.3119 down to 0.1143, and it costs 0.0042 of accuracy. By the number most projects report, that is nearly free. I built it, measured it, and did not ship it. Ask me why not.", "why": "Two reasons. First, it needs to know the person's race at the moment it decides, because it has to look up which cut-off applies to you. In hiring or lending that is either illegal or is the exact harm you were trying to prevent. Second, it moves the unfairness rather than removing it. The false positive gap goes up, from 0.145 to 0.196. When groups genuinely differ in how often the outcome happens, equalising one kind of error forces the other kind to become unequal. That is proved, not a bug in my code. You are always choosing which unfairness to keep.", "threshold": "The threshold is the cut-off, currently 0.3450, chosen on the 2016 data and never on the test year. The model gives a probability, and the threshold is the line above which it says yes. Moving it trades one kind of mistake for the other. I swept it end to end, and the best any single cut-off can do for the gap is 0.034, at an accuracy of 0.602, where the model says yes to almost everybody. That is not a fix, that is turning the model off.", "certainty": "A gap measured on a few hundred people and one measured on a hundred thousand are not the same claim. So every rate carries a confidence interval, and a check only fails when the whole interval is past the limit. If the estimate is over the line but the interval still straddles it, that drops to a warning and says so in words. Uncertainty can soften a failure. It can never invent one. A build that goes red on luck is a build people learn to rerun until it passes.", "small": "Any group under five hundred people gets measured and then withheld. 6 of the 18 race by sex cells fall below that line. They are drawn hatched rather than deleted, because the absence is part of the finding. The groups most likely to be harmed are the ones a national survey is least likely to contain enough of to say anything about.", "data": "United States census microdata, the American Community Survey, through the folktables package. Trained on 2015, tuned on 2016, tested on 2018, which is 600,551 real people. Split by time rather than at random, because that is how a model actually gets used: built on the past, applied to the present. Four states are held out entirely and never trained on.", "protected": "Race and sex never go into the model. It is trained on ten features and none of them is a protected attribute, and the gap is there anyway. That is the whole point. Deleting the column does not delete the problem, it deletes your ability to see it. The model reaches the same disparity through occupation, education, hours and region.", "status": "The gate is at warn. 7 checks pass, 9 are warnings and 0 fail. A warning means the model is past the standard I want but still inside the limit I tolerate. Both numbers are written down on purpose, so the distance between what is tolerated and what is wanted stays visible.", "help": "Ask me what a CI gate is, what the audit found, how many people are overlooked, what recall means, whether it can be fixed and why I did not ship the fix, what happens at the intersections, how sure I am, or where the data comes from. You can also say take me to the checks, or any other section, and I will scroll you there.", "unknown": "I only answer from what the audit actually measured, so I would rather say I do not know than guess. Try asking what the finding is, whether it can be fixed, what a CI gate is, or just say help."}, "grammar": [["\\b(help|what can (i|you)|options|commands)\\b", "help"], ["\\b(why not\\b|why\\b.{0,30}\\bnot\\b|reject|refus|did ?n.t ship|not ship)", "why"], ["\\b(ci gate|what is (this|a gate)|continuous integration|how does the gate)", "gate"], ["\\b(intersect|cross|both attributes|race and sex)", "intersection"], ["\\b(fix|mitigat|solve|repair|close the gap)", "fix"], ["\\b(threshold|cut.?off|sweep)", "threshold"], ["\\b(certain|confiden|interval|noise|sure)", "certainty"], ["\\b(small group|suppress|hidden|withheld|hatch)", "small"], ["\\b(protected|see race|use race|unawareness|remove race|delete race)", "protected"], ["\\b(data|census|source|survey|where.*(from|come))", "data"], ["\\b(how many|people|overlooked|missed|room)", "people"], ["\\b(recall|true positive|tpr)\\b", "recall"], ["\\b(accuracy|accurate)", "accuracy"], ["\\b(status|passing|failing|build|red|green|verdict)", "status"], ["\\b(find|found|finding|result|gap|disparity|problem|wrong)", "finding"]], "sections": {"start": "plain", "plain": "plain", "basic": "plain", "beginning": "plain", "miss": "cost", "overlook": "cost", "who": "cost", "cost": "cost", "check": "checks", "policy": "checks", "gate": "checks", "intersect": "intersections", "cross": "intersections", "certain": "certainty", "confiden": "certainty", "noise": "certainty", "group": "groups", "table": "groups", "flow": "flow", "sankey": "flow", "fix": "fix", "mitigat": "fix", "solution": "fix", "method": "method", "source": "sources", "data": "sources"}};
+  var panel = document.getElementById('vx');
+  var fab = document.getElementById('vx-open');
+  var log = document.getElementById('vx-log');
+  var note = document.getElementById('vx-note');
+  var mic = document.getElementById('vx-mic');
+  var text = document.getElementById('vx-text');
+
+  // The patterns come from the grammar in src/voice.py, so what the agent can say and
+  // what the page shows cannot drift apart.
+  var rules = DATA.grammar.map(function (r) {
+    return { re: new RegExp(r[0], 'i'), key: r[1] };
+  });
+
+  function add(who, what) {
+    var p = document.createElement('p');
+    p.className = 'vx-' + who;
+    p.textContent = what;
+    log.appendChild(p);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // Speaking is a nicety. If the browser has no voice, the answer is already on screen.
+  function speak(what) {
+    if (!('speechSynthesis' in window)) { return; }
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(what);
+      u.rate = 1.02;
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* no voice available */ }
+  }
+
+  function reply(key) {
+    add('a', DATA.answers[key]);
+    speak(DATA.answers[key]);
+  }
+
+  function navigate(said) {
+    if (!/\b(take me|go to|show me|scroll|jump)\b/i.test(said)) { return false; }
+    var lower = said.toLowerCase();
+    var keys = Object.keys(DATA.sections);
+    for (var i = 0; i < keys.length; i++) {
+      if (lower.indexOf(keys[i]) !== -1) {
+        var el = document.getElementById(DATA.sections[keys[i]]);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          add('a', 'Scrolling there now.');
+          speak('Scrolling there now.');
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function answer(said) {
+    if (!said) { return; }
+    add('q', said);
+    if (navigate(said)) { return; }
+    for (var i = 0; i < rules.length; i++) {
+      if (rules[i].re.test(said)) { reply(rules[i].key); return; }
+    }
+    reply('unknown');
+  }
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SR) {
+    // Firefox and Safari have no recognition. Typing gets identical answers, so the
+    // feature is not hidden here, it just loses the microphone.
+    mic.hidden = true;
+    note.textContent = 'This browser cannot do speech recognition, so type instead. '
+      + 'The answers are the same.';
+  } else {
+    note.textContent = 'Your browser sends the audio to its own speech service to '
+      + 'transcribe it. Nothing else on this page leaves your machine.';
+    var rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = function (e) { answer(e.results[0][0].transcript); };
+    rec.onerror = function (e) {
+      mic.classList.remove('is-live');
+      note.textContent = e.error === 'not-allowed'
+        ? 'Microphone permission was declined, so type your question instead.'
+        : 'That did not come through. Try again, or type it.';
+    };
+    rec.onend = function () { mic.classList.remove('is-live'); };
+
+    var start = function (ev) {
+      ev.preventDefault();
+      mic.classList.add('is-live');
+      try { rec.start(); } catch (e) { /* already listening */ }
+    };
+    var stop = function () { try { rec.stop(); } catch (e) {} };
+    mic.addEventListener('mousedown', start);
+    mic.addEventListener('touchstart', start, { passive: false });
+    mic.addEventListener('mouseup', stop);
+    mic.addEventListener('mouseleave', stop);
+    mic.addEventListener('touchend', stop);
+  }
+
+  document.getElementById('vx-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var said = text.value.trim();
+    text.value = '';
+    answer(said);
+  });
+
+  function open() {
+    panel.hidden = false;
+    fab.setAttribute('aria-expanded', 'true');
+    if (!log.childElementCount) { add('a', DATA.answers.help); }
+    text.focus();
+  }
+  function close() {
+    panel.hidden = true;
+    fab.setAttribute('aria-expanded', 'false');
+    if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+  }
+  fab.addEventListener('click', function () {
+    if (panel.hidden) { open(); } else { close(); }
+  });
+  document.getElementById('vx-close').addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !panel.hidden) { close(); }
+  });
+})();
+</script>
 
 <script>
 (function () {

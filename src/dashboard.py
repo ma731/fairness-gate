@@ -591,6 +591,7 @@ def _splits_compact(result: dict) -> str:
 
 
 def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
+    from src.voice import build as voice_build  # circular at module level
     test = tables["test"]
     race = next(s for s in result["fairness"]["test"] if s["attribute"] == "RAC1P")
     sex = next(s for s in result["fairness"]["test"] if s["attribute"] == "SEX")
@@ -1153,6 +1154,7 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </footer>
 
+{voice_build(result, tables)}
 <script>{FIELD_SCRIPT}</script>
 <script>
 (function () {{
