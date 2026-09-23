@@ -26,6 +26,7 @@ import pandas as pd
 
 from src.charts_extra import (
     confusion_heatmap,
+    intersection_matrix,
     interval_chart,
     reliability,
     ridgeline,
@@ -592,6 +593,13 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
     test = tables["test"]
     race = next(s for s in result["fairness"]["test"] if s["attribute"] == "RAC1P")
     sex = next(s for s in result["fairness"]["test"] if s["attribute"] == "SEX")
+    xsex = next(
+        (s for s in result["fairness"]["test"] if s["attribute"] == "RACExSEX"),
+        {"fpr_gap": 0.0, "tpr_gap": 0.0},
+    )
+    xcells = test[test["attribute"] == "RACExSEX"]
+    xtotal = len(xcells)
+    xsuppressed = int((~xcells["reportable"]).sum())
     sub = test[(test["attribute"] == "RAC1P") & test["reportable"]]
 
     cost = human_cost(test)
@@ -631,6 +639,7 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   <ul>
     <li><a href="#cost">Who it misses</a></li>
     <li><a href="#checks">Checks</a></li>
+    <li><a href="#intersections">Intersections</a></li>
     <li><a href="#certainty">Certainty</a></li>
     <li><a href="#groups">Groups</a></li>
     <li><a href="#flow">Flow</a></li>
@@ -755,6 +764,26 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
       to the aspiration would mean a permanently red build that everyone learns to
       ignore.</p>
     <div class="panel"><ul class="checks">{_checks(result)}</ul></div>
+  </div>
+</div>
+
+<div class="band" id="intersections">
+  <div class="shell band-in reveal">
+    <p class="kicker">Where the attributes cross</p>
+    <h2>Two acceptable averages can hide one bad cell.</h2>
+    <p class="say">Race and sex audited separately can both look tolerable while the
+      combination of the two is far worse than either suggests. A pair of bar charts
+      cannot show that, because it never puts the axes together. This is a grid, because
+      the data is a grid: recall in each cell, with the group size underneath.</p>
+    <p class="say">It is not hypothetical here. The false positive gap is
+      <b>{xsex['fpr_gap']:.3f}</b> across these cells, against {race['fpr_gap']:.3f} for
+      race alone and {sex['fpr_gap']:.3f} for sex alone. Crossing the attributes roughly
+      doubles the disparity that either marginal reports.</p>
+    <div class="panel chartbox">{intersection_matrix(test)}</div>
+    <p class="note">Hatched cells fall below the 500-person reporting floor and are
+      withheld. Their absence is itself the finding: {xsuppressed} of
+      {xtotal} cells are too small to say anything about, and the groups most exposed to
+      harm are the ones a survey is least likely to have enough of.</p>
   </div>
 </div>
 

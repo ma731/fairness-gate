@@ -5,7 +5,7 @@
 
 # Model card
 
-Generated 2026-09-23T03:53:03+00:00 from commit `7281d54` on Python 3.14.3.
+Generated 2026-09-23T04:01:56+00:00 from commit `5c9d876` on Python 3.14.3.
 
 Trained on 2015, threshold chosen on 2016, evaluated on 2018.
 
@@ -70,6 +70,7 @@ Summary gaps:
 |---|---:|---:|---:|---:|---:|---:|
 | RAC1P | 0.344 | 0.312 | 0.312 | 0.145 | 0.041 | 0.270 |
 | SEX | 0.158 | 0.080 | 0.071 | 0.080 | 0.034 | 0.135 |
+| RACExSEX | 0.440 | 0.329 | 0.329 | 0.221 | 0.049 | 0.373 |
 
 ### What that means
 
@@ -103,6 +104,9 @@ visible, rather than being made silently by quoting whichever is most flattering
 | WARN | `fairness.RAC1P.max_fpr_gap` | 0.1447 | 0.200 | 0.100 |
 | WARN | `fairness.RAC1P.max_calibration_gap` | 0.0410 | 0.080 | 0.040 |
 | WARN | `fairness.RAC1P.max_demographic_parity_difference` | 0.3445 | 0.450 | 0.300 |
+| WARN | `fairness.RACExSEX.max_tpr_gap` | 0.3285 | 0.500 | 0.250 |
+| WARN | `fairness.RACExSEX.max_fpr_gap` | 0.2209 | 0.280 | 0.140 |
+| WARN | `fairness.RACExSEX.max_demographic_parity_difference` | 0.4405 | 0.550 | 0.380 |
 | WARN | `fairness.SEX.max_fpr_gap` | 0.0802 | 0.150 | 0.080 |
 | WARN | `fairness.SEX.max_demographic_parity_difference` | 0.1575 | 0.250 | 0.150 |
 | PASS | `performance.auc` | 0.8881 | 0.850 | 0.880 |

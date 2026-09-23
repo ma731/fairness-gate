@@ -18,6 +18,7 @@ from folktables import ACSDataSource, ACSIncome
 
 from src.config import (
     CACHE_DIR,
+    INTERSECTION,
     SHIFT_STATES,
     TEST_YEAR,
     TRAIN_STATES,
@@ -32,7 +33,11 @@ NUMERIC = ["AGEP", "WKHP"]
 
 # Attributes we audit across. Kept separate from "features" on purpose: an attribute
 # can be protected whether or not the model is allowed to see it.
-PROTECTED = ["RAC1P", "SEX"]
+PROTECTED = ["RAC1P", "SEX", "RACExSEX"]
+
+# Attributes the model could actually be shown. The crossed one is derived for auditing
+# only and never exists as a feature, so it is listed apart from PROTECTED.
+PROTECTED_SOURCE = ["RAC1P", "SEX"]
 
 
 @dataclass(frozen=True)
@@ -59,7 +64,9 @@ def _load(year: str, states: list[str]) -> tuple[pd.DataFrame, pd.Series, pd.Dat
     X, y, _ = ACSIncome.df_to_pandas(raw)
 
     y = y.iloc[:, 0].astype(int)
-    A = X[PROTECTED].copy()
+    A = X[PROTECTED_SOURCE].copy()
+    # Derived for the audit only. It is not, and must not become, a feature.
+    A[INTERSECTION] = A["RAC1P"].astype(int) * 10 + A["SEX"].astype(int)
 
     for col in CATEGORICAL:
         X[col] = X[col].astype("category")
@@ -111,7 +118,7 @@ def load_splits(drop_protected: bool = False) -> dict[str, Split]:
 
     if drop_protected:
         splits = [
-            Split(s.name, s.X.drop(columns=PROTECTED), s.y, s.A) for s in splits
+            Split(s.name, s.X.drop(columns=PROTECTED_SOURCE), s.y, s.A) for s in splits
         ]
 
     return {s.name: s for s in splits}
@@ -120,5 +127,5 @@ def load_splits(drop_protected: bool = False) -> dict[str, Split]:
 def feature_columns(drop_protected: bool = False) -> list[str]:
     cols = NUMERIC + CATEGORICAL
     if drop_protected:
-        cols = [c for c in cols if c not in PROTECTED]
+        cols = [c for c in cols if c not in PROTECTED_SOURCE]
     return cols

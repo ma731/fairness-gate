@@ -65,6 +65,22 @@ fairness:
     max_demographic_parity_difference:
       fail: 0.45
       warn: 0.30
+  # Crossing two attributes mechanically widens every gap, because the extremes are
+  # drawn from more, smaller cells. Thresholds here are looser than the marginals on
+  # purpose; holding an intersection to the marginal limit would guarantee a red build
+  # that says nothing. What it is really for is catching a cell that is far worse than
+  # either of its marginals would suggest.
+  RACExSEX:
+    max_tpr_gap:
+      fail: 0.50
+      warn: 0.25
+    max_fpr_gap:
+      fail: 0.28
+      warn: 0.14
+    max_demographic_parity_difference:
+      fail: 0.55
+      warn: 0.38
+
   SEX:
     max_tpr_gap:
       fail: 0.20

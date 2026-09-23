@@ -38,4 +38,16 @@ RACE_LABELS = {
 
 SEX_LABELS = {1: "Male", 2: "Female"}
 
+# The crossed attribute. Code is race * 10 + sex, so 12 is "White alone, Female".
+# Auditing race and sex separately can show two acceptable marginals while a cell at
+# their intersection is far worse, which is the documented pattern in the literature and
+# the reason this exists.
+INTERSECTION = "RACExSEX"
+
+
+def intersection_label(code: int) -> str:
+    race = RACE_LABELS.get(code // 10, f"race {code // 10}")
+    sex = SEX_LABELS.get(code % 10, f"sex {code % 10}")
+    return f"{race}, {sex}"
+
 RANDOM_SEED = 20260922

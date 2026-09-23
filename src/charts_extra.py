@@ -27,6 +27,10 @@ def esc(t: object) -> str:
 
 
 def short(code: int, attribute: str) -> str:
+    if attribute == "RACExSEX":
+        race = RACE_SHORT.get(code // 10, f"race {code // 10}")
+        sex = "M" if code % 10 == 1 else "F"
+        return f"{race} {sex}"
     return (RACE_SHORT if attribute == "RAC1P" else SEX_SHORT).get(code, f"code {code}")
 
 
@@ -475,4 +479,88 @@ def interval_chart(result: dict, attribute: str = "RAC1P") -> str:
         f'<svg class="chart ivl" viewBox="0 0 {w} {h}" width="100%" role="img" '
         f'aria-label="recall with 95 percent intervals by {esc(attribute)}">'
         f"{grid}{rows}</svg>"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Intersection matrix: where two attributes cross
+# --------------------------------------------------------------------------- #
+def intersection_matrix(table, metric: str = "tpr") -> str:
+    """Race down, sex across, one cell per combination.
+
+    A grid, because the data is a grid. Auditing race and sex separately can leave two
+    acceptable marginals sitting on top of a cell that is much worse than either, and a
+    pair of bar charts cannot show that because it never puts the two axes together.
+
+    Cells below the reporting floor are drawn hatched rather than dropped. Their absence
+    is a finding: the groups most likely to be harmed are the ones a survey is least
+    likely to have enough of to say anything about.
+    """
+    sub = table[table["attribute"] == "RACExSEX"]
+    if sub.empty:
+        return '<p class="empty">No intersectional data.</p>'
+
+    races, seen = [], set()
+    for code in sorted(sub["code"].astype(int)):
+        r = code // 10
+        if r not in seen:
+            seen.add(r)
+            races.append(r)
+    sexes = [1, 2]
+
+    cell_w, cell_h, lab_w, top = 210, 62, 250, 52
+    w = lab_w + cell_w * len(sexes) + 150
+    h = top + cell_h * len(races) + 26
+
+    by_code = {int(r["code"]): r for _, r in sub.iterrows()}
+    vals = [float(r[metric]) for _, r in sub.iterrows() if r["reportable"]]
+    lo, hi = (min(vals), max(vals)) if vals else (0.0, 1.0)
+    rng = (hi - lo) or 1.0
+
+    head = "".join(
+        f'<text class="ax" x="{lab_w + i * cell_w + cell_w / 2}" y="{top - 18}" '
+        f'text-anchor="middle">{"Male" if sx == 1 else "Female"}</text>'
+        for i, sx in enumerate(sexes)
+    )
+
+    body = ""
+    for ri, race in enumerate(races):
+        y = top + ri * cell_h
+        body += (
+            f'<text class="gl" x="{lab_w - 18}" y="{y + cell_h / 2 + 4}" '
+            f'text-anchor="end">{esc(RACE_SHORT.get(race, str(race)))}</text>'
+        )
+        for si, sx in enumerate(sexes):
+            x = lab_w + si * cell_w
+            row = by_code.get(race * 10 + sx)
+            if row is None:
+                continue
+            if not bool(row["reportable"]):
+                body += (
+                    f'<g class="row"><rect class="cell muted-cell" x="{x + 3}" '
+                    f'y="{y + 3}" width="{cell_w - 6}" height="{cell_h - 6}" rx="6">'
+                    f'<title>{esc(row["group"])}: {int(row["n"]):,} people, below the '
+                    f"500-person reporting floor</title></rect>"
+                    f'<text class="cv sup" x="{x + cell_w / 2}" y="{y + cell_h / 2 + 4}" '
+                    f'text-anchor="middle">too few ({int(row["n"]):,})</text></g>'
+                )
+                continue
+            v = float(row[metric])
+            # low recall is the bad end, so invert for the shading intensity
+            heat = 1 - (v - lo) / rng
+            body += (
+                f'<g class="row"><rect class="cell bad" x="{x + 3}" y="{y + 3}" '
+                f'width="{cell_w - 6}" height="{cell_h - 6}" rx="6" '
+                f'style="--v:{heat:.3f}">'
+                f'<title>{esc(row["group"])}: recall {v:.3f} on {int(row["n"]):,} '
+                f"people</title></rect>"
+                f'<text class="cv" x="{x + cell_w / 2}" y="{y + cell_h / 2 - 1}" '
+                f'text-anchor="middle">{v:.3f}</text>'
+                f'<text class="cn" x="{x + cell_w / 2}" y="{y + cell_h / 2 + 15}" '
+                f'text-anchor="middle">{int(row["n"]):,}</text></g>'
+            )
+
+    return (
+        f'<svg class="chart heat xmat" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="recall by race and sex">{head}{body}</svg>'
     )

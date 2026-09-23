@@ -235,6 +235,14 @@ svg.tree .tml { fill:var(--ink); font-size:14px; font-weight:600; }
 svg.tree .tmn { fill:var(--ink); opacity:.72; font-size:13px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 
+/* intersection matrix */
+svg.xmat .muted-cell { fill:var(--ink); fill-opacity:.05; stroke:var(--hair-2);
+  stroke-width:1; stroke-dasharray:4 4; }
+svg.xmat .cn { fill:var(--mut); font-size:11px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.xmat .cv { font-size:15px; }
+svg.xmat .sup { fill:var(--mut); font-size:12px; font-weight:400; }
+
 /* intervals */
 svg.ivl .whisk { stroke:var(--s1); stroke-width:3; opacity:.55; }
 svg.ivl .cap { stroke:var(--s1); stroke-width:2; opacity:.8; }

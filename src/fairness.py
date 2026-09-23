@@ -21,7 +21,7 @@ from fairlearn.metrics import (
 )
 from sklearn.metrics import accuracy_score, roc_auc_score
 
-from src.config import RACE_LABELS, SEX_LABELS
+from src.config import INTERSECTION, RACE_LABELS, SEX_LABELS, intersection_label
 from src.model import expected_calibration_error
 
 # Groups smaller than this are reported but never used to draw a conclusion.
@@ -38,7 +38,14 @@ def group_table(
     y: np.ndarray, p: np.ndarray, pred: np.ndarray, groups: pd.Series, attribute: str
 ) -> pd.DataFrame:
     """Per-group performance, error rates and calibration."""
-    labels = RACE_LABELS if attribute == "RAC1P" else SEX_LABELS
+    if attribute == INTERSECTION:
+        def label_of(c):
+            return intersection_label(int(c))
+    else:
+        table_ = RACE_LABELS if attribute == "RAC1P" else SEX_LABELS
+
+        def label_of(c):
+            return table_.get(int(c), f"code {int(c)}")
 
     frame = MetricFrame(
         metrics={
@@ -60,7 +67,7 @@ def group_table(
             {
                 "attribute": attribute,
                 "code": int(code),
-                "group": labels.get(int(code), f"code {int(code)}"),
+                "group": label_of(code),
                 "n": n,
                 "base_rate": float(y[mask].mean()) if n else float("nan"),
                 "selection_rate": float(metrics["selection_rate"]),

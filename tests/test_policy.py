@@ -52,9 +52,14 @@ def test_gating_an_unaudited_attribute_is_fatal():
 
 
 def test_every_metric_in_the_real_policy_file_resolves():
-    """The shipped policy.yaml must be fully evaluable against a real audit summary."""
+    """The shipped policy.yaml must be fully evaluable against a real audit summary.
+
+    This also catches the reverse mistake: declaring a gate for an attribute the audit
+    does not produce. It fired when the crossed attribute was added to the policy, which
+    is exactly the point of it.
+    """
     policy = yaml.safe_load(POLICY_PATH.read_text(encoding="utf-8"))
-    summaries = [_summary("RAC1P"), _summary("SEX")]
+    summaries = [_summary("RAC1P"), _summary("SEX"), _summary("RACExSEX")]
     checks = pol.check_fairness(policy, summaries)
     declared = sum(len(m) for m in policy["fairness"].values())
     assert len(checks) == declared, "a declared fairness gate did not produce a check"
