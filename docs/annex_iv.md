@@ -5,7 +5,7 @@
 
 # Technical documentation (EU AI Act, Annex IV)
 
-Generated 2026-09-23T07:37:40+00:00 from commit `6215ba4` on Python 3.14.3.
+Generated 2026-09-23T07:55:08+00:00 from commit `e9b9e38` on Python 3.14.3.
 
 Trained on 2015, threshold chosen on 2016, evaluated on 2018.
 
@@ -19,7 +19,7 @@ Trained on 2015, threshold chosen on 2016, evaluated on 2018.
 An income classifier over US Census microdata. Intended purpose: none beyond
 demonstrating a policy-gated audit pipeline. No deployment, no users, no decisions.
 
-Provider: individual project. Version: commit `6215ba4`.
+Provider: individual project. Version: commit `e9b9e38`.
 
 ## 2. Elements of the system and its development
 
@@ -71,11 +71,28 @@ positive prediction unlocked.
 
 ## 5. Changes and trade-offs
 
-The most effective available mitigation for the equalised odds gap is per-group threshold
-optimisation. It is **not applied**, for a reason that belongs in this document rather
-than a footnote: it requires the protected attribute at inference time, which in many
-jurisdictions and use cases is either unlawful or a fresh harm of its own. Recording a
-mitigation that was rejected, and why, is part of the documentation.
+A mitigation was built, measured, and **not adopted**. Recording that with its numbers,
+rather than asserting it would be costly, is the point of this section.
+
+**What was tried.** One decision threshold per group, chosen on the validation year to
+equalise recall, then applied unchanged to the test year.
+
+| | recall gap | false positive gap | accuracy |
+|---|---:|---:|---:|
+| One threshold for everyone | 0.3119 | 0.1447 | 0.8021 |
+| One threshold per group | 0.1143 | 0.1956 | 0.7979 |
+
+**Why it was rejected, in order of weight.**
+
+1. It requires the protected attribute at the moment of prediction. The system must read
+   a person's race to decide which threshold applies to them. In the settings anyone
+   would actually want this for, that is either unlawful or is itself the harm.
+2. It moves the unfairness rather than removing it. The false positive gap rises from 0.1447 to 0.1956. With unequal base rates, equalising one error rate across groups necessarily unequalises another, which is the impossibility result rather than an implementation fault.
+3. The accuracy cost is small, 0.0042, and that is precisely
+   why the first two reasons have to be written down. By the number most projects
+   report, this looks nearly free.
+
+**What was also tried and does not work.** Sweeping the single global threshold across its whole range. The lowest recall gap any single cut achieves is 0.0342, at a threshold of 0.05 and an accuracy of 0.6022: it equalises groups by selecting almost everyone. That is not a mitigation, it is abandoning the model.
 
 ## 6. Validation and testing
 

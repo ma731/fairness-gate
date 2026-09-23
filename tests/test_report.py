@@ -87,10 +87,21 @@ def test_small_groups_are_never_in_a_reported_table(result, tables):
 
 
 def test_annex_iv_records_the_rejected_mitigation(result, tables):
-    """A mitigation considered and refused belongs in the documentation, with the why."""
-    text = report.annex_iv(result, tables)
-    assert "not applied" in text.lower()
-    assert "inference time" in text
+    """A mitigation considered and refused belongs in the documentation, with the why.
+
+    Asserts the substance rather than a turn of phrase: that the document says it was
+    rejected, names the reason that actually disqualifies it, and carries the measured
+    numbers instead of claiming a cost it never computed.
+    """
+    text = report.annex_iv(result, tables).lower()
+    assert "not adopted" in text or "not applied" in text
+    assert "moment of prediction" in text or "inference time" in text
+
+    mit = (result.get("mitigation") or {}).get("RAC1P") or {}
+    if mit:
+        # the numbers, not an adjective
+        assert f"{mit['per_group']['tpr_gap']:.4f}" in text
+        assert f"{mit['accuracy_cost']:.4f}" in text
 
 
 def test_dpia_states_the_residual_risk_is_unresolved(result):

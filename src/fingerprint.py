@@ -22,6 +22,7 @@ PIPELINE_SOURCES = [
     "src/fairness.py",
     "src/distributions.py",
     "src/uncertainty.py",
+    "src/mitigation.py",
     "src/dashboard.py",
     "src/pages.py",
     "src/theme.py",

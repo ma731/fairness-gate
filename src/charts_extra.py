@@ -567,3 +567,86 @@ def intersection_matrix(table, metric: str = "tpr") -> str:
         f'<svg class="chart heat xmat" viewBox="0 0 {w} {h}" width="100%" role="img" '
         f'aria-label="recall by race and sex">{head}{body}</svg>'
     )
+
+
+# --------------------------------------------------------------------------- #
+# The tradeoff frontier
+# --------------------------------------------------------------------------- #
+def tradeoff_curve(result: dict, attribute: str = "RAC1P") -> str:
+    """Accuracy against the recall gap, traced as the single threshold moves.
+
+    Every point on the line is the same model under a different global cut. The shape
+    is the argument: sliding one threshold does not buy fairness, it buys a worse model
+    that happens to select almost everyone. The per-group solution sits off the line
+    entirely, which is what "off the frontier" means, and it is marked separately
+    because it is not reachable by moving one number.
+    """
+    m = (result.get("mitigation") or {}).get(attribute) or {}
+    sweep = [s for s in (m.get("sweep") or []) if s.get("tpr_gap") is not None]
+    if not sweep:
+        return '<p class="empty">No mitigation data.</p>'
+
+    base, per = m.get("baseline") or {}, m.get("per_group") or {}
+    w, h = 780, 460
+    pad_l, pad_r, pad_t, pad_b = 72, 190, 26, 58
+    px, py = w - pad_l - pad_r, h - pad_t - pad_b
+
+    xs = [p["accuracy"] for p in sweep] + [base.get("accuracy", 0), per.get("accuracy", 0)]
+    ys = [p["tpr_gap"] for p in sweep] + [base.get("tpr_gap", 0), per.get("tpr_gap", 0)]
+    x0, x1 = min(xs) * 0.99, max(xs) * 1.005
+    y0, y1 = 0.0, max(ys) * 1.1
+
+    def X(v: float) -> float:
+        return round(pad_l + (v - x0) / (x1 - x0) * px, 1)
+
+    def Y(v: float) -> float:
+        return round(pad_t + (1 - (v - y0) / (y1 - y0)) * py, 1)
+
+    grid = ""
+    for t in (0, 0.25, 0.5, 0.75, 1.0):
+        gx, gy = pad_l + px * t, pad_t + py * t
+        grid += (
+            f'<line class="gr" x1="{gx}" y1="{pad_t}" x2="{gx}" y2="{pad_t + py}"/>'
+            f'<text class="ax" x="{gx}" y="{pad_t + py + 20}" text-anchor="middle">'
+            f"{x0 + (x1 - x0) * t:.2f}</text>"
+            f'<line class="gr" x1="{pad_l}" y1="{gy}" x2="{pad_l + px}" y2="{gy}"/>'
+            f'<text class="ax" x="{pad_l - 10}" y="{gy + 4}" text-anchor="end">'
+            f"{y1 - (y1 - y0) * t:.2f}</text>"
+        )
+
+    path = " ".join(f'{X(p["accuracy"])},{Y(p["tpr_gap"])}' for p in sweep)
+    dots = "".join(
+        f'<circle class="swp" cx="{X(p["accuracy"])}" cy="{Y(p["tpr_gap"])}" r="2.6">'
+        f'<title>threshold {p["threshold"]:.2f}: accuracy {p["accuracy"]:.3f}, '
+        f'gap {p["tpr_gap"]:.3f}</title></circle>'
+        for p in sweep
+    )
+
+    def marker(pt, cls, label, note):
+        if not pt:
+            return ""
+        cx, cy = X(pt["accuracy"]), Y(pt["tpr_gap"])
+        return (
+            f'<g class="row"><circle class="{cls}" cx="{cx}" cy="{cy}" r="8">'
+            f'<title>{label}: accuracy {pt["accuracy"]:.4f}, gap {pt["tpr_gap"]:.4f}'
+            f"</title></circle>"
+            f'<text class="mk" x="{cx + 14}" y="{cy - 2}">{label}</text>'
+            f'<text class="mkn" x="{cx + 14}" y="{cy + 13}">{note}</text></g>'
+        )
+
+    marks = (
+        marker(base, "mk-base", "Today",
+               f'gap {base.get("tpr_gap", 0):.3f}')
+        + marker(per, "mk-fix", "Per-group cuts",
+                 f'gap {per.get("tpr_gap", 0):.3f}, needs race at inference')
+    )
+
+    return (
+        f'<svg class="chart trade" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="accuracy against recall gap as the threshold moves">'
+        f'{grid}<polyline class="frontier" points="{path}"/>{dots}{marks}'
+        f'<text class="axt" x="{pad_l + px / 2}" y="{h - 12}" text-anchor="middle">'
+        f"Overall accuracy</text>"
+        f'<text class="axt" transform="translate(18,{pad_t + py / 2}) rotate(-90)" '
+        f'text-anchor="middle">Recall gap between groups</text></svg>'
+    )

@@ -235,6 +235,15 @@ svg.tree .tml { fill:var(--ink); font-size:14px; font-weight:600; }
 svg.tree .tmn { fill:var(--ink); opacity:.72; font-size:13px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 
+/* tradeoff frontier */
+svg.trade .frontier { fill:none; stroke:var(--s1); stroke-width:2; opacity:.55; }
+svg.trade .swp { fill:var(--s1); opacity:.5; }
+svg.trade .mk-base { fill:var(--warn); stroke:var(--surface); stroke-width:2; }
+svg.trade .mk-fix { fill:var(--acid); stroke:var(--surface); stroke-width:2; }
+svg.trade .mk { fill:var(--ink); font-size:13px; font-weight:600; }
+svg.trade .mkn { fill:var(--mut); font-size:11px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
 /* intersection matrix */
 svg.xmat .muted-cell { fill:var(--ink); fill-opacity:.05; stroke:var(--hair-2);
   stroke-width:1; stroke-dasharray:4 4; }

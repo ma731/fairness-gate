@@ -30,6 +30,7 @@ from src.data import PROTECTED, load_splits
 from src.distributions import build as build_distributions
 from src.fairness import audit
 from src.fingerprint import pipeline_fingerprint
+from src.mitigation import build as build_mitigation
 from src.model import baseline_rate, pick_threshold, predict_proba, score, train
 from src.report import write_all
 from src.uncertainty import build as build_uncertainty
@@ -64,9 +65,12 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
 
     scores, group_tables, summaries, dists = {}, {}, {}, {}
     uncertainty: dict = {}
+    mitigation: dict = {}
+    probs: dict = {}
     for name in ("val", "test", "shift"):
         split = splits[name]
         p = predict_proba(model, split)
+        probs[name] = p
         pred = (p >= threshold).astype(int)
         sc = score(split, p, threshold)
         scores[name] = sc.as_row() | {"majority_baseline": baseline_rate(split)}
@@ -90,6 +94,25 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
                 )
         print(f"  {name}: auc={sc.auc:.4f} ece={sc.ece:.4f} acc={sc.accuracy:.4f}",
               flush=True)
+
+    # What would it take to close the gap, and what does closing it cost?
+    for attr in PROTECTED:
+        table = group_tables["test"]
+        keep = set(table[(table["attribute"] == attr) & table["reportable"]]["code"])
+        if len(keep) < 2:
+            continue
+        mitigation[attr] = build_mitigation(
+            splits["val"].y, probs["val"], splits["val"].A,
+            splits["test"].y, probs["test"], splits["test"].A,
+            attr, keep, threshold,
+        )
+    print(
+        "  mitigation: gap "
+        f"{mitigation.get('RAC1P', {}).get('baseline', {}).get('tpr_gap')} -> "
+        f"{mitigation.get('RAC1P', {}).get('per_group', {}).get('tpr_gap')}, "
+        f"accuracy cost {mitigation.get('RAC1P', {}).get('accuracy_cost')}",
+        flush=True,
+    )
 
     policy = pol.load_policy()
 
@@ -137,6 +160,7 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
         "fairness": summaries,
         "distributions": dists,
         "uncertainty": uncertainty,
+        "mitigation": mitigation,
         "policy_verdict": pol.verdict(checks),
         "checks": pol.as_records(checks),
     }

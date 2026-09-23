@@ -220,6 +220,7 @@ Verdict: **{result['policy_verdict'].upper()}**. Thresholds are declared in `pol
 # --------------------------------------------------------------------------- #
 def annex_iv(result: dict, tables: dict[str, pd.DataFrame]) -> str:
     d = result["design"]
+    mit = (result.get("mitigation") or {}).get("RAC1P") or {}
     race = next(s for s in result["fairness"]["test"] if s["attribute"] == "RAC1P")
 
     return f"""{GENERATED_BANNER}
@@ -289,11 +290,28 @@ positive prediction unlocked.
 
 ## 5. Changes and trade-offs
 
-The most effective available mitigation for the equalised odds gap is per-group threshold
-optimisation. It is **not applied**, for a reason that belongs in this document rather
-than a footnote: it requires the protected attribute at inference time, which in many
-jurisdictions and use cases is either unlawful or a fresh harm of its own. Recording a
-mitigation that was rejected, and why, is part of the documentation.
+A mitigation was built, measured, and **not adopted**. Recording that with its numbers,
+rather than asserting it would be costly, is the point of this section.
+
+**What was tried.** One decision threshold per group, chosen on the validation year to
+equalise recall, then applied unchanged to the test year.
+
+| | recall gap | false positive gap | accuracy |
+|---|---:|---:|---:|
+| One threshold for everyone | {mit.get('baseline', {}).get('tpr_gap', 0):.4f} | {mit.get('baseline', {}).get('fpr_gap', 0):.4f} | {mit.get('baseline', {}).get('accuracy', 0):.4f} |
+| One threshold per group | {mit.get('per_group', {}).get('tpr_gap', 0):.4f} | {mit.get('per_group', {}).get('fpr_gap', 0):.4f} | {mit.get('per_group', {}).get('accuracy', 0):.4f} |
+
+**Why it was rejected, in order of weight.**
+
+1. It requires the protected attribute at the moment of prediction. The system must read
+   a person's race to decide which threshold applies to them. In the settings anyone
+   would actually want this for, that is either unlawful or is itself the harm.
+2. It moves the unfairness rather than removing it. The false positive gap rises from {mit.get('baseline', {}).get('fpr_gap', 0):.4f} to {mit.get('per_group', {}).get('fpr_gap', 0):.4f}. With unequal base rates, equalising one error rate across groups necessarily unequalises another, which is the impossibility result rather than an implementation fault.
+3. The accuracy cost is small, {mit.get('accuracy_cost', 0):.4f}, and that is precisely
+   why the first two reasons have to be written down. By the number most projects
+   report, this looks nearly free.
+
+**What was also tried and does not work.** Sweeping the single global threshold across its whole range. The lowest recall gap any single cut achieves is {(mit.get('best_global') or {}).get('tpr_gap', 0):.4f}, at a threshold of {(mit.get('best_global') or {}).get('threshold', 0):.2f} and an accuracy of {(mit.get('best_global') or {}).get('accuracy', 0):.4f}: it equalises groups by selecting almost everyone. That is not a mitigation, it is abandoning the model.
 
 ## 6. Validation and testing
 

@@ -32,6 +32,7 @@ from src.charts_extra import (
     ridgeline,
     sankey,
     short,
+    tradeoff_curve,
     treemap,
 )
 from src.pointfield import SCRIPT as FIELD_SCRIPT
@@ -597,6 +598,7 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
         (s for s in result["fairness"]["test"] if s["attribute"] == "RACExSEX"),
         {"fpr_gap": 0.0, "tpr_gap": 0.0},
     )
+    mt = (result.get("mitigation") or {}).get("RAC1P") or {}
     xcells = test[test["attribute"] == "RACExSEX"]
     xtotal = len(xcells)
     xsuppressed = int((~xcells["reportable"]).sum())
@@ -643,6 +645,7 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
     <li><a href="#certainty">Certainty</a></li>
     <li><a href="#groups">Groups</a></li>
     <li><a href="#flow">Flow</a></li>
+    <li><a href="#fix">The fix</a></li>
     <li><a href="#method">Method</a></li>
     <li><a href="#sources">Sources</a></li>
   </ul>
@@ -932,6 +935,66 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
       training entirely. Direction and size of the change at once, which two separate bar
       charts would make you compute in your head.</p>
     <div class="panel chartbox">{slope_chart(tables, 'RAC1P')}</div>
+  </div>
+</section>
+
+<div class="band" id="fix">
+  <div class="shell band-in reveal">
+    <p class="kicker">What it would take to fix</p>
+    <h2>The gap can be closed. Here is the bill.</h2>
+    <p class="say">Proving a disparity exists is the easy half. Every point on the line
+      is this same model under a different single threshold, and the shape is the
+      argument: sliding one cut does not buy fairness, it buys a worse model that selects
+      almost everybody. The lowest gap a single threshold reaches is
+      <b>{mt['best_global']['tpr_gap']:.3f}</b>, at a threshold of
+      {mt['best_global']['threshold']:.2f} and an accuracy of
+      {mt['best_global']['accuracy']:.3f}. That is not a fix, it is abandoning the
+      model.</p>
+    <div class="panel chartbox">{tradeoff_curve(result)}</div>
+  </div>
+</div>
+
+<section>
+  <div class="shell reveal">
+    <p class="kicker">The honest accounting</p>
+    <h2>Cheap in accuracy, expensive in everything else.</h2>
+    <p class="say">One threshold per group, chosen on the validation year to equalise
+      recall, closes most of the gap: <b>{mt['baseline']['tpr_gap']:.3f}</b> falls to
+      <b>{mt['per_group']['tpr_gap']:.3f}</b>. Accuracy pays
+      <b>{mt['accuracy_cost']:.4f}</b> for it, which is four tenths of a point. By the
+      only number most projects report, this is nearly free.</p>
+    <div class="numbers">
+      <div><div class="k">Recall gap, today</div>
+        <div class="v">{mt['baseline']['tpr_gap']:.3f}</div>
+        <div class="c">one threshold for everyone</div></div>
+      <div><div class="k">Recall gap, fixed</div>
+        <div class="v">{mt['per_group']['tpr_gap']:.3f}</div>
+        <div class="c">one threshold per group</div></div>
+      <div><div class="k">Accuracy paid</div>
+        <div class="v">{mt['accuracy_cost']:.4f}</div>
+        <div class="c">{mt['baseline']['accuracy']:.3f} to {mt['per_group']['accuracy']:.3f}</div></div>
+      <div><div class="k">False positive gap</div>
+        <div class="v">{mt['per_group']['fpr_gap']:.3f}</div>
+        <div class="c">was {mt['baseline']['fpr_gap']:.3f}, so it got worse</div></div>
+    </div>
+    <p class="say" style="margin-top:34px">Two things that accounting hides, and both
+      matter more than the accuracy.</p>
+    <p class="say">The false positive gap goes the other way, from
+      {mt['baseline']['fpr_gap']:.3f} to {mt['per_group']['fpr_gap']:.3f}. Equalising one
+      error rate across groups makes the other one less equal. This is not an
+      implementation detail, it is the impossibility result arriving in person: with
+      different base rates you are choosing which unfairness to keep, not removing
+      unfairness.</p>
+    <p class="say">And it needs the protected attribute <b>at the moment of
+      prediction</b>. A system doing this has to look at someone's race to decide which
+      threshold applies to them. In hiring, in lending, in most places anyone would
+      actually want this, that is either unlawful or is itself the harm. A mitigation
+      that only works by doing the thing you were trying to avoid belongs in the
+      documentation as a rejected option with its reasoning attached, which is where this
+      one is.</p>
+    <p class="note">Thresholds are chosen on the validation year and applied unchanged to
+      the test year, the same discipline as everything else here. Choosing them on the
+      test year would be fitting the fix to the exam.</p>
   </div>
 </section>
 
