@@ -850,36 +850,36 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
     <p class="kicker">Conclusion</p>
     <h2>Five things worth taking away.</h2>
     <div class="steps">
-      <div class="step">
+      <div class="step"><div>
         <h3>The gap is real</h3>
         <p>{fmt(race['tpr_gap'])} between the best and worst treated group. Deleting
           race and sex from the features leaves
           {unaware_cmp.get('share_remaining', 0):.0%} of it. Swapping the algorithm
           entirely leaves all of it.</p>
-      </div>
-      <div class="step">
+      </div></div>
+      <div class="step"><div>
         <h3>Accuracy will tell you nothing is wrong</h3>
         <p>It runs {fmt(float(sub['accuracy'].min()), 2)} to
           {fmt(float(sub['accuracy'].max()), 2)} across those same groups. A model can
           be equally accurate everywhere and still put its mistakes on the same people.</p>
-      </div>
-      <div class="step">
+      </div></div>
+      <div class="step"><div>
         <h3>Audit where attributes cross</h3>
         <p>False alarm gap {fmt(race['fpr_gap'])} by race, {fmt(sex['fpr_gap'])} by sex,
           {fmt(xsex.get('fpr_gap', 0))} by both together. One attribute at a time misses
           the cell that matters.</p>
-      </div>
-      <div class="step">
+      </div></div>
+      <div class="step"><div>
         <h3>The fix that works may not be usable</h3>
         <p>Per-group thresholds cut the gap to
           {fmt(float((mt.get('per_group') or {{}}).get('tpr_gap', 0)))}, need race at the
           moment of decision, and push the false alarm gap up. You are choosing which
           unfairness to keep, so choose it out loud.</p>
-      </div>
-      <div class="step">
+      </div></div>
+      <div class="step"><div>
         <h3>Put the limits where a build can read them</h3>
         <p>A standard in a document drifts. A standard that fails a build does not.</p>
-      </div>
+      </div></div>
     </div>
     <p class="note">The goal was never a model with no disparity. It was to measure the
       disparity, publish what closing it would cost, and say which cost I was not
