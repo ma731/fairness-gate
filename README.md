@@ -1,164 +1,223 @@
 # fairness-gate
 
-A CI gate for model fairness. Declared thresholds live in `policy.yaml`, an audit run
-measures the model against them, and a breach fails the build.
+I built a machine learning model, then built something that refuses to let me ship it
+quietly when it treats people unequally.
 
-The model underneath is an income classifier on real US Census data, trained on one year
-and tested on a later one. It is there to have something real to gate. The part that
-matters is the enforcement: the model card, the EU AI Act Annex IV documentation and the
-DPIA section are **generated from the audit run**, so a document cannot quietly stop being
-true about the model it describes, and a threshold cannot be loosened without it showing
-up in a diff someone has to approve.
-
-> **Status: in progress.** The pipeline, the audit, the generated documents and the gate
-> all work, and every number below is measured. Still to come: a mitigation with its cost
-> measured, and an LLM-drafted narrative layer whose numeric claims are verified against
-> the audit before they are allowed into a document. Nothing here is a product, and
-> nothing here should be used to make a decision about a real person.
-
-## The gate
-
-```bash
-python scripts/run_audit.py --gate     # full run, ~3 GB of data, exits non-zero on breach
-python scripts/check_policy.py         # seconds, no data, what CI runs on every commit
-```
-
-`policy.yaml` declares two levels for every metric. `fail` breaks the build. `warn` is the
-standard the project is actually aiming at. The current model sits between them on the
-race gaps, which is deliberate: pinning `fail` to wherever the model happens to land today
-would make the gate meaningless, and pinning it to the aspiration would mean a permanently
-red build that everyone learns to ignore. Both numbers are stated so the distance between
-"tolerated" and "wanted" is visible rather than quietly collapsed.
-
-The current run is **7 pass, 6 warn, 0 fail**.
-
-`scripts/check_policy.py` enforces three things on every commit:
-
-1. **The committed results still satisfy `policy.yaml`**, re-evaluated rather than trusted,
-   because the stored verdict was produced under whatever the policy said at the time.
-2. **Every document is exactly what the results generate.** The model card, Annex IV
-   document and DPIA are regenerated and compared byte for byte. Hand-edit a number in the
-   model card and the build fails. This is what makes "generated, not written" a fact
-   rather than a claim.
-3. **The results match the code that produced them**, by content fingerprint over the
-   pipeline files. Change the model and forget to re-run, and the results stop counting as
-   evidence about the code they sit next to.
-
-A scheduled workflow re-runs the whole thing monthly and opens an issue if a threshold
-breaks.
+> **Not a real system.** This predicts income from census answers, which is a standard
+> benchmark task. No decision about any actual person should be made with it. The model
+> is here so the safety machinery around it has something real to hold.
 
 ---
 
-## The task
+## First, in plain language
 
-Predict whether a person's annual income exceeds $50,000, from ten variables in the
-American Community Survey, via [folktables](https://github.com/socialfoundations/folktables).
+If you already know this, skip to [What I found](#what-i-found).
 
-Real survey responses, real outcomes, real demographics. No synthetic data anywhere, which
-matters because a fairness result computed on invented people measures nothing.
+**What a CI gate is.** CI stands for continuous integration. It is a robot that wakes up
+every time someone changes the code, runs a list of checks, and either says "fine" or
+refuses. Most teams use it to catch broken code: does it still compile, do the tests
+still pass. A *gate* is a check that can say no and stop everything.
 
-## How it is split, and why that way
+My idea was simple. Teams already refuse to ship code that fails a test. Almost nobody
+refuses to ship a model that fails a fairness check, because that check usually lives in
+a PDF someone wrote once and never opened again. So I put the fairness limits in a file
+next to the code, and wired them to the same robot. If the model starts treating one
+group meaningfully worse than another, the build turns red, exactly like a broken test.
+You cannot merge past it without someone editing the limits, and editing them leaves a
+mark in the history that a reviewer has to approve.
 
-| split | year | states | rows | positive rate |
-|---|---|---|---:|---:|
-| train | 2015 | CA, TX, NY, FL, IL | 576,014 | 0.346 |
-| validation | 2016 | same | 583,297 | 0.359 |
-| test | 2018 | same | 600,551 | 0.386 |
-| shift | 2018 | NV, MS, WV, ME | 43,101 | 0.302 |
+**What the model is doing.** It looks at ten facts about a person from a government
+survey (age, education, hours worked, occupation and so on) and guesses whether they earn
+more than $50,000. I know the real answer for every person, because the survey recorded
+it. So I can check not just whether the model is right overall, but *who it is wrong
+about*.
 
-Training on one year and testing on a later one makes the validation **temporal**, which
-is how the model would actually be used: fitted on the past, applied to the present. The
-held-out states add **geographic** shift on top.
+**A few words I use a lot:**
 
-Both shifts are real and visible in that table. The positive rate climbs from 0.346 to
-0.386 across the years, and the held-out states sit at 0.302. A single random split of one
-year would have hidden all of it.
+- **Recall** is the share of people who genuinely qualify that the model actually finds.
+  If a hundred people really do earn above the threshold and the model flags 54 of them,
+  recall is 54%. The other 46 are overlooked.
+- **False positive rate** is the opposite mistake: people flagged who should not have
+  been.
+- **Threshold** is the cut-off. The model outputs a probability, and I have to pick a line
+  above which it says yes. Moving the line trades one kind of mistake for the other.
+- **The gap** is just the difference between the best-treated group and the worst-treated
+  one on whichever of those measures we are talking about.
 
-Every threshold and every calibration decision is made on the validation year. The test
-year is read once, at the end.
+---
 
-## Performance
+## What I found
 
-| split | AUC | avg precision | Brier | ECE | accuracy | majority baseline |
-|---|---:|---:|---:|---:|---:|---:|
-| validation | 0.900 | 0.829 | 0.122 | 0.000 | 0.812 | 0.641 |
-| test | 0.888 | 0.824 | 0.133 | 0.026 | 0.802 | 0.614 |
-| shift | 0.864 | 0.736 | 0.136 | 0.035 | 0.771 | 0.698 |
+On 600,551 people in the year I held back for testing:
 
-**The validation ECE of 0.000 is not a result.** The calibrator was fitted on that split,
-so scoring it there measures nothing. The honest numbers are the ones after it: calibration
-error grows under temporal shift and grows again under geographic shift. Average precision
-falls hardest on the shifted states, which is what you would expect when the base rate
-drops and the positive class gets rarer.
+| | |
+|---|---|
+| Recall gap between racial groups | **0.312** (95% confidence interval 0.300 to 0.324) |
+| Accuracy across those same groups | 0.79 to 0.84, almost identical |
+| Qualifying people the model overlooks | **42,517** in a single survey year |
+| False positive gap, race on its own | 0.145 |
+| False positive gap, **race and sex together** | **0.221** |
+| Policy result | 16 checks: 7 pass, 9 warn, 0 fail |
 
-## Fairness audit
+Here is the sentence that made me keep going. **Out of every hundred people who genuinely
+earn above the threshold, the model finds 85 in one group and 54 in another.** And its
+accuracy is nearly the same for both.
 
-Test year, 600,551 people. Groups below 500 people are computed but marked unreportable.
+That is the trap. Accuracy is the number everyone reports, and by that number this model
+looks even-handed. It is not. It is equally accurate everywhere and it puts its mistakes
+on the same people every time. If you only ever check one number, this is invisible to
+you.
 
-**By race (RAC1P):**
+It gets worse when you stop looking at one thing at a time. Audit race on its own and the
+false positive gap is 0.145. Audit sex on its own and it is 0.080. Audit the two crossed
+together and it is **0.221**. Two acceptable averages, one much worse cell underneath
+them.
 
-| group | n | base rate | selection rate | TPR | FPR | accuracy |
-|---|---:|---:|---:|---:|---:|---:|
-| White alone | 434,022 | 0.411 | 0.477 | 0.833 | 0.228 | 0.797 |
-| Asian alone | 55,374 | 0.458 | 0.516 | 0.854 | 0.231 | 0.808 |
-| Black or African American alone | 49,941 | 0.277 | 0.315 | 0.709 | 0.165 | 0.800 |
-| Some other race alone | 40,106 | 0.188 | 0.172 | 0.542 | 0.086 | 0.844 |
-| Two or more races | 16,928 | 0.329 | 0.367 | 0.781 | 0.164 | 0.818 |
-| American Indian alone | 2,340 | 0.283 | 0.332 | 0.727 | 0.177 | 0.796 |
+## Can it be fixed?
 
-**Summary gaps:**
+I tried, and I published the bill instead of guessing at it.
 
-| attribute | demographic parity diff | equalised odds diff | TPR gap | FPR gap | calibration gap | base rate gap |
-|---|---:|---:|---:|---:|---:|---:|
-| race | 0.344 | 0.312 | 0.312 | 0.145 | 0.041 | 0.270 |
-| sex | 0.158 | 0.080 | 0.071 | 0.080 | 0.034 | 0.135 |
+| | recall gap | false positive gap | accuracy |
+|---|---:|---:|---:|
+| One threshold for everyone | 0.3119 | 0.1447 | 0.8021 |
+| One threshold per group | 0.1143 | 0.1956 | 0.7979 |
 
-### How to read this without lying
+Giving each group its own cut-off closes two thirds of the recall gap and costs four
+tenths of a point of accuracy. By the number most projects report, it is nearly free.
 
-More than one criterion is reported on purpose. Demographic parity, equalised odds and
-calibration **cannot all hold at once** when base rates differ across groups, and here they
-differ a lot: the base rate gap by race is 0.270. Any single number, quoted alone, is a
-choice about which unfairness to make invisible.
+**I still rejected it**, for two reasons that matter more than the accuracy:
 
-So the pack states which criterion the model fails and by how much, rather than picking the
-flattering one. The 0.344 parity difference substantially tracks a real difference in
-recorded outcomes. The 0.312 true positive rate gap does not have that excuse: among people
-who actually earn above the threshold, the model finds 85.4% of the Asian group and 54.2%
-of the "some other race" group. That is the number that would worry a reviewer, and it
-should.
+1. It needs to know the person's race **at the moment it decides**. The system has to
+   look at your race to pick which cut-off applies to you. In hiring or lending, that is
+   either illegal or is the exact harm you were trying to prevent.
+2. It moves the unfairness rather than removing it. The false positive gap goes *up*,
+   0.145 to 0.196. When groups genuinely differ in how often the outcome occurs, making
+   one type of error equal across groups forces the other type to become unequal. That is
+   a proved mathematical result, not a bug I could code my way out of. There is no
+   setting where everything is fair at once. You are choosing which unfairness to keep.
 
-Accuracy is roughly flat across groups, and is the least informative metric here. A model
-can be equally accurate everywhere and still distribute its errors in a way that matters.
+I also tried the obvious thing first: just move the one shared cut-off up and down until
+the gap closes. It does close, at a threshold of 0.05, where the model says yes to almost
+everybody and accuracy collapses to 0.602. That is not a fix. That is switching the model
+off and calling it fair.
 
-## What this does not claim
+Recording a fix that works and explaining why I would not ship it felt more honest than
+quietly not trying.
 
-- **It is not a deployable system**, and income prediction on census data is a benchmark,
-  not a product. Treat every number as a measurement of this pipeline, not advice about
-  anybody.
-- **Race and sex categories are Census Bureau recodes**, with the coarseness and the
-  politics that implies. "Some other race alone" is not a community; it is a residual.
-- **Small groups are reported but not concluded from.** Anything under 500 people is
-  marked unreportable and excluded from the summary gaps.
-- Nothing here measures the harm of a wrong decision, because that depends on what the
-  prediction would be used for, and this is used for nothing.
+---
 
-## Run it
+## How the gate works
+
+```bash
+python scripts/check_policy.py      # a few seconds, needs no data. This is what CI runs.
+python scripts/run_audit.py --gate  # the full run, ~3 GB of data, exits non-zero on a breach
+```
+
+`policy.yaml` is the whole point. It is a plain file listing every limit, in language you
+can argue with. Each metric has two levels: `fail` breaks the build, and `warn` is the
+standard I actually want to hit.
+
+The model currently sits *between* those two levels on the race gaps, and that is
+deliberate. If I set the failing limit to wherever the model happens to land today, the
+gate never fires and means nothing. If I set it to where I wish the model were, the build
+is permanently red and everyone learns to ignore it. Writing both numbers down keeps the
+distance between "tolerated" and "wanted" visible instead of quietly collapsing it.
+
+On every commit the gate checks three things:
+
+1. **The committed results still pass the policy**, recalculated rather than trusted,
+   because the saved verdict was produced under whatever the limits said at the time.
+2. **Every document still matches the numbers.** The model card, the EU AI Act
+   documentation, the privacy assessment and this whole website are regenerated from the
+   audit and compared character by character. If I hand-edit a number in any of them, the
+   build fails. That is what stops a document slowly becoming fiction.
+3. **The results match the code that produced them**, by hashing the pipeline files. If I
+   change the model and forget to re-run, the old results stop counting as evidence.
+
+**The gate will not fire on noise.** This one took me a while to get right. A gap measured
+on 180 people and one measured on 178,000 are not the same claim, and a build that goes
+red because of random chance is a build people learn to re-run until it passes. So a check
+only fails when the *entire* confidence interval is past the limit. If the estimate is
+over the line but the interval still straddles it, that is a warning that says so in
+words. Uncertainty can soften a failure. It can never invent one.
+
+There is also a scheduled job that re-runs everything monthly, commits the new numbers
+when they actually move, and opens an issue if a limit breaks.
+
+---
+
+## How I measured it, and why that way
+
+**I split the data by time, not at random.** Trained on 2015, tuned on 2016, tested on
+2018. That is how a model like this really gets used: built on the past, applied to the
+present. Shuffling one year and splitting it randomly would have looked better and told
+me nothing, because it hides the fact that the world moves.
+
+**I held four whole states out.** Never trained on them at all. Performance drops there,
+and I report the drop instead of pretending it does not happen.
+
+**Race and sex never go into the model.** They are kept to one side and used only to check
+the results. An attribute is protected whether or not the model is allowed to see it, so
+deleting it does not make the problem go away, it just makes it invisible. That is the
+mistake I most wanted to avoid.
+
+**I report three fairness measures, not one.** They contradict each other on purpose, and
+they cannot all be satisfied when groups genuinely differ in outcomes, which here they do.
+Picking one number to report would have been choosing which unfairness to hide.
+
+**Groups under 500 people are measured and then withheld.** A percentage from a few
+hundred people is mostly noise, and publishing it as a finding would be its own kind of
+harm. Six of the eighteen race-by-sex cells fall below that line and are drawn hatched
+rather than deleted, because the absence is the point: the groups most likely to be
+harmed are the ones a survey is least likely to have enough of to say anything about.
+
+---
+
+## What is in here
+
+```
+policy.yaml              the limits, in a file a non-engineer can read and argue with
+src/data.py              loading the census data, the four splits, attributes kept apart
+src/model.py             the model, the threshold, and calibrating its probabilities
+src/fairness.py          per-group metrics and the gaps between them
+src/uncertainty.py       confidence intervals; the gate runs on these, not point estimates
+src/mitigation.py        what fixing it would cost, and why I did not ship the fix
+src/distributions.py     the binned data the charts need
+src/policy.py            compares measured numbers to declared ones. Nothing else.
+src/report.py            model card, EU AI Act Annex IV, privacy assessment: all generated
+src/dashboard.py         the website
+src/charts_extra.py      the charts that need more than a summary row
+src/pointfield.py        the animated hero: one dot per person, no libraries
+scripts/run_audit.py     one command, every number
+scripts/check_policy.py  the gate
+docs/decisions/          why things are the way they are, including what I rejected
+```
+
+## Running it yourself
 
 ```bash
 pip install -r requirements-dev.txt
-python scripts/download_data.py      # ~3 GB of ACS CSVs, cached outside the repo
-python scripts/run_audit.py          # regenerates every number above
+python scripts/download_data.py   # ~3 GB of census files, cached outside the repo
+python scripts/run_audit.py       # regenerates every number and every document
+python -m pytest tests/ -q        # 45 tests, no data needed
 ```
 
-## Layout
+One trap if you contribute: CI runs Python 3.11 as well as 3.12, and some f-string syntax
+added in 3.12 parses fine locally while breaking the older job. Check against 3.11 before
+pushing. I learned that the slow way.
 
-```
-src/config.py      the experiment definition: states, years, seeds
-src/data.py        ACS loading, the four splits, protected attributes kept apart
-src/model.py       LightGBM, validation-year threshold, isotonic calibration
-src/fairness.py    per-group metrics and the disparity summaries
-scripts/           data download, audit run
-results/           generated measurements
-docs/              generated model card, Annex IV, DPIA
-tests/             leakage and metric-arithmetic tests
-```
+## The website
+
+`docs/index.html` is the evidence. Fifteen kinds of chart, and each one is there because
+it answers something a table cannot: a flow diagram because every person has to come out
+somewhere, a dot grid because the denominator is people, a tradeoff curve because the
+shape of the curve *is* the argument. I deliberately left out a couple of charts that
+would have looked impressive, like a chord diagram, because this data has nothing for
+them to show and a chart that encodes nothing is decoration pretending to be evidence.
+
+`docs/about.html` is the only page not generated from the data, and it says so on the
+page. It is me explaining why I think this matters.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
