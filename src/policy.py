@@ -102,7 +102,8 @@ def check_performance(policy: dict, scores: dict, majority: float) -> list[Check
     return checks
 
 
-def check_fairness(policy: dict, summaries: list[dict]) -> list[Check]:
+def check_fairness(policy: dict, summaries: list[dict],
+                   uncertainty: dict | None = None) -> list[Check]:
     """summaries: one dict per protected attribute, as produced by src.fairness."""
     by_attr = {s["attribute"]: s for s in summaries}
     checks = []
@@ -124,16 +125,46 @@ def check_fairness(policy: dict, summaries: list[dict]) -> list[Check]:
                     f"Available: {sorted(k for k in summary if k != 'attribute')}"
                 )
             measured = summary[key]
-            checks.append(
-                _evaluate(
-                    f"fairness.{attribute}.{metric}",
-                    metric,
-                    measured,
-                    bounds,
-                    _direction(metric),
-                )
+            check = _evaluate(
+                f"fairness.{attribute}.{metric}",
+                metric,
+                measured,
+                bounds,
+                _direction(metric),
             )
+
+            # Gate on the interval, not the point estimate. A gap of 0.312 measured on
+            # a few hundred people and one measured on four hundred thousand are not
+            # the same claim, and a build that goes red on sampling noise is a build
+            # everyone learns to re-run until it passes. So a FAIL requires the whole
+            # interval to clear the limit; a point estimate over it is a WARN, which
+            # says "probably too big, not yet certain".
+            ci = (uncertainty or {}).get(attribute, {}).get(_CI_KEY.get(metric, ""))
+            if ci and check.status == FAIL and check.fail_at is not None:
+                confident = (
+                    ci["lo"] > check.fail_at
+                    if check.direction == "max"
+                    else ci["hi"] < check.fail_at
+                )
+                if not confident:
+                    check.status = WARN
+                    check.note = (
+                        f"point estimate breaches the limit but the {ci['level']:.0%} "
+                        f"interval [{ci['lo']:.3f}, {ci['hi']:.3f}] does not clear it, "
+                        "so this is not yet distinguishable from noise"
+                    )
+            if ci and not check.note:
+                check.note = f"{ci['level']:.0%} CI [{ci['lo']:.3f}, {ci['hi']:.3f}]"
+
+            checks.append(check)
     return checks
+
+
+_CI_KEY = {
+    "max_tpr_gap": "tpr_gap",
+    "max_fpr_gap": "fpr_gap",
+    "max_demographic_parity_difference": "selection_gap",
+}
 
 
 def _summary_key(metric: str) -> str:

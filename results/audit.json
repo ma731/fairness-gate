@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-23T03:42:26+00:00",
-  "git_sha": "3628577",
+  "generated_at": "2026-09-23T03:53:03+00:00",
+  "git_sha": "7281d54",
   "python": "3.14.3",
-  "pipeline_fingerprint": "d37046e3f84d0ae8",
+  "pipeline_fingerprint": "5395bf378ea83a0f",
   "design": {
     "train_year": "2015",
     "val_year": "2016",
@@ -5430,6 +5430,154 @@
       }
     }
   },
+  "uncertainty": {
+    "RAC1P": {
+      "attribute": "RAC1P",
+      "level": 0.95,
+      "draws": 4000,
+      "tpr_gap": {
+        "point": 0.3119,
+        "lo": 0.3001,
+        "hi": 0.3241,
+        "level": 0.95,
+        "draws": 4000
+      },
+      "fpr_gap": {
+        "point": 0.1447,
+        "lo": 0.1401,
+        "hi": 0.152,
+        "level": 0.95,
+        "draws": 4000
+      },
+      "selection_gap": {
+        "point": 0.3445,
+        "lo": 0.3388,
+        "hi": 0.35,
+        "level": 0.95,
+        "draws": 4000
+      },
+      "tpr_by_group": [
+        {
+          "code": 5,
+          "group": "American Indian and Alaska Native tribes specified",
+          "qualifying": 180,
+          "tpr": 0.6944,
+          "lo": 0.6237,
+          "hi": 0.7571,
+          "width": 0.1334
+        },
+        {
+          "code": 7,
+          "group": "Native Hawaiian and Other Pacific Islander alone",
+          "qualifying": 263,
+          "tpr": 0.7186,
+          "lo": 0.6614,
+          "hi": 0.7695,
+          "width": 0.1081
+        },
+        {
+          "code": 3,
+          "group": "American Indian alone",
+          "qualifying": 662,
+          "tpr": 0.7266,
+          "lo": 0.6914,
+          "hi": 0.7592,
+          "width": 0.0678
+        },
+        {
+          "code": 8,
+          "group": "Some other race alone",
+          "qualifying": 7548,
+          "tpr": 0.542,
+          "lo": 0.5307,
+          "hi": 0.5532,
+          "width": 0.0225
+        },
+        {
+          "code": 9,
+          "group": "Two or more races",
+          "qualifying": 5570,
+          "tpr": 0.7813,
+          "lo": 0.7703,
+          "hi": 0.792,
+          "width": 0.0217
+        },
+        {
+          "code": 2,
+          "group": "Black or African American alone",
+          "qualifying": 13816,
+          "tpr": 0.7089,
+          "lo": 0.7013,
+          "hi": 0.7164,
+          "width": 0.0151
+        },
+        {
+          "code": 6,
+          "group": "Asian alone",
+          "qualifying": 25376,
+          "tpr": 0.8539,
+          "lo": 0.8495,
+          "hi": 0.8582,
+          "width": 0.0087
+        },
+        {
+          "code": 1,
+          "group": "White alone",
+          "qualifying": 178373,
+          "tpr": 0.8329,
+          "lo": 0.8312,
+          "hi": 0.8346,
+          "width": 0.0035
+        }
+      ]
+    },
+    "SEX": {
+      "attribute": "SEX",
+      "level": 0.95,
+      "draws": 4000,
+      "tpr_gap": {
+        "point": 0.071,
+        "lo": 0.0677,
+        "hi": 0.0744,
+        "level": 0.95,
+        "draws": 4000
+      },
+      "fpr_gap": {
+        "point": 0.0802,
+        "lo": 0.0776,
+        "hi": 0.0829,
+        "level": 0.95,
+        "draws": 4000
+      },
+      "selection_gap": {
+        "point": 0.1575,
+        "lo": 0.1551,
+        "hi": 0.16,
+        "level": 0.95,
+        "draws": 4000
+      },
+      "tpr_by_group": [
+        {
+          "code": 2,
+          "group": "Female",
+          "qualifying": 90718,
+          "tpr": 0.7733,
+          "lo": 0.7706,
+          "hi": 0.776,
+          "width": 0.0054
+        },
+        {
+          "code": 1,
+          "group": "Male",
+          "qualifying": 141078,
+          "tpr": 0.8444,
+          "lo": 0.8425,
+          "hi": 0.8463,
+          "width": 0.0038
+        }
+      ]
+    }
+  },
   "policy_verdict": "warn",
   "checks": [
     {
@@ -5470,7 +5618,7 @@
       "warn_at": 0.15,
       "direction": "max",
       "status": "warn",
-      "note": ""
+      "note": "95% CI [0.300, 0.324]"
     },
     {
       "name": "fairness.RAC1P.max_fpr_gap",
@@ -5480,7 +5628,7 @@
       "warn_at": 0.1,
       "direction": "max",
       "status": "warn",
-      "note": ""
+      "note": "95% CI [0.140, 0.152]"
     },
     {
       "name": "fairness.RAC1P.max_calibration_gap",
@@ -5500,7 +5648,7 @@
       "warn_at": 0.3,
       "direction": "max",
       "status": "warn",
-      "note": ""
+      "note": "95% CI [0.339, 0.350]"
     },
     {
       "name": "fairness.SEX.max_tpr_gap",
@@ -5510,7 +5658,7 @@
       "warn_at": 0.08,
       "direction": "max",
       "status": "pass",
-      "note": ""
+      "note": "95% CI [0.068, 0.074]"
     },
     {
       "name": "fairness.SEX.max_fpr_gap",
@@ -5520,7 +5668,7 @@
       "warn_at": 0.08,
       "direction": "max",
       "status": "warn",
-      "note": ""
+      "note": "95% CI [0.078, 0.083]"
     },
     {
       "name": "fairness.SEX.max_calibration_gap",
@@ -5540,7 +5688,7 @@
       "warn_at": 0.15,
       "direction": "max",
       "status": "warn",
-      "note": ""
+      "note": "95% CI [0.155, 0.160]"
     },
     {
       "name": "shift.auc",

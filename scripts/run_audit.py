@@ -32,6 +32,7 @@ from src.fairness import audit
 from src.fingerprint import pipeline_fingerprint
 from src.model import baseline_rate, pick_threshold, predict_proba, score, train
 from src.report import write_all
+from src.uncertainty import build as build_uncertainty
 
 
 def _git_sha() -> str:
@@ -62,6 +63,7 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
     print(f"  threshold chosen on {VAL_YEAR}: {threshold:.4f}", flush=True)
 
     scores, group_tables, summaries, dists = {}, {}, {}, {}
+    uncertainty: dict = {}
     for name in ("val", "test", "shift"):
         split = splits[name]
         p = predict_proba(model, split)
@@ -75,6 +77,10 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
             # Distribution series for the charts that need more than a summary row.
             # Only groups above the reporting floor, so nothing noisy gets drawn.
             dists[name] = {}
+            if name == "test":
+                uncertainty.update(
+                    {attr: build_uncertainty(table, attr) for attr in PROTECTED}
+                )
             for attr in PROTECTED:
                 keep = set(
                     table[(table["attribute"] == attr) & table["reportable"]]["code"]
@@ -105,7 +111,7 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
 
     checks = (
         pol.check_performance(policy, scores["test"], scores["test"]["majority_baseline"])
-        + pol.check_fairness(policy, summaries["test"])
+        + pol.check_fairness(policy, summaries["test"], uncertainty)
         + pol.check_shift_canary(
             policy, scores["shift"], race_test["tpr_gap"], race_shift["tpr_gap"]
         )
@@ -130,6 +136,7 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
         "scores": scores,
         "fairness": summaries,
         "distributions": dists,
+        "uncertainty": uncertainty,
         "policy_verdict": pol.verdict(checks),
         "checks": pol.as_records(checks),
     }

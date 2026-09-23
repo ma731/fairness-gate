@@ -26,6 +26,7 @@ import pandas as pd
 
 from src.charts_extra import (
     confusion_heatmap,
+    interval_chart,
     reliability,
     ridgeline,
     sankey,
@@ -59,7 +60,7 @@ def pct(v: float) -> str:
 # --------------------------------------------------------------------------- #
 # Charts
 # --------------------------------------------------------------------------- #
-def bullet(check: dict, width: int = 720) -> str:
+def bullet(check: dict, width: int = 720, ci: dict | None = None) -> str:
     """A policy check: measured fill, dashed target tick, solid limit tick.
 
     A bullet bar rather than a gauge because the question is not "how full" but "where
@@ -83,13 +84,25 @@ def bullet(check: dict, width: int = 720) -> str:
             f'<title>{label} {fmt(value)}</title></g>'
         )
 
+    # A shaded band for the interval, so the eye sees how much of the bar is certain.
+    band = ""
+    if ci and ci.get("lo") is not None:
+        bx, bw = x(ci["lo"]), max(x(ci["hi"]) - x(ci["lo"]), 1.0)
+        band = (
+            f'<rect class="ci" x="{bx}" y="3" width="{bw}" height="14" rx="3">'
+            f'<title>{ci["level"]:.0%} interval [{ci["lo"]:.3f}, {ci["hi"]:.3f}]'
+            f"</title></rect>"
+            f'<line class="ci-cap" x1="{bx}" y1="3" x2="{bx}" y2="17"/>'
+            f'<line class="ci-cap" x1="{bx + bw}" y1="3" x2="{bx + bw}" y2="17"/>'
+        )
+
     return (
         f'<svg class="bullet" viewBox="0 0 {width} 20" width="100%" height="20" '
         f'preserveAspectRatio="none" role="img" aria-label="measured {fmt(measured, 4)}">'
         f'<rect class="trk" x="0" y="6" width="{width}" height="8" rx="4"/>'
         f'<rect class="fil s-{check["status"]}" x="0" y="6" width="{x(measured)}" '
         f'height="8" rx="4"><title>measured {fmt(measured, 4)}</title></rect>'
-        f"{ticks}</svg>"
+        f"{band}{ticks}</svg>"
     )
 
 
@@ -518,6 +531,23 @@ def _controls() -> str:
     )
 
 
+_CI_FOR = {
+    "max_tpr_gap": "tpr_gap",
+    "max_fpr_gap": "fpr_gap",
+    "max_demographic_parity_difference": "selection_gap",
+}
+
+
+def _ci_for(result: dict, check: dict) -> dict | None:
+    parts = check["name"].split(".")
+    if len(parts) != 3 or parts[0] != "fairness":
+        return None
+    key = _CI_FOR.get(parts[2])
+    if not key:
+        return None
+    return ((result.get("uncertainty") or {}).get(parts[1]) or {}).get(key) or None
+
+
 def _checks(result: dict) -> str:
     order = {"fail": 0, "warn": 1, "pass": 2}
     out = ""
@@ -529,10 +559,12 @@ def _checks(result: dict) -> str:
             f'<li class="chk s-{c["status"]}">'
             f'<div class="chk-top"><code>{esc(name)}</code>'
             f'<span class="tag">{STATUS_LABEL[c["status"]]}</span></div>'
-            f"{bullet(c)}"
+            f"{bullet(c, ci=_ci_for(result, c))}"
             f'<div class="chk-bot"><span class="big">{fmt(c["measured"], 4)}</span>'
             f'<span class="mut">target {target}</span>'
-            f'<span class="mut">limit {limit}</span></div></li>'
+            f'<span class="mut">limit {limit}</span>'
+            + (f'<span class="mut ci-note">{esc(c["note"])}</span>' if c.get("note") else "")
+            + "</div></li>"
         )
     return out
 
@@ -599,6 +631,7 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   <ul>
     <li><a href="#cost">Who it misses</a></li>
     <li><a href="#checks">Checks</a></li>
+    <li><a href="#certainty">Certainty</a></li>
     <li><a href="#groups">Groups</a></li>
     <li><a href="#flow">Flow</a></li>
     <li><a href="#method">Method</a></li>
@@ -724,6 +757,22 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
     <div class="panel"><ul class="checks">{_checks(result)}</ul></div>
   </div>
 </div>
+
+<section id="certainty">
+  <div class="shell reveal">
+    <p class="kicker">How much to trust these numbers</p>
+    <h2>Three decimals do not mean three decimals.</h2>
+    <p class="say">Every other chart here prints rates to the same precision whatever the
+      group size. This one shows what that precision is worth. The dot is the measured
+      recall, the bar is the 95% interval, and the groups are ordered by how uncertain
+      they are, so the caveat arrives before the ranking.</p>
+    <p class="say">This is also what the gate now runs on. A check fails only when the
+      whole interval clears the declared limit. A point estimate over the line with an
+      interval straddling it is a warning instead, because a build that goes red on
+      sampling noise is a build people learn to re-run until it passes.</p>
+    <div class="panel chartbox">{interval_chart(result)}</div>
+  </div>
+</section>
 
 <section id="groups">
   <div class="shell reveal">

@@ -158,6 +158,8 @@ section { padding:104px 0; }
 .chk-bot { display:flex; align-items:baseline; gap:22px; margin-top:10px; font-size:12px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--mut); }
 .chk-bot .big { font-size:16px; color:var(--ink); letter-spacing:-.02em; }
+.chk-bot .ci-note { flex:1 1 100%; margin-top:4px; font-size:11.5px; opacity:.85;
+  font-family:ui-sans-serif,system-ui,sans-serif; letter-spacing:0; }
 svg.bullet { display:block; }
 svg.bullet .trk { fill:var(--grid); }
 svg.bullet .fil { transition:width 480ms cubic-bezier(.23,1,.32,1); }
@@ -167,6 +169,9 @@ svg.bullet .fil { transition:width 480ms cubic-bezier(.23,1,.32,1); }
 svg.bullet line { stroke:var(--ink); stroke-width:2; vector-effect:non-scaling-stroke; }
 svg.bullet .t-warn line { opacity:.4; stroke-dasharray:3 3; }
 svg.bullet .t-fail line { opacity:.75; }
+svg.bullet .ci { fill:var(--ink); opacity:.22; }
+svg.bullet .ci-cap { stroke:var(--ink); stroke-width:1.5; opacity:.5;
+  vector-effect:non-scaling-stroke; }
 
 /* controls */
 .controls { display:flex; align-items:center; gap:26px; flex-wrap:wrap; margin:0 0 24px; }
@@ -229,6 +234,11 @@ svg.tree .tm { fill:var(--s1); fill-opacity:calc(.2 + var(--v) * .7);
 svg.tree .tml { fill:var(--ink); font-size:14px; font-weight:600; }
 svg.tree .tmn { fill:var(--ink); opacity:.72; font-size:13px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+/* intervals */
+svg.ivl .whisk { stroke:var(--s1); stroke-width:3; opacity:.55; }
+svg.ivl .cap { stroke:var(--s1); stroke-width:2; opacity:.8; }
+svg.ivl .pt { fill:var(--acid); }
 
 /* reliability, faceted: one small panel per group on identical axes */
 svg.relf .facet { fill:var(--raised); stroke:var(--hair); stroke-width:1; }

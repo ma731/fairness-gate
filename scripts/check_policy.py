@@ -74,7 +74,7 @@ def check_thresholds(result: dict) -> bool:
 
     checks = (
         pol.check_performance(policy, scores, scores["majority_baseline"])
-        + pol.check_fairness(policy, summaries)
+        + pol.check_fairness(policy, summaries, result.get("uncertainty"))
         + pol.check_shift_canary(
             policy, result["scores"]["shift"], race_test["tpr_gap"], race_shift["tpr_gap"]
         )

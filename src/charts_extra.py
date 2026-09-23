@@ -412,3 +412,67 @@ def ridgeline(result: dict, split: str = "test", attribute: str = "RAC1P") -> st
         f'<text class="axt" x="{lab_w + plot_w / 2}" y="{h - 1}" text-anchor="middle">'
         f"Predicted probability</text></svg>"
     )
+
+
+# --------------------------------------------------------------------------- #
+# Intervals: what the precision is actually worth
+# --------------------------------------------------------------------------- #
+def interval_chart(result: dict, attribute: str = "RAC1P") -> str:
+    """Per-group recall with its 95% interval, ordered by how uncertain it is.
+
+    The chart that stops a reader trusting three decimal places equally. Every other
+    chart here prints rates to the same precision whatever the group size; this one
+    shows what that precision is worth. The widest bars are the smallest groups, and
+    they sit at the top so the caveat arrives before the ranking.
+    """
+    u = (result.get("uncertainty") or {}).get(attribute) or {}
+    groups = u.get("tpr_by_group") or []
+    if not groups:
+        return '<p class="empty">No interval data.</p>'
+
+    row_h, lab_w, pad_r, plot_w = 46, 190, 150, 520
+    h = len(groups) * row_h + 48
+    w = lab_w + plot_w + pad_r
+    lo = min(min(g["lo"] for g in groups), 0.45)
+    hi = max(max(g["hi"] for g in groups), 0.9)
+    span = hi - lo or 1.0
+
+    def X(v: float) -> float:
+        return round(lab_w + (v - lo) / span * plot_w, 1)
+
+    grid = ""
+    for t in (0, 0.25, 0.5, 0.75, 1.0):
+        v = lo + span * t
+        gx = X(v)
+        grid += (
+            f'<line class="gr" x1="{gx}" y1="28" x2="{gx}" y2="{h - 18}"/>'
+            f'<text class="ax" x="{gx}" y="18" text-anchor="middle">{v:.2f}</text>'
+        )
+
+    rows = ""
+    for i, g in enumerate(groups):
+        cy = 44 + i * row_h
+        x0, x1, xc = X(g["lo"]), X(g["hi"]), X(g["tpr"])
+        rows += (
+            f'<g class="row">'
+            f'<text class="gl" x="{lab_w - 16}" y="{cy - 3}" text-anchor="end">'
+            f'{esc(short(g["code"], attribute))}'
+            f'<title>{esc(g["group"])}</title></text>'
+            f'<text class="gn" x="{lab_w - 16}" y="{cy + 14}" text-anchor="end">'
+            f'{g["qualifying"]:,} qualify</text>'
+            f'<line class="whisk" x1="{x0}" y1="{cy}" x2="{x1}" y2="{cy}"/>'
+            f'<line class="cap" x1="{x0}" y1="{cy - 7}" x2="{x0}" y2="{cy + 7}"/>'
+            f'<line class="cap" x1="{x1}" y1="{cy - 7}" x2="{x1}" y2="{cy + 7}"/>'
+            f'<circle class="pt" cx="{xc}" cy="{cy}" r="5">'
+            f'<title>{esc(g["group"])}: {g["tpr"]:.3f}, 95% interval '
+            f'[{g["lo"]:.3f}, {g["hi"]:.3f}] on {g["qualifying"]:,} qualifying people'
+            f"</title></circle>"
+            f'<text class="vl" x="{x1 + 13}" y="{cy + 4}">&#177;{g["width"] / 2:.3f}</text>'
+            f"</g>"
+        )
+
+    return (
+        f'<svg class="chart ivl" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="recall with 95 percent intervals by {esc(attribute)}">'
+        f"{grid}{rows}</svg>"
+    )
