@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-23T13:29:44+00:00",
-  "git_sha": "21b8c3d",
+  "generated_at": "2026-09-23T20:10:48+00:00",
+  "git_sha": "8a619a4",
   "python": "3.14.3",
-  "pipeline_fingerprint": "e2aef5d440ff2808",
+  "pipeline_fingerprint": "fb264eaa04ed7ed5",
   "design": {
     "train_year": "2015",
     "val_year": "2016",
@@ -13072,6 +13072,86 @@
       "direction": "max",
       "status": "pass",
       "note": "test gap 0.3119, shift gap 0.3910"
+    },
+    {
+      "name": "regression.auc_drop",
+      "metric": "max_auc_drop",
+      "measured": 0.0,
+      "fail_at": 0.01,
+      "warn_at": null,
+      "direction": "max",
+      "status": "pass",
+      "note": ""
+    },
+    {
+      "name": "regression.ece_increase",
+      "metric": "max_ece_increase",
+      "measured": 0.0,
+      "fail_at": 0.01,
+      "warn_at": null,
+      "direction": "max",
+      "status": "pass",
+      "note": ""
+    },
+    {
+      "name": "regression.RAC1P.tpr_gap",
+      "metric": "max_gap_increase",
+      "measured": 0.0,
+      "fail_at": 0.02,
+      "warn_at": null,
+      "direction": "max",
+      "status": "pass",
+      "note": ""
+    },
+    {
+      "name": "regression.SEX.tpr_gap",
+      "metric": "max_gap_increase",
+      "measured": 0.0,
+      "fail_at": 0.02,
+      "warn_at": null,
+      "direction": "max",
+      "status": "pass",
+      "note": ""
+    },
+    {
+      "name": "regression.RACExSEX.tpr_gap",
+      "metric": "max_gap_increase",
+      "measured": 0.0,
+      "fail_at": 0.02,
+      "warn_at": null,
+      "direction": "max",
+      "status": "pass",
+      "note": ""
+    },
+    {
+      "name": "regression.RAC1P.fpr_gap",
+      "metric": "max_gap_increase",
+      "measured": 0.0,
+      "fail_at": 0.02,
+      "warn_at": null,
+      "direction": "max",
+      "status": "pass",
+      "note": ""
+    },
+    {
+      "name": "regression.SEX.fpr_gap",
+      "metric": "max_gap_increase",
+      "measured": 0.0,
+      "fail_at": 0.02,
+      "warn_at": null,
+      "direction": "max",
+      "status": "pass",
+      "note": ""
+    },
+    {
+      "name": "regression.RACExSEX.fpr_gap",
+      "metric": "max_gap_increase",
+      "measured": 0.0,
+      "fail_at": 0.02,
+      "warn_at": null,
+      "direction": "max",
+      "status": "pass",
+      "note": ""
     }
   ]
 }

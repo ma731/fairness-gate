@@ -584,7 +584,7 @@ body { padding-top:0; }
 
     /* charts wipe in from the left, which reads as the bars being drawn */
     .chartbox svg.chart { animation:wipe cubic-bezier(.23,1,.32,1) both;
-      animation-timeline:view(); animation-range:entry 8% cover 26%; }
+      animation-timeline:view(); animation-range:entry 8% entry 70%; }
 
     /* the acid wall lifts in rather than cutting */
     .acid-in { animation:liftin cubic-bezier(.23,1,.32,1) both;
@@ -611,8 +611,10 @@ body { padding-top:0; }
    simply visible: an entrance animation must never be load-bearing for legibility. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
+    /* measured on entry, not cover: cover scales with the element's height, so a tall
+       section was still half faded when its heading reached the top of the screen */
     .reveal { animation:rise both; animation-timeline:view();
-      animation-range:entry 0% cover 20%; }
+      animation-range:entry 0% entry 40%; }
     .cost svg.dots .on { animation:pop 420ms cubic-bezier(.23,1,.32,1) both;
       animation-delay:var(--d,0ms); animation-timeline:view();
       animation-range:entry 0% cover 16%; }

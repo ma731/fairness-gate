@@ -8,6 +8,7 @@ diff someone has to approve, not in a function nobody reads.
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -58,6 +59,20 @@ class Check:
 def load_policy(path: Path | None = None) -> dict:
     with open(path or POLICY_PATH, encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def load_baseline(path: Path | None = None) -> dict | None:
+    target = path or BASELINE_PATH
+    if not target.exists():
+        return None
+    return json.loads(target.read_text(encoding="utf-8"))
+
+
+def regression_inputs(scores_test: dict, summaries_test: list[dict]) -> dict:
+    """The numbers the regression guard compares against the baseline."""
+    gaps = {f"{s['attribute']}.tpr_gap": s["tpr_gap"] for s in summaries_test}
+    gaps |= {f"{s['attribute']}.fpr_gap": s["fpr_gap"] for s in summaries_test}
+    return {"auc": scores_test["auc"], "ece": scores_test["ece"], "gaps": gaps}
 
 
 def _evaluate(name, metric, measured, bounds, direction) -> Check:
@@ -198,10 +213,22 @@ def check_shift_canary(policy: dict, shift_scores: dict, test_gap: float,
 
 
 def check_regression(policy: dict, current: dict, baseline: dict | None) -> list[Check]:
-    """Compare against the committed baseline. No baseline means nothing to regress from."""
+    """Compare against the committed baseline.
+
+    A declared guard with no baseline is reported, not skipped. It silently did nothing
+    for this project's first day because results/baseline.json was never recorded.
+    """
     rules = policy.get("regression")
-    if not rules or not baseline:
+    if not rules:
         return []
+    if not baseline:
+        return [Check(
+            name="regression.baseline", metric="baseline", measured=0.0,
+            fail_at=None, warn_at=None, direction="max", status=WARN,
+            note=("policy.yaml declares a regression guard but there is no "
+                  "results/baseline.json, so it cannot run. Record one with "
+                  "scripts/run_audit.py --set-baseline."),
+        )]
 
     checks = []
     auc_drop = baseline["auc"] - current["auc"]

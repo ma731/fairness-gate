@@ -3,6 +3,11 @@
 I built a machine learning model, then built something that refuses to let me ship it
 quietly when it treats people unequally.
 
+**[See the live site](https://ma731.github.io/fairness-gate/)**
+
+![A tour of the site: the finding, who the model misses, the checks, the charts, the fix
+it refused, and the voice panel](docs/assets/tour.gif)
+
 > **Not a real system.** This predicts income from census answers, which is a standard
 > benchmark task. No decision about any actual person should be made with it. The model
 > is here so the safety machinery around it has something real to hold.
@@ -57,7 +62,7 @@ On 600,551 people in the year I held back for testing:
 | Qualifying people the model overlooks | **42,517** in a single survey year |
 | False positive gap, race on its own | 0.145 |
 | False positive gap, **race and sex together** | **0.221** |
-| Policy result | 16 checks: 7 pass, 9 warn, 0 fail |
+| Policy result | 24 checks: 15 pass, 9 warn, 0 fail (8 compare against a recorded baseline) |
 
 Here is the sentence that made me keep going. **Out of every hundred people who genuinely
 earn above the threshold, the model finds 85 in one group and 54 in another.** And its
@@ -123,7 +128,7 @@ gate never fires and means nothing. If I set it to where I wish the model were, 
 is permanently red and everyone learns to ignore it. Writing both numbers down keeps the
 distance between "tolerated" and "wanted" visible instead of quietly collapsing it.
 
-On every commit the gate checks three things:
+On every commit the gate checks four things:
 
 1. **The committed results still pass the policy**, recalculated rather than trusted,
    because the saved verdict was produced under whatever the limits said at the time.
@@ -133,6 +138,10 @@ On every commit the gate checks three things:
    build fails. That is what stops a document slowly becoming fiction.
 3. **The results match the code that produced them**, by hashing the pipeline files. If I
    change the model and forget to re-run, the old results stop counting as evidence.
+4. **Nothing got worse since the recorded baseline.** Any gap that widens by more than
+   0.020 fails, even if it's still inside its limit. The limits were set after I'd seen
+   the results, so this is what stops them being quietly used up. See
+   [decision 0007](docs/decisions/0007-how-the-limits-were-chosen.md).
 
 **The gate will not fire on noise.** This one took me a while to get right. A gap measured
 on 180 people and one measured on 178,000 are not the same claim, and a build that goes
@@ -209,6 +218,12 @@ withheld groups stay withheld, the fix is never described as shipped, the model 
 called fair, and nothing is said about attributes this audit didn't measure. A failed
 draft goes back with its violations. If nothing passes, nothing is published.
 
+To run it yourself, copy `.env.example` to `.env`, paste in a key (an Azure OpenAI
+deployment, Claude on Azure, or the Claude API), and run
+`python scripts/narrate.py --check`, then `python scripts/narrate.py`. The `.env` file is
+git-ignored. Any model works, a cheap one included: the checker rejects a bad draft
+whatever wrote it, so a weaker model only costs extra retries.
+
 `evals/` holds twelve drafts: ten with planted errors, and two clean ones that must
 pass. Building it caught a wrong number in this README: it said accuracy ran from 0.79,
 and the real figure is 0.77.
@@ -257,6 +272,8 @@ scripts/run_audit.py     one command, every number
 scripts/check_policy.py  the gate
 scripts/review_pr.py     the pull request reviewer
 scripts/voice_audio.py   renders the spoken answers to audio
+scripts/narrate.py       writes the summary with any model, then checks it
+scripts/record_tour.py   records the GIF above from the built site
 docs/decisions/          why things are the way they are, including what I rejected
 ```
 

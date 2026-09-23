@@ -140,6 +140,27 @@ NAMED = {
 }
 
 
+# The regression guard: this run against the recorded baseline.
+REGRESSION = {
+    "summary": (
+        "Nothing got worse since the baseline",
+        (
+            "Compares this run with a recorded baseline, so a change that stays inside "
+            "every limit above but still makes things worse gets caught."
+        ),
+    ),
+    "auc_drop": ("Ranking quality drop since the baseline", ""),
+    "ece_increase": ("Calibration error rise since the baseline", ""),
+    "baseline": (
+        "Regression guard has no baseline",
+        (
+            "policy.yaml declares the guard, but no baseline has been recorded, so it "
+            "can't run."
+        ),
+    ),
+}
+
+
 def explain(name: str) -> tuple[str, str]:
     """A readable title and an explanation, for any check name in the policy.
 
@@ -151,6 +172,15 @@ def explain(name: str) -> tuple[str, str]:
         return entry["title"], f"{entry['what']} {entry['why']}"
 
     parts = name.split(".")
+    if parts[0] == "regression":
+        if len(parts) == 2 and parts[1] in REGRESSION:
+            return REGRESSION[parts[1]]
+        if len(parts) == 3:
+            gap = {"tpr_gap": "Recall gap", "fpr_gap": "False alarm gap"}.get(parts[2])
+            who = ATTRIBUTES.get(parts[1], {}).get("who", parts[1])
+            if gap:
+                return f"{gap} change since the baseline, {who}", ""
+
     if len(parts) == 3 and parts[0] == "fairness" and parts[2] in METRICS:
         entry = METRICS[parts[2]]
         who = ATTRIBUTES.get(parts[1], {}).get("who", parts[1])

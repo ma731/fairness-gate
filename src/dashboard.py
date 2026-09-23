@@ -405,6 +405,53 @@ def diverging_chart(table: pd.DataFrame, attribute: str) -> str:
     )
 
 
+def _spread(ys: list[float], gap: float = 15.0) -> list[float]:
+    """Label positions at least `gap` apart, kept as close to their points as possible.
+
+    Groups with near-identical rates put their labels on top of each other. Push each
+    one below the last, then re-centre every cluster on its points.
+    """
+    order = sorted(range(len(ys)), key=lambda i: ys[i])
+    pos = [ys[i] for i in order]
+    for k in range(1, len(pos)):
+        pos[k] = max(pos[k], pos[k - 1] + gap)
+    k = 0
+    while k < len(pos):
+        j = k
+        while j + 1 < len(pos) and pos[j + 1] - pos[j] <= gap + 1e-6:
+            j += 1
+        shift = sum(ys[order[m]] - pos[m] for m in range(k, j + 1)) / (j - k + 1)
+        for m in range(k, j + 1):
+            pos[m] += shift
+        k = j + 1
+    for k in range(1, len(pos)):
+        pos[k] = max(pos[k], pos[k - 1] + gap)
+    out = [0.0] * len(ys)
+    for k, i in enumerate(order):
+        out[i] = round(pos[k], 1)
+    return out
+
+
+def _slope_row(cls: str, x1: float, y1: float, x2: float, y2: float,
+               ly1: float, ly2: float, label: str, value: str, name: str) -> str:
+    """One slope with its labels, and a leader line wherever a label had to move."""
+    lead = ""
+    if abs(ly1 - y1) > 2:
+        lead += f'<path class="lead" d="M{x1 - 16},{ly1} L{x1 - 6},{y1}"/>'
+    if abs(ly2 - y2) > 2:
+        lead += f'<path class="lead" d="M{x2 + 6},{y2} L{x2 + 13},{ly2}"/>'
+    return (
+        f'<g class="row">{lead}'
+        f'<text class="gl" x="{x1 - 18}" y="{ly1 + 4}" text-anchor="end">'
+        f"{esc(label)}<title>{esc(name)}</title></text>"
+        f'<line class="slope {cls}l" x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}"/>'
+        f'<circle class="{cls}" cx="{x1}" cy="{y1}" r="4.5"/>'
+        f'<circle class="{cls}" cx="{x2}" cy="{y2}" r="4.5"/>'
+        f'<text class="vl" x="{x2 + 15}" y="{ly2 + 4}">{esc(value)}'
+        f"<title>{esc(name)}</title></text></g>"
+    )
+
+
 def slope_chart(tables: dict, attribute: str) -> str:
     """One line per group, test year to the states held out entirely.
 
@@ -436,21 +483,14 @@ def slope_chart(tables: dict, attribute: str) -> str:
         f'<text class="ax" x="{right}" y="{top - 24}" text-anchor="middle">'
         f"Held-out states</text>"
     )
-    for _, r in m.iterrows():
-        y1, y2 = Y(float(r["tpr_test"])), Y(float(r["tpr_shift"]))
+    ys1 = [Y(float(v)) for v in m["tpr_test"]]
+    ys2 = [Y(float(v)) for v in m["tpr_shift"]]
+    for (_, r), y1, y2, ly1, ly2 in zip(m.iterrows(), ys1, ys2, _spread(ys1), _spread(ys2)):
         drop = float(r["tpr_shift"]) - float(r["tpr_test"])
-        cls = "s2" if drop < 0 else "s1"
-        out += (
-            f'<g class="row">'
-            f'<text class="gl" x="{left - 18}" y="{y1 + 4}" text-anchor="end">'
-            f'{esc(short(int(r["code"]), attribute))}'
-            f'<title>{esc(r["group"])}</title></text>'
-            f'<line class="slope {cls}l" x1="{left}" y1="{y1}" x2="{right}" y2="{y2}"/>'
-            f'<circle class="{cls}" cx="{left}" cy="{y1}" r="4.5"/>'
-            f'<circle class="{cls}" cx="{right}" cy="{y2}" r="4.5"/>'
-            f'<text class="vl" x="{right + 15}" y="{y2 + 4}">'
-            f'{pct(float(r["tpr_shift"]))} ({drop:+.1%})'
-            f'<title>{esc(r["group"])}</title></text></g>'
+        out += _slope_row(
+            "s2" if drop < 0 else "s1", left, y1, right, y2, ly1, ly2,
+            short(int(r["code"]), attribute),
+            f'{pct(float(r["tpr_shift"]))} ({drop:+.1%})', r["group"],
         )
 
     return (
@@ -523,26 +563,21 @@ def arm_slope(result: dict, table: pd.DataFrame, arm_key: str,
         return round(top + (1 - (v - lo) / (hi - lo)) * (bot - top), 1)
 
     out = (
-        f'<line class="gr" x1="{left_x}" y1="{top - 16}" x2="{left}" y2="{bot + 10}"/>'
-        f'<line class="gr" x1="{right}" y1="{top - 16}" x2="{right_x}" y2="{bot + 10}"/>'
+        f'<line class="gr" x1="{left_x}" y1="{top - 16}" x2="{left_x}" y2="{bot + 10}"/>'
+        f'<line class="gr" x1="{right_x}" y1="{top - 16}" x2="{right_x}" y2="{bot + 10}"/>'
         f'<text class="ax" x="{left_x}" y="{top - 24}" text-anchor="middle">'
         f"{esc(left)}</text>"
         f'<text class="ax" x="{right_x}" y="{top - 24}" text-anchor="middle">'
         f"{esc(right)}</text>"
     )
-    for code, name, before, after in rows:
-        y1, y2 = Y(before), Y(after)
-        cls = "s1" if after >= before else "s2"
-        out += (
-            f'<g class="row">'
-            f'<text class="gl" x="{left_x - 18}" y="{y1 + 4}" text-anchor="end">'
-            f"{esc(short(code, attribute))}<title>{esc(name)}</title></text>"
-            f'<line class="slope {cls}l" x1="{left_x}" y1="{y1}" x2="{right_x}" y2="{y2}"/>'
-            f'<circle class="{cls}" cx="{left_x}" cy="{y1}" r="4.5"/>'
-            f'<circle class="{cls}" cx="{right_x}" cy="{y2}" r="4.5"/>'
-            f'<text class="vl" x="{right_x + 15}" y="{y2 + 4}">'
-            f"{pct(after)} ({after - before:+.1%})"
-            f"<title>{esc(name)}</title></text></g>"
+    ys1 = [Y(r[2]) for r in rows]
+    ys2 = [Y(r[3]) for r in rows]
+    for (code, name, before, after), y1, y2, ly1, ly2 in zip(
+        rows, ys1, ys2, _spread(ys1), _spread(ys2)
+    ):
+        out += _slope_row(
+            "s1" if after >= before else "s2", left_x, y1, right_x, y2, ly1, ly2,
+            short(code, attribute), f"{pct(after)} ({after - before:+.1%})", name,
         )
 
     return (
@@ -631,8 +666,10 @@ def _ci_for(result: dict, check: dict) -> dict | None:
 
 def _checks(result: dict) -> str:
     order = {"fail": 0, "warn": 1, "pass": 2}
+    guard = [c for c in result["checks"] if c["name"].startswith("regression.")]
+    rest = [c for c in result["checks"] if not c["name"].startswith("regression.")]
     out = ""
-    for c in sorted(result["checks"], key=lambda c: (order[c["status"]], c["name"])):
+    for c in sorted(rest, key=lambda c: (order[c["status"]], c["name"])):
         target = "n/a" if c["warn_at"] is None else fmt(c["warn_at"])
         limit = "n/a" if c["fail_at"] is None else fmt(c["fail_at"])
         # The raw name stays on the row because it is the string you would search for
@@ -653,7 +690,36 @@ def _checks(result: dict) -> str:
             + (f'<p class="chk-why">{esc(why)}</p>' if why else "")
             + "</li>"
         )
-    return out
+    return out + _guard_row(guard)
+
+
+def _guard_row(guard: list[dict]) -> str:
+    """The regression checks as one row. Eight lines of "no change" would be noise."""
+    if not guard:
+        return ""
+    worst = min(guard, key=lambda c: {"fail": 0, "warn": 1, "pass": 2}[c["status"]])
+    title, why = explain_check("regression.summary")
+    if worst["name"] == "regression.baseline":
+        detail = worst.get("note", "")
+    else:
+        moved = max(guard, key=lambda c: c["measured"])
+        gap_limit = max((c["fail_at"] for c in guard if c["fail_at"] is not None),
+                        default=None)
+        limit_text = f" Any gap widening by more than {gap_limit:.3f} fails." if (
+            gap_limit is not None) else ""
+        if moved["measured"] < 5e-5:
+            change = "Nothing has moved since the baseline was recorded."
+        else:
+            change = (f"Largest change so far: {moved['measured']:+.4f} "
+                      f"({explain_check(moved['name'])[0]}).")
+        detail = f"{len(guard)} comparisons.{limit_text} {change}"
+    return (
+        f'<li class="chk s-{worst["status"]}">'
+        f'<div class="chk-top"><div class="chk-id">'
+        f'<span class="chk-h">{esc(title)}</span><code>regression.*</code></div>'
+        f'<span class="tag">{STATUS_LABEL[worst["status"]]}</span></div>'
+        f'<p class="chk-why">{esc(why)} {esc(detail)}</p></li>'
+    )
 
 
 def _splits(result: dict) -> str:
@@ -757,7 +823,7 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
         "narration": narration_block(),
         "head_evidence": page_head(
             "The evidence",
-            "Sixteen checks, and how sure I am of each one.",
+            "Every check, and how sure I am of each one.",
             "Every measured number, what it is being held to, and the interval around "
             "it. Nothing here fails the build yet, and the section on certainty "
             "explains why that is deliberate rather than lucky.",
@@ -778,7 +844,7 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
         ),
         "next_evidence": onward(
             "evidence.html", "The evidence",
-            "Sixteen checks, the intersectional audit, and how certain each number is."),
+            "Every check, the intersectional audit, and how certain each number is."),
         "next_method": onward(
             "method.html", "How I measured it",
             "The splits, the reporting floor, and what happens when you delete race "
@@ -1451,9 +1517,8 @@ PAGES = [
         "evidence.html",
         "The evidence",
         (
-            "Every check, every group, and how certain each number is. Sixteen policy "
-            "checks, the intersectional audit, confidence intervals and the full flow "
-            "of 600,551 people through the model."
+            "Every check, every group, how certain each number is, and the flow of "
+            "600,551 people through the model."
         ),
         ["head_evidence", "checks", "intersections", "certainty", "groups", "flow", "next_method"],
     ),

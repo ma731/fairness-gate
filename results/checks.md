@@ -5,7 +5,7 @@
 
 # Policy gate result
 
-Generated 2026-09-23T13:29:44+00:00 from commit `21b8c3d` on Python 3.14.3.
+Generated 2026-09-23T20:10:48+00:00 from commit `8a619a4` on Python 3.14.3.
 
 Trained on 2015, threshold chosen on 2016, evaluated on 2018.
 
@@ -29,6 +29,14 @@ Verdict: **WARN**
 | PASS | `fairness.SEX.max_calibration_gap` | 0.0344 | 0.080 | 0.040 |
 | PASS | `shift.auc` | 0.8642 | 0.800 | 0.850 |
 | PASS | `shift.tpr_gap_increase_vs_test` | 0.0790 | 0.150 | 0.080 |
+| PASS | `regression.auc_drop` | 0.0000 | 0.010 |  |
+| PASS | `regression.ece_increase` | 0.0000 | 0.010 |  |
+| PASS | `regression.RAC1P.tpr_gap` | 0.0000 | 0.020 |  |
+| PASS | `regression.SEX.tpr_gap` | 0.0000 | 0.020 |  |
+| PASS | `regression.RACExSEX.tpr_gap` | 0.0000 | 0.020 |  |
+| PASS | `regression.RAC1P.fpr_gap` | 0.0000 | 0.020 |  |
+| PASS | `regression.SEX.fpr_gap` | 0.0000 | 0.020 |  |
+| PASS | `regression.RACExSEX.fpr_gap` | 0.0000 | 0.020 |  |
 
 `FAIL` breaks the build. `WARN` is the standard the project is aiming at and does not
 break the build. The distance between the two columns is deliberate and is explained in

@@ -77,6 +77,11 @@ def check_thresholds(result: dict) -> bool:
         + pol.check_shift_canary(
             policy, result["scores"]["shift"], race_test["tpr_gap"], race_shift["tpr_gap"]
         )
+        # Every commit, not just the monthly run: a change that stays inside every limit
+        # but widens a gap against the recorded baseline still fails.
+        + pol.check_regression(
+            policy, pol.regression_inputs(scores, summaries), pol.load_baseline()
+        )
     )
 
     for c in checks:

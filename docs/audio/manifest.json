@@ -4,9 +4,9 @@
   "clips": {
     "gate": {
       "file": "audio/gate.mp3",
-      "sha": "a750a33d815d88e4",
+      "sha": "2d0ebd56f28c17c4",
       "voice": "en-US-AndrewMultilingualNeural",
-      "bytes": 214128
+      "bytes": 211824
     },
     "finding": {
       "file": "audio/finding.mp3",
@@ -88,9 +88,9 @@
     },
     "status": {
       "file": "audio/status.mp3",
-      "sha": "022970dc02bce780",
+      "sha": "7b7ae9acf9c1de8e",
       "voice": "en-US-AndrewMultilingualNeural",
-      "bytes": 113328
+      "bytes": 112896
     },
     "help": {
       "file": "audio/help.mp3",

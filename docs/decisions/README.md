@@ -20,3 +20,4 @@ what it costs me.
 | [0004](0004-webgl-without-a-library.md) | Raw WebGL, no Three.js | 4 KB against 600 KB, for one effect |
 | [0005](0005-suppress-small-groups.md) | Hide any group under 500 people | And draw the hole, do not delete the row |
 | [0006](0006-keep-protected-attributes-out.md) | Test unawareness, do not assume it | Deleting both columns leaves 92% of the gap |
+| [0007](0007-how-the-limits-were-chosen.md) | How the limits were chosen | I set them after seeing the results; the regression guard is what keeps that honest |

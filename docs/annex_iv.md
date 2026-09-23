@@ -5,7 +5,7 @@
 
 # Technical documentation (EU AI Act, Annex IV)
 
-Generated 2026-09-23T13:29:44+00:00 from commit `21b8c3d` on Python 3.14.3.
+Generated 2026-09-23T20:10:48+00:00 from commit `8a619a4` on Python 3.14.3.
 
 Trained on 2015, threshold chosen on 2016, evaluated on 2018.
 
@@ -19,7 +19,7 @@ Trained on 2015, threshold chosen on 2016, evaluated on 2018.
 An income classifier over US Census microdata. Intended purpose: none beyond
 demonstrating a policy-gated audit pipeline. No deployment, no users, no decisions.
 
-Provider: individual project. Version: commit `21b8c3d`.
+Provider: individual project. Version: commit `8a619a4`.
 
 ## 2. Elements of the system and its development
 

@@ -178,18 +178,8 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
 
     policy = pol.load_policy()
 
-    test_gaps = {
-        f"{s['attribute']}.tpr_gap": s["tpr_gap"] for s in summaries["test"]
-    } | {f"{s['attribute']}.fpr_gap": s["fpr_gap"] for s in summaries["test"]}
-
-    current = {
-        "auc": scores["test"]["auc"],
-        "ece": scores["test"]["ece"],
-        "gaps": test_gaps,
-    }
-    baseline = None
-    if pol.BASELINE_PATH.exists():
-        baseline = json.loads(pol.BASELINE_PATH.read_text(encoding="utf-8"))
+    current = pol.regression_inputs(scores["test"], summaries["test"])
+    baseline = pol.load_baseline()
 
     race_test = next(s for s in summaries["test"] if s["attribute"] == "RAC1P")
     race_shift = next(s for s in summaries["shift"] if s["attribute"] == "RAC1P")

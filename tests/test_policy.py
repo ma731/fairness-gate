@@ -149,10 +149,27 @@ def test_an_improvement_is_never_a_regression():
     assert pol.verdict(pol.check_regression(policy, current, baseline)) == PASS
 
 
-def test_no_baseline_means_no_regression_checks():
+def test_a_declared_guard_with_no_baseline_is_reported_not_skipped():
+    """It used to return nothing here, and the guard never ran for the project's first
+    day because the baseline file had never been recorded."""
     policy = {"regression": {"max_auc_drop": 0.01, "max_ece_increase": 0.01,
                              "max_gap_increase": 0.02}}
-    assert pol.check_regression(policy, {"auc": 0.5, "ece": 0.5}, None) == []
+    checks = pol.check_regression(policy, {"auc": 0.5, "ece": 0.5}, None)
+    assert [c.name for c in checks] == ["regression.baseline"]
+    assert checks[0].status == WARN
+    assert "--set-baseline" in checks[0].note
+
+
+def test_no_declared_guard_means_no_regression_checks():
+    assert pol.check_regression({}, {"auc": 0.5, "ece": 0.5}, None) == []
+
+
+def test_the_committed_baseline_is_actually_checked():
+    """The guard only protects anything if a baseline is committed and CI reads it."""
+    baseline = pol.load_baseline()
+    assert baseline is not None, "results/baseline.json is missing; the guard is inert"
+    assert {"auc", "ece", "gaps"} <= set(baseline)
+    assert baseline["gaps"], "the baseline records no gaps to compare against"
 
 
 # --------------------------------------------------------------------------- #
