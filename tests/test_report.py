@@ -135,3 +135,25 @@ def test_every_number_in_the_model_card_comes_from_the_audit(result, tables):
         suspicious.append(token)
 
     assert not suspicious, f"numbers in the model card not traceable to the audit: {suspicious}"
+
+
+def test_stored_numbers_are_short_enough_to_be_reproducible(result):
+    """Two machines must produce the same file, down to the byte.
+
+    They nearly did on their own: every rate matched between a Windows laptop and a
+    Linux runner, but a few figures built from long sums differed in the thirteenth
+    decimal, because floating point addition depends on what order the hardware adds
+    things up. That is noise a thousand times smaller than the sampling error, and left
+    alone it made the monthly job commit a diff every run while meaning nothing by it.
+
+    So the audit rounds what it stores. This test is what stops that quietly regressing.
+    """
+    places = 9
+    raw = AUDIT_PATH.read_text(encoding="utf-8")
+    too_precise = [
+        token for token in re.findall(r"-?\d+\.(\d+)", raw) if len(token) > places
+    ]
+    assert not too_precise, (
+        f"{len(too_precise)} stored numbers carry more than {places} decimals, "
+        "which will differ between platforms and churn the results on every run"
+    )

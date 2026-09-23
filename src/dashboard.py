@@ -639,6 +639,7 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
 <nav>
   <span class="mark">fairness&#8209;gate <i>/ ACS income</i></span>
   <ul>
+    <li><a href="#plain">Plain language</a></li>
     <li><a href="#cost">Who it misses</a></li>
     <li><a href="#checks">Checks</a></li>
     <li><a href="#intersections">Intersections</a></li>
@@ -686,6 +687,51 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
 <div class="mq" aria-hidden="true">
   <div class="mq-track">{_marquee(cost)}{_marquee(cost)}</div>
 </div>
+
+<section id="plain">
+  <div class="shell reveal">
+    <p class="kicker">Plain language</p>
+    <h2>What a gate is, before any of the numbers.</h2>
+    <div class="primer">
+      <div>
+        <p class="lede">Teams already refuse to ship code that fails a test. Almost
+          nobody refuses to ship a <b>model</b> that fails a fairness check, because that
+          check usually lives in a document someone wrote once and never opened again.</p>
+        <p>Continuous integration is a robot that wakes up every time somebody changes
+          the code, runs a list of checks, and either says fine or refuses. A
+          <b>gate</b> is a check with the authority to say no. So I took the fairness
+          limits, wrote them into a file sitting next to the code, and wired them to that
+          same robot. If the model starts treating one group meaningfully worse than
+          another, the build turns red, exactly like a broken test. Nobody can merge past
+          it without editing the limits, and editing the limits leaves a mark in the
+          history that a reviewer has to approve.</p>
+        <p>The model underneath is doing something ordinary. It reads ten facts from a
+          government survey, things like age, education, hours worked and occupation, and
+          guesses whether that person earns above a threshold. The survey already recorded
+          the real answer, so I can check not only whether the model is right, but
+          <b>who it is wrong about</b>. That second question is the whole project.</p>
+      </div>
+      <dl class="defs">
+        <dt>Recall</dt>
+        <dd>Of the people who genuinely qualify, the share the model actually finds. If a
+          hundred people really do earn above the line and it flags 54, recall is 54%.
+          <b>The other 46 are overlooked.</b></dd>
+        <dt>False positive</dt>
+        <dd>The opposite mistake. Somebody flagged who should not have been.</dd>
+        <dt>Threshold</dt>
+        <dd>The cut-off. The model gives a probability, and I choose the line above which
+          it says yes. Moving that line trades one kind of mistake for the other.</dd>
+        <dt>Gap</dt>
+        <dd>Just the distance between the best treated group and the worst treated one,
+          on whichever measure is being discussed.</dd>
+        <dt>Calibration</dt>
+        <dd>Whether the probabilities mean what they say. If it claims 70% for a thousand
+          people, about 700 of them should qualify. Being accurate and being calibrated
+          are not the same thing.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
 
 <div class="band" id="cost">
   <div class="shell band-in reveal">

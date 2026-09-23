@@ -46,6 +46,32 @@ def _git_sha() -> str:
         return "unknown"
 
 
+# Results get committed, so two machines running the same audit have to produce the
+# same file. They nearly do: every rate agreed exactly between my laptop and CI, but a
+# few figures built from long sums drifted in the thirteenth decimal, because floating
+# point addition depends on the order the hardware happens to add things up.
+#
+# That is not a disagreement about anything. It is far below the sampling error on
+# 600,000 people, which lives around the third decimal. Left alone it would make the
+# monthly job commit a diff every single time and mean nothing by it, and a reviewer who
+# sees meaningless diffs every month stops reading them.
+#
+# So stored numbers are rounded to nine places. Still absurdly finer than anything the
+# data can actually support, and identical everywhere.
+STORED_PLACES = 9
+
+
+def _stabilise(value):
+    """Round every float in a nested structure, leaving everything else alone."""
+    if isinstance(value, float):
+        return round(value, STORED_PLACES)
+    if isinstance(value, dict):
+        return {k: _stabilise(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_stabilise(v) for v in value]
+    return value
+
+
 def run(gate: bool = False, set_baseline: bool = False) -> int:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     started = datetime.now(timezone.utc)
@@ -163,6 +189,14 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
         "mitigation": mitigation,
         "policy_verdict": pol.verdict(checks),
         "checks": pol.as_records(checks),
+    }
+
+    # Round before writing AND before rendering, so the documents are built from the
+    # same numbers that get stored. Otherwise check_policy.py re-renders from the file
+    # and gets a different byte for a digit nobody can see.
+    result = _stabilise(result)
+    group_tables = {
+        name: table.round(STORED_PLACES) for name, table in group_tables.items()
     }
 
     (RESULTS_DIR / "audit.json").write_text(

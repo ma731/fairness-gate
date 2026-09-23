@@ -5,7 +5,7 @@
 
 # Policy gate result
 
-Generated 2026-09-23T09:25:51+00:00 from commit `45f861c` on Python 3.12.14.
+Generated 2026-09-23T09:30:46+00:00 from commit `45f861c` on Python 3.14.3.
 
 Trained on 2015, threshold chosen on 2016, evaluated on 2018.
 

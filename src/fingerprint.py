@@ -13,8 +13,18 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Changing any of these changes the numbers. policy.yaml is deliberately NOT here: the
-# policy is what the results are judged against, not what produces them.
+# Only the code that produces a number belongs here.
+#
+# Two things are deliberately left out. policy.yaml, because the policy is what the
+# results get judged against, not what makes them. And everything that draws the site
+# (dashboard, pages, theme), because a colour or a sentence cannot move a figure, and
+# the documents are already guarded by a stronger check: check_policy.py regenerates
+# every one of them and requires a byte-identical match, so changing how something is
+# rendered without re-rendering it fails immediately and for the right reason.
+#
+# Having presentation in here made every cosmetic edit mark the results stale and
+# demand a three gigabyte re-run to fix, which taught me to reach for --skip-staleness.
+# A check people routinely switch off has stopped being a check.
 PIPELINE_SOURCES = [
     "src/config.py",
     "src/data.py",
@@ -23,9 +33,6 @@ PIPELINE_SOURCES = [
     "src/distributions.py",
     "src/uncertainty.py",
     "src/mitigation.py",
-    "src/dashboard.py",
-    "src/pages.py",
-    "src/theme.py",
     "scripts/run_audit.py",
 ]
 
