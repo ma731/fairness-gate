@@ -242,6 +242,8 @@ svg.xmat .cn { fill:var(--mut); font-size:11px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 svg.xmat .cv { font-size:15px; }
 svg.xmat .sup { fill:var(--mut); font-size:12px; font-weight:400; }
+svg.xmat .on-bright { fill:#0a0b00; }
+svg.xmat .cn.on-bright { fill:#0a0b00; opacity:.62; }
 
 /* intervals */
 svg.ivl .whisk { stroke:var(--s1); stroke-width:3; opacity:.55; }

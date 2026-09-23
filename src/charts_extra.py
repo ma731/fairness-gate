@@ -548,15 +548,18 @@ def intersection_matrix(table, metric: str = "tpr") -> str:
             v = float(row[metric])
             # low recall is the bad end, so invert for the shading intensity
             heat = 1 - (v - lo) / rng
+            # Light ink on a bright acid cell fails contrast, so the label flips to
+            # dark once the fill is strong enough to need it.
+            ink = " on-bright" if heat > 0.45 else ""
             body += (
                 f'<g class="row"><rect class="cell bad" x="{x + 3}" y="{y + 3}" '
                 f'width="{cell_w - 6}" height="{cell_h - 6}" rx="6" '
                 f'style="--v:{heat:.3f}">'
                 f'<title>{esc(row["group"])}: recall {v:.3f} on {int(row["n"]):,} '
                 f"people</title></rect>"
-                f'<text class="cv" x="{x + cell_w / 2}" y="{y + cell_h / 2 - 1}" '
+                f'<text class="cv{ink}" x="{x + cell_w / 2}" y="{y + cell_h / 2 - 1}" '
                 f'text-anchor="middle">{v:.3f}</text>'
-                f'<text class="cn" x="{x + cell_w / 2}" y="{y + cell_h / 2 + 15}" '
+                f'<text class="cn{ink}" x="{x + cell_w / 2}" y="{y + cell_h / 2 + 15}" '
                 f'text-anchor="middle">{int(row["n"]):,}</text></g>'
             )
 

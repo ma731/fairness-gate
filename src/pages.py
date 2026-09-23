@@ -28,11 +28,13 @@ def _nav(active: str, verdict: str, verdict_label: str) -> str:
         ("index.html#method", "Method", "method"),
         ("index.html#sources", "Sources", "sources"),
     ]
-    links = "".join(
-        f'<li><a href="{href}"{" aria-current=\'page\'" if key == active else ""}>'
-        f"{esc(label)}</a></li>"
-        for href, label, key in items
-    )
+    def link(href: str, label: str, key: str) -> str:
+        # Built outside the f-string: a backslash inside an f-string expression is
+        # a syntax error before Python 3.12, and CI runs 3.11.
+        current = ' aria-current="page"' if key == active else ""
+        return f'<li><a href="{href}"{current}>{esc(label)}</a></li>'
+
+    links = "".join(link(h, lb, k) for h, lb, k in items)
     return f"""<nav>
   <a class="mark" href="index.html">fairness&#8209;gate <i>/ ACS income</i></a>
   <ul>{links}</ul>

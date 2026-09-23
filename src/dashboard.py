@@ -212,7 +212,7 @@ def _marquee(cost: pd.DataFrame) -> str:
     """The scrolling band says something. Each entry is a group and how many of every
     hundred qualifying people the model overlooks there."""
     return "".join(
-        f'<span>{esc(r["group"])} <em>{round(r['per_100'])}</em></span>'
+        f'<span>{esc(r["group"])} <em>{round(r["per_100"])}</em></span>'
         for _, r in cost.iterrows()
     )
 
