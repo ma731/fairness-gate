@@ -309,6 +309,9 @@ svg.chart .s1l { stroke:var(--s1); } svg.chart .s2l { stroke:var(--s2); }
 .empty { color:var(--mut); font-size:13px; margin:0; }
 
 table { border-collapse:collapse; width:100%; font-size:12.5px; }
+/* scrolls sideways on a phone rather than being clipped by the page */
+.tablewrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.tablewrap table { min-width:640px; }
 th, td { padding:10px 12px; text-align:right; white-space:nowrap; }
 thead th { font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
   color:var(--mut); font-weight:600; border-bottom:1px solid var(--axis); }

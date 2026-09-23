@@ -586,12 +586,15 @@ def group_table(table: pd.DataFrame, attribute: str) -> str:
         f"<td class='mut'>{fmt(r['ece'])}</td></tr>"
         for _, r in sub.iterrows()
     )
+    # Wrapped so it scrolls on a phone. The page clips horizontal overflow, which
+    # without this would silently cut the right-hand columns off instead.
     return (
-        "<table><thead><tr><th scope='col'>Group</th><th scope='col'>n</th>"
+        "<div class='tablewrap'>"
+        "<table><thead><tr><th scope='col'>Group</th><th scope='col'>People</th>"
         "<th scope='col'>Base rate</th><th scope='col'>Selected</th>"
-        "<th scope='col'>TPR</th><th scope='col'>FPR</th>"
-        "<th scope='col'>Accuracy</th><th scope='col'>ECE</th></tr></thead>"
-        f"<tbody>{rows}</tbody></table>"
+        "<th scope='col'>Recall</th><th scope='col'>False alarms</th>"
+        "<th scope='col'>Accuracy</th><th scope='col'>Calibration error</th></tr>"
+        f"</thead><tbody>{rows}</tbody></table></div>"
     )
 
 
