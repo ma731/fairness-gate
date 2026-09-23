@@ -65,8 +65,10 @@ nav { position:sticky; top:0; z-index:20; height:64px; display:flex; align-items
   -webkit-backdrop-filter:blur(16px) saturate(140%); }
 nav .mark { font-size:14px; font-weight:660; letter-spacing:-.015em; }
 nav .mark i { font-style:normal; color:var(--mut); font-weight:400; }
-nav ul { display:flex; gap:26px; list-style:none; margin:0; padding:0; }
+nav ul { display:flex; flex-wrap:nowrap; gap:21px; list-style:none; margin:0;
+  padding:0; }
 nav a { color:var(--ink-2); text-decoration:none; font-size:12px;
+  white-space:nowrap;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   letter-spacing:.06em; text-transform:uppercase;
   transition:color 150ms ease; }

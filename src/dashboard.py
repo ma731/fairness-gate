@@ -639,7 +639,7 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
 <nav>
   <span class="mark">fairness&#8209;gate <i>/ ACS income</i></span>
   <ul>
-    <li><a href="#plain">Plain language</a></li>
+    <li><a href="#plain">Start here</a></li>
     <li><a href="#cost">Who it misses</a></li>
     <li><a href="#checks">Checks</a></li>
     <li><a href="#intersections">Intersections</a></li>
