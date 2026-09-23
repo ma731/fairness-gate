@@ -337,13 +337,7 @@ tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
 .narr-h { margin:0 0 10px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
   monospace; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
   color:var(--acid); }
-.narr-receipt p { margin:0 0 14px; font-size:14px; line-height:1.58; color:var(--ink-2); }
-.narr-checks { list-style:none; margin:0 0 16px; padding:0; display:grid; gap:5px; }
-.narr-checks li { font-size:12.5px; color:var(--ink-2);
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
-.narr-checks li::before { content:"¹3  "; color:var(--acid); font-weight:700; }
-.narr-meta { margin:0 !important; font-size:11.5px; line-height:1.75; color:var(--mut); }
-.narr-meta code { color:var(--ink-2); }
+.narr-receipt p { margin:0; font-size:14px; line-height:1.58; color:var(--ink-2); }
 
 /* ---- page header (every page but the front one) ----
    The front page keeps the full-height hero. Repeating that five times would make each
@@ -874,26 +868,17 @@ body { padding-top:0; }
 
 <section id="summary">
   <div class="shell reveal">
-    <p class="kicker">In words</p>
-    <h2>A summary, written by a language model and checked before you saw it.</h2>
+    <p class="kicker">In short</p>
+    <h2>Written by a language model. Fact-checked before you saw it.</h2>
     <div class="narr">
       <blockquote class="narr-text">This model guesses who earns above fifty thousand dollars a year, and it is wrong about some people far more often than others. Out of every hundred people who genuinely earn above that line, it finds about 85 in the Asian alone group and about 54 in the Some other race alone group, a recall gap of 0.312. Recall just means the share of qualifying people a model actually finds, so everyone it does not find is simply overlooked. Accuracy barely moves between those same groups, running from 0.77 to 0.84, which is why the single headline number most projects report would have hidden all of this. Giving each group its own cut-off was measured and would bring the gap down to 0.114 for 0.0042 of accuracy, and it was left unadopted anyway, because it needs to know the person&#x27;s race at the moment it decides and it pushes the false alarm gap up instead.</blockquote>
       <aside class="narr-receipt">
-        <p class="narr-h">How this got here</p>
-        <p>A model wrote it. It was not allowed to publish it. Every number in it had
-          to trace back to a measured value at the precision it was written, and the
-          draft had to survive every check below before it could appear on this page.</p>
-        <ul class="narr-checks"><li>numbers</li><li>claims</li><li>suppressed</li><li>superlatives</li><li>forbidden</li><li>absent attributes</li><li>substance</li></ul>
-        <p class="narr-meta">Passed on the first attempt<br>
-          Source: drafted by Claude (Opus 5) in an editing session, verified by src/narrator.py before publication<br>
-          Against the audit of
-          2026-09-23T10:44:43+00:00</p>
+        <p class="narr-h">Checked</p>
+        <p>Every figure above had to match a measured one, and 7 other
+          checks had to pass, before this was allowed on the page. Drafts that fail are
+          not published.</p>
       </aside>
     </div>
-    <p class="note">If no draft passes, nothing is published and this section does not
-      appear at all. There is no best-of-four fallback, because a guardrail with one is
-      only a delay. The checks themselves are scored against twelve drafts with known
-      planted errors on every commit, so they cannot rot quietly.</p>
   </div>
 </section>
 
@@ -909,16 +894,10 @@ body { padding-top:0; }
 </div>
 <footer>
   <div class="shell">
-    <p><strong>Generated, not written.</strong> This page, the model card, the Annex IV
-      technical documentation and the DPIA all come out of
-      <code>scripts/run_audit.py</code>. Continuous integration regenerates each of them
-      and requires a byte-identical match, so editing any number by hand fails the
-      build.</p>
-    <p>Run 2026-09-23T10:44:43+00:00 &#183; commit <code>4ab2a32</code>
-      &#183; pipeline <code>6c1704bd41fd737a</code>
-      &#183; Python 3.14.3</p>
-    <p>Not a deployable system, and not a product. Income prediction on census microdata
-      is a benchmark. No decision about any person should be made with it.</p>
+    <p>Not a product. This predicts income from census answers, which is a benchmark
+      task. No decision about any person should be made with it.</p>
+    <p><a href="https://github.com/ma731/fairness-gate">Source and full results on
+      GitHub</a></p>
   </div>
 </footer>
 

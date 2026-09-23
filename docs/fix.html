@@ -337,13 +337,7 @@ tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
 .narr-h { margin:0 0 10px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
   monospace; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
   color:var(--acid); }
-.narr-receipt p { margin:0 0 14px; font-size:14px; line-height:1.58; color:var(--ink-2); }
-.narr-checks { list-style:none; margin:0 0 16px; padding:0; display:grid; gap:5px; }
-.narr-checks li { font-size:12.5px; color:var(--ink-2);
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
-.narr-checks li::before { content:"¹3  "; color:var(--acid); font-weight:700; }
-.narr-meta { margin:0 !important; font-size:11.5px; line-height:1.75; color:var(--mut); }
-.narr-meta code { color:var(--ink-2); }
+.narr-receipt p { margin:0; font-size:14px; line-height:1.58; color:var(--ink-2); }
 
 /* ---- page header (every page but the front one) ----
    The front page keeps the full-height hero. Repeating that five times would make each
@@ -730,29 +724,26 @@ body { padding-top:0; }
 </header>
 <div class="band" id="fix">
   <div class="shell band-in reveal">
-    <p class="kicker">What it would take to fix</p>
-    <h2>The gap can be closed. Here is the bill.</h2>
-    <p class="say">Proving a disparity exists is the easy half. Every point on the line
-      is this same model under a different single threshold, and the shape is the
-      argument: sliding one cut does not buy fairness, it buys a worse model that selects
-      almost everybody. The lowest gap a single threshold reaches is
-      <b>0.034</b>, at a threshold of
-      0.05 and an accuracy of
-      0.602. That is not a fix, it is abandoning the
-      model.</p>
+    <p class="kicker">One threshold for everyone</p>
+    <h2>Moving the cut-off does not work.</h2>
+    <p class="say">The obvious first move is to slide the single threshold until the gap
+      closes. It does close, at <b>0.034</b>, but only at a
+      threshold of 0.05 where accuracy falls to
+      0.602 and the model says yes to almost everyone.
+      That is switching the model off, not fixing it.</p>
     <div class="panel chartbox"><svg class="chart trade" viewBox="0 0 780 460" width="100%" role="img" aria-label="accuracy against recall gap as the threshold moves"><line class="gr" x1="72" y1="26" x2="72" y2="402"/><text class="ax" x="72" y="422" text-anchor="middle">0.60</text><line class="gr" x1="72" y1="26" x2="590" y2="26"/><text class="ax" x="62" y="30" text-anchor="end">0.41</text><line class="gr" x1="201.5" y1="26" x2="201.5" y2="402"/><text class="ax" x="201.5" y="422" text-anchor="middle">0.65</text><line class="gr" x1="72" y1="120.0" x2="590" y2="120.0"/><text class="ax" x="62" y="124.0" text-anchor="end">0.31</text><line class="gr" x1="331.0" y1="26" x2="331.0" y2="402"/><text class="ax" x="331.0" y="422" text-anchor="middle">0.70</text><line class="gr" x1="72" y1="214.0" x2="590" y2="214.0"/><text class="ax" x="62" y="218.0" text-anchor="end">0.20</text><line class="gr" x1="460.5" y1="26" x2="460.5" y2="402"/><text class="ax" x="460.5" y="422" text-anchor="middle">0.76</text><line class="gr" x1="72" y1="308.0" x2="590" y2="308.0"/><text class="ax" x="62" y="312.0" text-anchor="end">0.10</text><line class="gr" x1="590.0" y1="26" x2="590.0" y2="402"/><text class="ax" x="590.0" y="422" text-anchor="middle">0.81</text><line class="gr" x1="72" y1="402.0" x2="590" y2="402.0"/><text class="ax" x="62" y="406.0" text-anchor="end">0.00</text><polyline class="frontier" points="86.4,370.4 149.9,357.5 222.7,336.9 285.5,314.7 340.6,286.3 391.5,259.1 425.9,236.9 442.1,224.9 476.2,200.8 506.8,173.0 508.5,171.6 531.4,148.3 542.1,138.8 563.6,114.1 563.6,114.3 571.3,107.2 577.7,95.6 580.1,83.9 580.3,76.7 579.4,72.1 577.0,67.8 573.4,67.7 564.8,60.2 556.0,62.2 546.9,64.0 538.3,64.2 519.5,73.1 508.2,81.0 485.6,94.7 471.2,102.6 445.7,116.0 433.5,122.8 402.7,140.7 384.3,156.6 349.7,179.3 324.4,200.9 297.4,224.1 264.2,252.8 238.5,275.8 197.6,313.7 158.7,355.8"/><circle class="swp" cx="86.4" cy="370.4" r="2.6"><title>threshold 0.05: accuracy 0.602, gap 0.034</title></circle><circle class="swp" cx="149.9" cy="357.5" r="2.6"><title>threshold 0.07: accuracy 0.629, gap 0.048</title></circle><circle class="swp" cx="222.7" cy="336.9" r="2.6"><title>threshold 0.10: accuracy 0.659, gap 0.070</title></circle><circle class="swp" cx="285.5" cy="314.7" r="2.6"><title>threshold 0.12: accuracy 0.686, gap 0.095</title></circle><circle class="swp" cx="340.6" cy="286.3" r="2.6"><title>threshold 0.14: accuracy 0.709, gap 0.125</title></circle><circle class="swp" cx="391.5" cy="259.1" r="2.6"><title>threshold 0.16: accuracy 0.730, gap 0.155</title></circle><circle class="swp" cx="425.9" cy="236.9" r="2.6"><title>threshold 0.18: accuracy 0.744, gap 0.179</title></circle><circle class="swp" cx="442.1" cy="224.9" r="2.6"><title>threshold 0.21: accuracy 0.751, gap 0.192</title></circle><circle class="swp" cx="476.2" cy="200.8" r="2.6"><title>threshold 0.23: accuracy 0.765, gap 0.218</title></circle><circle class="swp" cx="506.8" cy="173.0" r="2.6"><title>threshold 0.25: accuracy 0.778, gap 0.248</title></circle><circle class="swp" cx="508.5" cy="171.6" r="2.6"><title>threshold 0.28: accuracy 0.779, gap 0.250</title></circle><circle class="swp" cx="531.4" cy="148.3" r="2.6"><title>threshold 0.30: accuracy 0.789, gap 0.275</title></circle><circle class="swp" cx="542.1" cy="138.8" r="2.6"><title>threshold 0.32: accuracy 0.793, gap 0.285</title></circle><circle class="swp" cx="563.6" cy="114.1" r="2.6"><title>threshold 0.34: accuracy 0.802, gap 0.312</title></circle><circle class="swp" cx="563.6" cy="114.3" r="2.6"><title>threshold 0.36: accuracy 0.802, gap 0.312</title></circle><circle class="swp" cx="571.3" cy="107.2" r="2.6"><title>threshold 0.39: accuracy 0.805, gap 0.319</title></circle><circle class="swp" cx="577.7" cy="95.6" r="2.6"><title>threshold 0.41: accuracy 0.808, gap 0.332</title></circle><circle class="swp" cx="580.1" cy="83.9" r="2.6"><title>threshold 0.43: accuracy 0.809, gap 0.345</title></circle><circle class="swp" cx="580.3" cy="76.7" r="2.6"><title>threshold 0.46: accuracy 0.809, gap 0.352</title></circle><circle class="swp" cx="579.4" cy="72.1" r="2.6"><title>threshold 0.48: accuracy 0.809, gap 0.357</title></circle><circle class="swp" cx="577.0" cy="67.8" r="2.6"><title>threshold 0.50: accuracy 0.808, gap 0.362</title></circle><circle class="swp" cx="573.4" cy="67.7" r="2.6"><title>threshold 0.52: accuracy 0.806, gap 0.362</title></circle><circle class="swp" cx="564.8" cy="60.2" r="2.6"><title>threshold 0.55: accuracy 0.803, gap 0.370</title></circle><circle class="swp" cx="556.0" cy="62.2" r="2.6"><title>threshold 0.57: accuracy 0.799, gap 0.368</title></circle><circle class="swp" cx="546.9" cy="64.0" r="2.6"><title>threshold 0.59: accuracy 0.795, gap 0.366</title></circle><circle class="swp" cx="538.3" cy="64.2" r="2.6"><title>threshold 0.61: accuracy 0.791, gap 0.366</title></circle><circle class="swp" cx="519.5" cy="73.1" r="2.6"><title>threshold 0.64: accuracy 0.784, gap 0.356</title></circle><circle class="swp" cx="508.2" cy="81.0" r="2.6"><title>threshold 0.66: accuracy 0.779, gap 0.348</title></circle><circle class="swp" cx="485.6" cy="94.7" r="2.6"><title>threshold 0.68: accuracy 0.769, gap 0.333</title></circle><circle class="swp" cx="471.2" cy="102.6" r="2.6"><title>threshold 0.70: accuracy 0.763, gap 0.324</title></circle><circle class="swp" cx="445.7" cy="116.0" r="2.6"><title>threshold 0.72: accuracy 0.753, gap 0.310</title></circle><circle class="swp" cx="433.5" cy="122.8" r="2.6"><title>threshold 0.75: accuracy 0.748, gap 0.302</title></circle><circle class="swp" cx="402.7" cy="140.7" r="2.6"><title>threshold 0.77: accuracy 0.735, gap 0.283</title></circle><circle class="swp" cx="384.3" cy="156.6" r="2.6"><title>threshold 0.79: accuracy 0.727, gap 0.266</title></circle><circle class="swp" cx="349.7" cy="179.3" r="2.6"><title>threshold 0.81: accuracy 0.713, gap 0.241</title></circle><circle class="swp" cx="324.4" cy="200.9" r="2.6"><title>threshold 0.84: accuracy 0.702, gap 0.218</title></circle><circle class="swp" cx="297.4" cy="224.1" r="2.6"><title>threshold 0.86: accuracy 0.691, gap 0.193</title></circle><circle class="swp" cx="264.2" cy="252.8" r="2.6"><title>threshold 0.88: accuracy 0.677, gap 0.162</title></circle><circle class="swp" cx="238.5" cy="275.8" r="2.6"><title>threshold 0.91: accuracy 0.666, gap 0.137</title></circle><circle class="swp" cx="197.6" cy="313.7" r="2.6"><title>threshold 0.93: accuracy 0.649, gap 0.096</title></circle><circle class="swp" cx="158.7" cy="355.8" r="2.6"><title>threshold 0.95: accuracy 0.632, gap 0.050</title></circle><g class="row"><circle class="mk-base" cx="563.6" cy="114.1" r="8"><title>Today: accuracy 0.8021, gap 0.3119</title></circle><text class="mk" x="577.6" y="112.1">Today</text><text class="mkn" x="577.6" y="127.1">gap 0.312</text></g><g class="row"><circle class="mk-fix" cx="553.6" cy="296.5" r="8"><title>Per-group cuts: accuracy 0.7979, gap 0.1143</title></circle><text class="mk" x="567.6" y="294.5">Per-group cuts</text><text class="mkn" x="567.6" y="309.5">gap 0.114, needs race at inference</text></g><text class="axt" x="331.0" y="448" text-anchor="middle">Overall accuracy</text><text class="axt" transform="translate(18,214.0) rotate(-90)" text-anchor="middle">Recall gap between groups</text></svg></div>
   </div>
 </div>
 
 <section>
   <div class="shell reveal">
-    <p class="kicker">The honest accounting</p>
-    <h2>Cheap in accuracy, expensive in everything else.</h2>
-    <p class="say">One threshold per group, chosen on the validation year to equalise
-      recall, closes most of the gap: <b>0.312</b> falls to
-      <b>0.114</b>. Accuracy pays
-      <b>0.0042</b> for it, which is four tenths of a point. By the
-      only number most projects report, this is nearly free.</p>
+    <p class="kicker">One threshold per group</p>
+    <h2>This works. I did not ship it.</h2>
+    <p class="say">Give each group its own cut-off and the recall gap falls from
+      <b>0.312</b> to
+      <b>0.114</b>, for
+      <b>0.0042</b> of accuracy. By the number most projects report,
+      that is nearly free.</p>
     <div class="numbers">
       <div><div class="k">Recall gap, today</div>
         <div class="v">0.312</div>
@@ -763,28 +754,19 @@ body { padding-top:0; }
       <div><div class="k">Accuracy paid</div>
         <div class="v">0.0042</div>
         <div class="c">0.802 to 0.798</div></div>
-      <div><div class="k">False positive gap</div>
+      <div><div class="k">False alarm gap</div>
         <div class="v">0.196</div>
         <div class="c">was 0.145, so it got worse</div></div>
     </div>
-    <p class="say" style="margin-top:34px">Two things that accounting hides, and both
-      matter more than the accuracy.</p>
-    <p class="say">The false positive gap goes the other way, from
-      0.145 to 0.196. Equalising one
-      error rate across groups makes the other one less equal. This is not an
-      implementation detail, it is the impossibility result arriving in person: with
-      different base rates you are choosing which unfairness to keep, not removing
-      unfairness.</p>
-    <p class="say">And it needs the protected attribute <b>at the moment of
-      prediction</b>. A system doing this has to look at someone's race to decide which
-      threshold applies to them. In hiring, in lending, in most places anyone would
-      actually want this, that is either unlawful or is itself the harm. A mitigation
-      that only works by doing the thing you were trying to avoid belongs in the
-      documentation as a rejected option with its reasoning attached, which is where this
-      one is.</p>
-    <p class="note">Thresholds are chosen on the validation year and applied unchanged to
-      the test year, the same discipline as everything else here. Choosing them on the
-      test year would be fitting the fix to the exam.</p>
+    <p class="say" style="margin-top:34px">Two reasons, both bigger than the accuracy.</p>
+    <p class="say"><b>It needs the person's race at the moment it decides.</b> The system
+      has to look up your race to know which cut-off applies. In hiring or lending that
+      is either illegal or is the harm you were trying to prevent.</p>
+    <p class="say"><b>It moves the unfairness rather than removing it.</b> The false
+      alarm gap goes up, 0.145 to
+      0.196. When groups differ in how often the outcome
+      happens, making one kind of error equal forces the other to become unequal. There
+      is no setting where everything is fair at once.</p>
   </div>
 </section>
 
@@ -792,65 +774,52 @@ body { padding-top:0; }
 <div class="band" id="conclusion">
   <div class="shell band-in reveal">
     <p class="kicker">Conclusion</p>
-    <h2>What I would tell a team about to ship this.</h2>
+    <h2>Five things worth taking away.</h2>
     <div class="steps">
       <div class="step">
-        <h3>The gap is real, and it is not an artefact of the attributes</h3>
-        <p>0.312 between the best and worst treated racial group, with
-          a 95% interval that does not come near zero. Deleting race and sex from the
-          features leaves 92% of it standing.
-          You cannot make this go away by not looking.</p>
+        <h3>The gap is real</h3>
+        <p>0.312 between the best and worst treated group. Deleting
+          race and sex from the features leaves
+          92% of it. Swapping the algorithm
+          entirely leaves all of it.</p>
       </div>
       <div class="step">
-        <h3>Accuracy will tell you everything is fine</h3>
-        <p>It sits between 0.77 and
+        <h3>Accuracy will tell you nothing is wrong</h3>
+        <p>It runs 0.77 to
           0.84 across those same groups. A model can
-          be equally accurate everywhere and still place its errors on the same people
-          every time. If one number is all you check, this is invisible to you.</p>
+          be equally accurate everywhere and still put its mistakes on the same people.</p>
       </div>
       <div class="step">
-        <h3>Audit where the attributes cross, not one at a time</h3>
-        <p>False positive gap 0.145 by race, 0.080 by
-          sex, 0.221 by the two together. Two acceptable
-          averages can hide a much worse cell underneath them, and marginal audits are
-          built to miss exactly that.</p>
+        <h3>Audit where attributes cross</h3>
+        <p>False alarm gap 0.145 by race, 0.080 by sex,
+          0.221 by both together. One attribute at a time misses
+          the cell that matters.</p>
       </div>
       <div class="step">
-        <h3>The fix that works may not be one you can use</h3>
+        <h3>The fix that works may not be usable</h3>
         <p>Per-group thresholds cut the gap to
-          0.114 for
-          0.0042 of accuracy, and need the
-          person's race at the moment of decision, and push the false positive gap up.
-          There is no setting where everything is fair at once. You are choosing which
+          0.114, need race at the
+          moment of decision, and push the false alarm gap up. You are choosing which
           unfairness to keep, so choose it out loud.</p>
       </div>
       <div class="step">
-        <h3>Put the limits somewhere a build can read them</h3>
-        <p>The reason any of this is still true tomorrow is that the numbers are held
-          against a declared file, regenerated on every commit, and checked monthly by
-          a job nobody has to remember to run. A standard that lives in a document
-          drifts. A standard that fails a build does not.</p>
+        <h3>Put the limits where a build can read them</h3>
+        <p>A standard in a document drifts. A standard that fails a build does not.</p>
       </div>
     </div>
-    <p class="note">The honest move was never to find a model with no disparity. It was
-      to measure the disparity, publish what closing it would cost, say which cost I
-      was not willing to pay, and make it impossible to quietly change my mind later.</p>
+    <p class="note">The goal was never a model with no disparity. It was to measure the
+      disparity, publish what closing it would cost, and say which cost I was not
+      willing to pay.</p>
   </div>
 </div>
 
 
 <footer>
   <div class="shell">
-    <p><strong>Generated, not written.</strong> This page, the model card, the Annex IV
-      technical documentation and the DPIA all come out of
-      <code>scripts/run_audit.py</code>. Continuous integration regenerates each of them
-      and requires a byte-identical match, so editing any number by hand fails the
-      build.</p>
-    <p>Run 2026-09-23T10:44:43+00:00 &#183; commit <code>4ab2a32</code>
-      &#183; pipeline <code>6c1704bd41fd737a</code>
-      &#183; Python 3.14.3</p>
-    <p>Not a deployable system, and not a product. Income prediction on census microdata
-      is a benchmark. No decision about any person should be made with it.</p>
+    <p>Not a product. This predicts income from census answers, which is a benchmark
+      task. No decision about any person should be made with it.</p>
+    <p><a href="https://github.com/ma731/fairness-gate">Source and full results on
+      GitHub</a></p>
   </div>
 </footer>
 

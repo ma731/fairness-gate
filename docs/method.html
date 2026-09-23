@@ -337,13 +337,7 @@ tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
 .narr-h { margin:0 0 10px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
   monospace; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
   color:var(--acid); }
-.narr-receipt p { margin:0 0 14px; font-size:14px; line-height:1.58; color:var(--ink-2); }
-.narr-checks { list-style:none; margin:0 0 16px; padding:0; display:grid; gap:5px; }
-.narr-checks li { font-size:12.5px; color:var(--ink-2);
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
-.narr-checks li::before { content:"¹3  "; color:var(--acid); font-weight:700; }
-.narr-meta { margin:0 !important; font-size:11.5px; line-height:1.75; color:var(--mut); }
-.narr-meta code { color:var(--ink-2); }
+.narr-receipt p { margin:0; font-size:14px; line-height:1.58; color:var(--ink-2); }
 
 /* ---- page header (every page but the front one) ----
    The front page keeps the full-height hero. Repeating that five times would make each
@@ -770,10 +764,8 @@ body { padding-top:0; }
       before I measured it. It has a name, <b>fairness through unawareness</b>: if the
       model cannot see the attribute, it cannot discriminate on it. It is testable, so
       I tested it instead of citing someone.</p>
-    <p class="say">The shipped model does use race and sex, because they are part of
-      the standard feature set for this task. So I trained the whole pipeline a second
-      time with both columns deleted, gave it its own threshold chosen on the
-      validation year, and scored it on the same test year.</p>
+    <p class="say">The model does use race and sex. So I trained it again with both
+      columns deleted, gave it its own threshold, and scored it on the same year.</p>
 
     <div class="numbers">
       <div><div class="k">Gap, sees both</div>
@@ -798,10 +790,8 @@ body { padding-top:0; }
       group and 85 in another. It rebuilds nearly all of
       the signal from occupation, education, hours worked and place of birth, because
       those carry the history of who got which opportunities.</p>
-    <p class="note">So an attribute is protected whether or not the model is allowed to
-      look at it. Deleting the column does not delete the problem. It deletes your
-      ability to see the problem, while leaving you feeling like you did something, and
-      a team in that position is worse off than one that never tried.</p>
+    <p class="note">Deleting the column does not delete the problem. It deletes your
+      ability to see it, while leaving you feeling like you did something.</p>
   </div>
 </section>
 
@@ -810,16 +800,12 @@ body { padding-top:0; }
   <div class="shell reveal">
     <p class="kicker">A second model</p>
     <h2>Would a different algorithm simply not have this problem?</h2>
-    <p class="say">Every other number here comes from one gradient boosted tree, and
-      that is a real weakness in the argument. Boosting is very good at finding
-      interactions, and an interaction between occupation, region and hours is exactly
-      the shape of thing that could rebuild race without ever being told it. So the
-      obvious objection is that this is a fact about the algorithm rather than about
-      the world.</p>
-    <p class="say">I trained a <b>logistic regression</b> on the identical splits and
-      the identical features. Linear, additive, no interactions unless you build them,
-      and about as different from a boosted forest as you can get while still predicting
-      the same thing.</p>
+    <p class="say">Every other number here comes from one gradient boosted tree. The
+      fair objection is that this might be a fact about the algorithm: boosting is very
+      good at finding interactions, and occupation crossed with region and hours could
+      rebuild race without ever being told it.</p>
+    <p class="say">So I trained a <b>logistic regression</b> on the identical splits
+      and features. Linear, additive, no interactions unless you build them.</p>
 
     <div class="numbers">
       <div><div class="k">Gap, trees</div>
@@ -845,12 +831,9 @@ body { padding-top:0; }
       And the rank correlation says the two families do not merely fail equally hard,
       they fail the same people: rank the groups by recall under each model and you get
       almost the same order.</p>
-    <p class="note">So this is not a fact about gradient boosting. Two model families
-      with nothing in common, fitted to the same data, arrive at the same disparity and
-      put it on the same groups. That moves the finding from "this algorithm has a
-      problem" to "this data encodes an inequality, and a model fitted to it will
-      inherit it". The second is much harder to fix and much more useful to know, and
-      it is the reason picking a different library is not a plan.</p>
+    <p class="note">Two model families with nothing in common reach the same
+      disparity and put it on the same groups. So the problem is in the data, not the
+      algorithm, and picking a different library is not a plan.</p>
   </div>
 </section>
 
@@ -928,16 +911,10 @@ body { padding-top:0; }
 </div>
 <footer>
   <div class="shell">
-    <p><strong>Generated, not written.</strong> This page, the model card, the Annex IV
-      technical documentation and the DPIA all come out of
-      <code>scripts/run_audit.py</code>. Continuous integration regenerates each of them
-      and requires a byte-identical match, so editing any number by hand fails the
-      build.</p>
-    <p>Run 2026-09-23T10:44:43+00:00 &#183; commit <code>4ab2a32</code>
-      &#183; pipeline <code>6c1704bd41fd737a</code>
-      &#183; Python 3.14.3</p>
-    <p>Not a deployable system, and not a product. Income prediction on census microdata
-      is a benchmark. No decision about any person should be made with it.</p>
+    <p>Not a product. This predicts income from census answers, which is a benchmark
+      task. No decision about any person should be made with it.</p>
+    <p><a href="https://github.com/ma731/fairness-gate">Source and full results on
+      GitHub</a></p>
   </div>
 </footer>
 

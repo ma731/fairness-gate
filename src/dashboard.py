@@ -478,11 +478,10 @@ def slope_chart(tables: dict, attribute: str) -> str:
 
 
 def narration_block() -> str:
-    """The generated summary, if one verified, with its receipt attached.
+    """The generated summary, if one verified.
 
-    Absent is a normal state and renders as nothing. A page that showed an empty
-    placeholder would be advertising a feature that is currently switched off, and a
-    page that showed an unverified draft would be the exact thing this is here to stop.
+    Absent renders as nothing. An empty placeholder would advertise a switched-off
+    feature, and an unverified draft is the thing this exists to stop.
     """
     from src.narrator import CHECKS, load
 
@@ -490,39 +489,19 @@ def narration_block() -> str:
     if not record:
         return ""
 
-    passed = "".join(
-        f"<li>{esc(check.__name__.replace('check_', '').replace('_', ' '))}</li>"
-        for check in CHECKS
-    )
-    attempts = record.get("attempts", 1)
-    tries = "first attempt" if attempts == 1 else f"attempt {attempts}"
-    # Only shown when an API call actually produced it. The source line already says
-    # where the words came from, and "Model: no model" reads like a bug.
-    model = record.get("model")
-    model_line = f"Model: <code>{esc(model)}</code><br>" if model else ""
-
     return f"""<section id="summary">
   <div class="shell reveal">
-    <p class="kicker">In words</p>
-    <h2>A summary, written by a language model and checked before you saw it.</h2>
+    <p class="kicker">In short</p>
+    <h2>Written by a language model. Fact-checked before you saw it.</h2>
     <div class="narr">
       <blockquote class="narr-text">{esc(record['text'])}</blockquote>
       <aside class="narr-receipt">
-        <p class="narr-h">How this got here</p>
-        <p>A model wrote it. It was not allowed to publish it. Every number in it had
-          to trace back to a measured value at the precision it was written, and the
-          draft had to survive every check below before it could appear on this page.</p>
-        <ul class="narr-checks">{passed}</ul>
-        <p class="narr-meta">Passed on the {esc(tries)}<br>
-          Source: {esc(record.get('source', 'unknown'))}<br>
-          {model_line}Against the audit of
-          {esc(record.get('audit_generated_at', 'unknown'))}</p>
+        <p class="narr-h">Checked</p>
+        <p>Every figure above had to match a measured one, and {len(CHECKS)} other
+          checks had to pass, before this was allowed on the page. Drafts that fail are
+          not published.</p>
       </aside>
     </div>
-    <p class="note">If no draft passes, nothing is published and this section does not
-      appear at all. There is no best-of-four fallback, because a guardrail with one is
-      only a delay. The checks themselves are scored against twelve drafts with known
-      planted errors on every commit, so they cannot rot quietly.</p>
   </div>
 </section>
 
@@ -753,16 +732,12 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
   <div class="shell reveal">
     <p class="kicker">A second model</p>
     <h2>Would a different algorithm simply not have this problem?</h2>
-    <p class="say">Every other number here comes from one gradient boosted tree, and
-      that is a real weakness in the argument. Boosting is very good at finding
-      interactions, and an interaction between occupation, region and hours is exactly
-      the shape of thing that could rebuild race without ever being told it. So the
-      obvious objection is that this is a fact about the algorithm rather than about
-      the world.</p>
-    <p class="say">I trained a <b>logistic regression</b> on the identical splits and
-      the identical features. Linear, additive, no interactions unless you build them,
-      and about as different from a boosted forest as you can get while still predicting
-      the same thing.</p>
+    <p class="say">Every other number here comes from one gradient boosted tree. The
+      fair objection is that this might be a fact about the algorithm: boosting is very
+      good at finding interactions, and occupation crossed with region and hours could
+      rebuild race without ever being told it.</p>
+    <p class="say">So I trained a <b>logistic regression</b> on the identical splits
+      and features. Linear, additive, no interactions unless you build them.</p>
 
     <div class="numbers">
       <div><div class="k">Gap, trees</div>
@@ -789,12 +764,9 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
       And the rank correlation says the two families do not merely fail equally hard,
       they fail the same people: rank the groups by recall under each model and you get
       almost the same order.</p>
-    <p class="note">So this is not a fact about gradient boosting. Two model families
-      with nothing in common, fitted to the same data, arrive at the same disparity and
-      put it on the same groups. That moves the finding from "this algorithm has a
-      problem" to "this data encodes an inequality, and a model fitted to it will
-      inherit it". The second is much harder to fix and much more useful to know, and
-      it is the reason picking a different library is not a plan.</p>
+    <p class="note">Two model families with nothing in common reach the same
+      disparity and put it on the same groups. So the problem is in the data, not the
+      algorithm, and picking a different library is not a plan.</p>
   </div>
 </section>
 
@@ -840,10 +812,8 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
       before I measured it. It has a name, <b>fairness through unawareness</b>: if the
       model cannot see the attribute, it cannot discriminate on it. It is testable, so
       I tested it instead of citing someone.</p>
-    <p class="say">The shipped model does use race and sex, because they are part of
-      the standard feature set for this task. So I trained the whole pipeline a second
-      time with both columns deleted, gave it its own threshold chosen on the
-      validation year, and scored it on the same test year.</p>
+    <p class="say">The model does use race and sex. So I trained it again with both
+      columns deleted, gave it its own threshold, and scored it on the same year.</p>
 
     <div class="numbers">
       <div><div class="k">Gap, sees both</div>
@@ -868,10 +838,8 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
       group and {round(100 - spared['per_100'])} in another. It rebuilds nearly all of
       the signal from occupation, education, hours worked and place of birth, because
       those carry the history of who got which opportunities.</p>
-    <p class="note">So an attribute is protected whether or not the model is allowed to
-      look at it. Deleting the column does not delete the problem. It deletes your
-      ability to see the problem, while leaving you feeling like you did something, and
-      a team in that position is worse off than one that never tried.</p>
+    <p class="note">Deleting the column does not delete the problem. It deletes your
+      ability to see it, while leaving you feeling like you did something.</p>
   </div>
 </section>
 
@@ -880,49 +848,42 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
         f"""<div class="band" id="conclusion">
   <div class="shell band-in reveal">
     <p class="kicker">Conclusion</p>
-    <h2>What I would tell a team about to ship this.</h2>
+    <h2>Five things worth taking away.</h2>
     <div class="steps">
       <div class="step">
-        <h3>The gap is real, and it is not an artefact of the attributes</h3>
-        <p>{fmt(race['tpr_gap'])} between the best and worst treated racial group, with
-          a 95% interval that does not come near zero. Deleting race and sex from the
-          features leaves {unaware_cmp.get('share_remaining', 0):.0%} of it standing.
-          You cannot make this go away by not looking.</p>
+        <h3>The gap is real</h3>
+        <p>{fmt(race['tpr_gap'])} between the best and worst treated group. Deleting
+          race and sex from the features leaves
+          {unaware_cmp.get('share_remaining', 0):.0%} of it. Swapping the algorithm
+          entirely leaves all of it.</p>
       </div>
       <div class="step">
-        <h3>Accuracy will tell you everything is fine</h3>
-        <p>It sits between {fmt(float(sub['accuracy'].min()), 2)} and
+        <h3>Accuracy will tell you nothing is wrong</h3>
+        <p>It runs {fmt(float(sub['accuracy'].min()), 2)} to
           {fmt(float(sub['accuracy'].max()), 2)} across those same groups. A model can
-          be equally accurate everywhere and still place its errors on the same people
-          every time. If one number is all you check, this is invisible to you.</p>
+          be equally accurate everywhere and still put its mistakes on the same people.</p>
       </div>
       <div class="step">
-        <h3>Audit where the attributes cross, not one at a time</h3>
-        <p>False positive gap {fmt(race['fpr_gap'])} by race, {fmt(sex['fpr_gap'])} by
-          sex, {fmt(xsex.get('fpr_gap', 0))} by the two together. Two acceptable
-          averages can hide a much worse cell underneath them, and marginal audits are
-          built to miss exactly that.</p>
+        <h3>Audit where attributes cross</h3>
+        <p>False alarm gap {fmt(race['fpr_gap'])} by race, {fmt(sex['fpr_gap'])} by sex,
+          {fmt(xsex.get('fpr_gap', 0))} by both together. One attribute at a time misses
+          the cell that matters.</p>
       </div>
       <div class="step">
-        <h3>The fix that works may not be one you can use</h3>
+        <h3>The fix that works may not be usable</h3>
         <p>Per-group thresholds cut the gap to
-          {fmt(float((mt.get('per_group') or {{}}).get('tpr_gap', 0)))} for
-          {fmt(float(mt.get('accuracy_cost', 0)), 4)} of accuracy, and need the
-          person's race at the moment of decision, and push the false positive gap up.
-          There is no setting where everything is fair at once. You are choosing which
+          {fmt(float((mt.get('per_group') or {{}}).get('tpr_gap', 0)))}, need race at the
+          moment of decision, and push the false alarm gap up. You are choosing which
           unfairness to keep, so choose it out loud.</p>
       </div>
       <div class="step">
-        <h3>Put the limits somewhere a build can read them</h3>
-        <p>The reason any of this is still true tomorrow is that the numbers are held
-          against a declared file, regenerated on every commit, and checked monthly by
-          a job nobody has to remember to run. A standard that lives in a document
-          drifts. A standard that fails a build does not.</p>
+        <h3>Put the limits where a build can read them</h3>
+        <p>A standard in a document drifts. A standard that fails a build does not.</p>
       </div>
     </div>
-    <p class="note">The honest move was never to find a model with no disparity. It was
-      to measure the disparity, publish what closing it would cost, say which cost I
-      was not willing to pay, and make it impossible to quietly change my mind later.</p>
+    <p class="note">The goal was never a model with no disparity. It was to measure the
+      disparity, publish what closing it would cost, and say which cost I was not
+      willing to pay.</p>
   </div>
 </div>
 
@@ -1090,10 +1051,9 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
     <p class="kicker">The gate</p>
     <h2>Every threshold, measured on every commit.</h2>
     <p class="say">The solid tick is the limit that fails the build. The dashed tick is
-      the target being aimed at. The distance between them is deliberate: a limit pinned
-      to wherever the model lands today would make the gate meaningless, and one pinned
-      to the aspiration would mean a permanently red build that everyone learns to
-      ignore.</p>
+      the target. The distance between them is deliberate: a limit set to wherever the
+      model lands today never fires, and one set to the aspiration is permanently
+      red.</p>
     <div class="panel"><ul class="checks">{_checks(result)}</ul></div>
   </div>
 </div>
@@ -1104,19 +1064,17 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
   <div class="shell band-in reveal">
     <p class="kicker">Where the attributes cross</p>
     <h2>Two acceptable averages can hide one bad cell.</h2>
-    <p class="say">Race and sex audited separately can both look tolerable while the
-      combination of the two is far worse than either suggests. A pair of bar charts
-      cannot show that, because it never puts the axes together. This is a grid, because
-      the data is a grid: recall in each cell, with the group size underneath.</p>
+    <p class="say">Race and sex can each look tolerable while the combination is far
+      worse than either suggests. Recall in every cell, with the group size
+      underneath.</p>
     <p class="say">It is not hypothetical here. The false positive gap is
       <b>{xsex['fpr_gap']:.3f}</b> across these cells, against {race['fpr_gap']:.3f} for
       race alone and {sex['fpr_gap']:.3f} for sex alone. Crossing the attributes roughly
       doubles the disparity that either marginal reports.</p>
     <div class="panel chartbox">{intersection_matrix(test)}</div>
-    <p class="note">Hatched cells fall below the 500-person reporting floor and are
-      withheld. Their absence is itself the finding: {xsuppressed} of
-      {xtotal} cells are too small to say anything about, and the groups most exposed to
-      harm are the ones a survey is least likely to have enough of.</p>
+    <p class="note">Hatched cells are below the 500-person floor and withheld. The
+      absence is the finding: {xsuppressed} of {xtotal} cells are too small to say
+      anything about, and they are the groups most exposed to harm.</p>
   </div>
 </div>
 
@@ -1126,14 +1084,12 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
   <div class="shell reveal">
     <p class="kicker">How much to trust these numbers</p>
     <h2>Three decimals do not mean three decimals.</h2>
-    <p class="say">Every other chart here prints rates to the same precision whatever the
-      group size. This one shows what that precision is worth. The dot is the measured
-      recall, the bar is the 95% interval, and the groups are ordered by how uncertain
-      they are, so the caveat arrives before the ranking.</p>
-    <p class="say">This is also what the gate now runs on. A check fails only when the
-      whole interval clears the declared limit. A point estimate over the line with an
-      interval straddling it is a warning instead, because a build that goes red on
-      sampling noise is a build people learn to re-run until it passes.</p>
+    <p class="say">Every other chart prints rates to the same precision whatever the group
+      size. This one shows what that precision is worth. The dot is the measured recall,
+      the bar is the 95% interval, ordered by how uncertain they are.</p>
+    <p class="say">The gate runs on these, not on the point estimate. A check fails only
+      when the whole interval is past the limit. A build that goes red on sampling noise
+      is a build people re-run until it passes.</p>
     <div class="panel chartbox">{interval_chart(result)}</div>
   </div>
 </section>
@@ -1278,29 +1234,26 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
         "fix":
         f"""<div class="band" id="fix">
   <div class="shell band-in reveal">
-    <p class="kicker">What it would take to fix</p>
-    <h2>The gap can be closed. Here is the bill.</h2>
-    <p class="say">Proving a disparity exists is the easy half. Every point on the line
-      is this same model under a different single threshold, and the shape is the
-      argument: sliding one cut does not buy fairness, it buys a worse model that selects
-      almost everybody. The lowest gap a single threshold reaches is
-      <b>{mt['best_global']['tpr_gap']:.3f}</b>, at a threshold of
-      {mt['best_global']['threshold']:.2f} and an accuracy of
-      {mt['best_global']['accuracy']:.3f}. That is not a fix, it is abandoning the
-      model.</p>
+    <p class="kicker">One threshold for everyone</p>
+    <h2>Moving the cut-off does not work.</h2>
+    <p class="say">The obvious first move is to slide the single threshold until the gap
+      closes. It does close, at <b>{mt['best_global']['tpr_gap']:.3f}</b>, but only at a
+      threshold of {mt['best_global']['threshold']:.2f} where accuracy falls to
+      {mt['best_global']['accuracy']:.3f} and the model says yes to almost everyone.
+      That is switching the model off, not fixing it.</p>
     <div class="panel chartbox">{tradeoff_curve(result)}</div>
   </div>
 </div>
 
 <section>
   <div class="shell reveal">
-    <p class="kicker">The honest accounting</p>
-    <h2>Cheap in accuracy, expensive in everything else.</h2>
-    <p class="say">One threshold per group, chosen on the validation year to equalise
-      recall, closes most of the gap: <b>{mt['baseline']['tpr_gap']:.3f}</b> falls to
-      <b>{mt['per_group']['tpr_gap']:.3f}</b>. Accuracy pays
-      <b>{mt['accuracy_cost']:.4f}</b> for it, which is four tenths of a point. By the
-      only number most projects report, this is nearly free.</p>
+    <p class="kicker">One threshold per group</p>
+    <h2>This works. I did not ship it.</h2>
+    <p class="say">Give each group its own cut-off and the recall gap falls from
+      <b>{mt['baseline']['tpr_gap']:.3f}</b> to
+      <b>{mt['per_group']['tpr_gap']:.3f}</b>, for
+      <b>{mt['accuracy_cost']:.4f}</b> of accuracy. By the number most projects report,
+      that is nearly free.</p>
     <div class="numbers">
       <div><div class="k">Recall gap, today</div>
         <div class="v">{mt['baseline']['tpr_gap']:.3f}</div>
@@ -1311,28 +1264,19 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
       <div><div class="k">Accuracy paid</div>
         <div class="v">{mt['accuracy_cost']:.4f}</div>
         <div class="c">{mt['baseline']['accuracy']:.3f} to {mt['per_group']['accuracy']:.3f}</div></div>
-      <div><div class="k">False positive gap</div>
+      <div><div class="k">False alarm gap</div>
         <div class="v">{mt['per_group']['fpr_gap']:.3f}</div>
         <div class="c">was {mt['baseline']['fpr_gap']:.3f}, so it got worse</div></div>
     </div>
-    <p class="say" style="margin-top:34px">Two things that accounting hides, and both
-      matter more than the accuracy.</p>
-    <p class="say">The false positive gap goes the other way, from
-      {mt['baseline']['fpr_gap']:.3f} to {mt['per_group']['fpr_gap']:.3f}. Equalising one
-      error rate across groups makes the other one less equal. This is not an
-      implementation detail, it is the impossibility result arriving in person: with
-      different base rates you are choosing which unfairness to keep, not removing
-      unfairness.</p>
-    <p class="say">And it needs the protected attribute <b>at the moment of
-      prediction</b>. A system doing this has to look at someone's race to decide which
-      threshold applies to them. In hiring, in lending, in most places anyone would
-      actually want this, that is either unlawful or is itself the harm. A mitigation
-      that only works by doing the thing you were trying to avoid belongs in the
-      documentation as a rejected option with its reasoning attached, which is where this
-      one is.</p>
-    <p class="note">Thresholds are chosen on the validation year and applied unchanged to
-      the test year, the same discipline as everything else here. Choosing them on the
-      test year would be fitting the fix to the exam.</p>
+    <p class="say" style="margin-top:34px">Two reasons, both bigger than the accuracy.</p>
+    <p class="say"><b>It needs the person's race at the moment it decides.</b> The system
+      has to look up your race to know which cut-off applies. In hiring or lending that
+      is either illegal or is the harm you were trying to prevent.</p>
+    <p class="say"><b>It moves the unfairness rather than removing it.</b> The false
+      alarm gap goes up, {mt['baseline']['fpr_gap']:.3f} to
+      {mt['per_group']['fpr_gap']:.3f}. When groups differ in how often the outcome
+      happens, making one kind of error equal forces the other to become unequal. There
+      is no setting where everything is fair at once.</p>
   </div>
 </section>
 
@@ -1436,18 +1380,12 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
 
 """,
         "footer":
-        f"""<footer>
+        """<footer>
   <div class="shell">
-    <p><strong>Generated, not written.</strong> This page, the model card, the Annex IV
-      technical documentation and the DPIA all come out of
-      <code>scripts/run_audit.py</code>. Continuous integration regenerates each of them
-      and requires a byte-identical match, so editing any number by hand fails the
-      build.</p>
-    <p>Run {esc(result['generated_at'])} &#183; commit <code>{esc(result['git_sha'])}</code>
-      &#183; pipeline <code>{esc(result.get('pipeline_fingerprint', 'n/a'))}</code>
-      &#183; Python {esc(result['python'])}</p>
-    <p>Not a deployable system, and not a product. Income prediction on census microdata
-      is a benchmark. No decision about any person should be made with it.</p>
+    <p>Not a product. This predicts income from census answers, which is a benchmark
+      task. No decision about any person should be made with it.</p>
+    <p><a href="https://github.com/ma731/fairness-gate">Source and full results on
+      GitHub</a></p>
   </div>
 </footer>
 
