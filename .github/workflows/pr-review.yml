@@ -1,0 +1,86 @@
+name: fairness review
+
+# Comments on every pull request with what actually moved.
+#
+# The gate in gate.yml answers "did anything cross a limit". That is a yes or no, and a
+# yes or no is not enough to review a model change with: a commit can keep every check
+# inside its limit and still take four points of recall off one group. This job reads
+# the audit on main, reads the audit on the branch, and writes the difference into a
+# comment so the reviewer sees the movement rather than a green tick.
+#
+# It never fails the build. Blocking stays the gate's job. This one is here to make the
+# human review better, and a bot that both nags and blocks gets muted.
+
+on:
+  pull_request:
+
+# The default token cannot comment on a pull request from a fork, which is correct:
+# a fork should not be able to make the base repository post things. Those PRs get the
+# comment in the job summary instead, where it is still readable.
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch the audit from the base branch
+        run: |
+          git show "origin/${{ github.base_ref }}:results/audit.json" > base_audit.json \
+            || echo '{}' > base_audit.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Write the review
+        run: |
+          python scripts/review_pr.py \
+            --base base_audit.json \
+            --head results/audit.json \
+            --out review.md
+
+      - name: Put it in the job summary as well
+        run: cat review.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post or update the comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('review.md', 'utf8');
+            const marker = '## Fairness review';
+
+            // One comment per pull request, edited in place. A new comment on every
+            // push buries the conversation under a bot talking to itself.
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const mine = comments.find(c =>
+              c.user.type === 'Bot' && c.body.startsWith(marker));
+
+            if (mine) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: mine.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
