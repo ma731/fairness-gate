@@ -41,6 +41,17 @@ WRONG_SUPERLATIVE = f"""The audit found a recall gap of {GAP} across racial grou
 measured and left unadopted, because it requires race at the moment of decision. The
 {WORST} group appears in the same table."""
 
+# Real drafts from gpt-4.1-mini, from the first live run on Azure. The first two are
+# correct and were rejected: the checker read "most often" as praise in "overlooks
+# ... most often". They stay here so that false alarm can't come back.
+LIVE_1 = 'The model overlooks the group labeled "Some other race alone" most often, with their recall rate at 0.5420 compared to other groups. Overall, the difference in recall rates across racial groups is 0.3119, showing a disparity in how often the model recognizes people from different groups. Despite this, the accuracy remains nearly the same across groups, ranging roughly from 0.7735 to 0.8440. A method to reduce the recall gap was tested but not used because it would require knowing a person’s race when predicting, and it would increase false positives. Removing race and sex from the model’s inputs barely reduced the recall gap.'
+
+LIVE_2 = 'The model most often overlooks people identified as "Some other race alone," with the lowest recall rate of 0.5420. Overall, accuracy is nearly the same across racial groups, ranging from 0.7735 to 0.8440. There is a recall gap of 0.3119 across racial groups, meaning the model identifies some groups less reliably. A possible fix that reduces this recall gap but raises false positives and needs race at prediction time was tested and deliberately not used.'
+
+# The third had a real error: 0.8539 is Asian recall, given as the top of the accuracy
+# range. It should fail for that alone.
+LIVE_3 = 'This audit finds a large difference in how often the model correctly identifies cases across racial groups, with a recall gap of 0.3119. The group that the model misses most often is "Some other race alone," with the lowest recall of 0.5420. Accuracy is similar across all groups, ranging roughly between 0.7735 and 0.8539. A possible fairness adjustment was tested that would reduce the recall gap significantly but increase false positives and require knowing a person\'s race at prediction time, so it was intentionally not used.'
+
 CASES = [
     {
         "name": "clean",
@@ -81,7 +92,7 @@ CASES = [
     {
         "name": "claims_the_fix_shipped",
         "text": FIX_SHIPPED,
-        "expect": ["claims_mitigation_shipped", "claims_fairness"],
+        "expect": ["claims_mitigation_shipped", "claims_fairness", "too_thin"],
         "why": "inverts the central finding of the project",
     },
     {
@@ -121,5 +132,23 @@ left unadopted, for reasons set out in the documentation. Readers should consult
 full results for the specific figures involved here.""",
         "expect": ["no_numbers", "missing_finding"],
         "why": "fluent, confident, and says nothing that could be checked",
+    },
+    {
+        "name": "live_correct_worst_group_1",
+        "text": LIVE_1,
+        "expect": [],
+        "why": "a real model draft that was right and got rejected by the first checker",
+    },
+    {
+        "name": "live_correct_worst_group_2",
+        "text": LIVE_2,
+        "expect": [],
+        "why": "the same false alarm, phrased 'most often overlooks'",
+    },
+    {
+        "name": "live_wrong_accuracy_range",
+        "text": LIVE_3,
+        "expect": ["wrong_claim"],
+        "why": "a real model error: a recall figure passed off as the top of accuracy",
     },
 ]

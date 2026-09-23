@@ -48,9 +48,9 @@ def run(verbose: bool = False) -> tuple[list[dict], dict]:
 
         # A miss is an expected violation the verifier did not raise. Dangerous.
         not_caught = expected - raised
-        # A false alarm is a violation on a draft that should have been clean. Annoying,
-        # and annoying is how a check gets switched off.
-        spurious = raised - expected if not expected else set()
+        # A false alarm is any violation the draft didn't earn, on a bad draft as well as
+        # a clean one. Only checking clean drafts missed a real false alarm once.
+        spurious = raised - expected
 
         ok = not not_caught and not spurious
         missed += len(not_caught)

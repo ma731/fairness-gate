@@ -26,6 +26,7 @@ from src.narrator import NARRATION_PATH, facts, generate, prompt, verify
 from src.report import RESULTS_DIR
 
 ENV_PATH = REPO_ROOT / ".env"
+REJECTED_PATH = NARRATION_PATH.with_name("narration_rejected.json")
 PROVIDERS = ("azure-openai", "azure-claude", "anthropic")
 
 
@@ -153,9 +154,12 @@ def load_audit() -> tuple[dict, dict]:
 
 
 def write_record(record: dict) -> None:
-    NARRATION_PATH.parent.mkdir(parents=True, exist_ok=True)
-    NARRATION_PATH.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {NARRATION_PATH.relative_to(REPO_ROOT)}")
+    """A passing draft replaces the published one. A failed run is kept aside for
+    inspection, so a bad retry can't wipe a summary that already passed."""
+    path = NARRATION_PATH if record.get("verified") else REJECTED_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {path.relative_to(REPO_ROOT)}")
 
 
 def main() -> int:
@@ -190,7 +194,8 @@ def main() -> int:
             "history": [{"attempt": 1, "draft": draft,
                          "violations": [str(v) for v in violations]}],
         })
-        print("VERIFIED" if not violations else "REJECTED, nothing published")
+        print("VERIFIED" if not violations
+              else "REJECTED; the published summary is unchanged")
         return 0 if not violations else 1
 
     env = load_env()
@@ -225,7 +230,8 @@ def main() -> int:
         "audit_generated_at": audit_at,
     })
     print(f"VERIFIED after {out['attempts']} attempt(s)" if out["verified"]
-          else f"REJECTED after {out['attempts']} attempts, nothing published")
+          else f"REJECTED after {out['attempts']} attempts; the published summary "
+               "is unchanged")
     return 0 if out["verified"] else 1
 
 

@@ -49,12 +49,18 @@ FORBIDDEN = [
      "claims_mitigation_shipped"),
 ]
 
+# "Most often" alone says nothing about direction: "found most often" is best treated,
+# "overlooked most often" is worst. A bare "most often" in the best list rejected two
+# correct gpt-4.1-mini drafts in the first live run, so the verb now has to be there.
 SUPERLATIVE_WORST = re.compile(
-    r"\b(worst|least|lowest|most overlooked|missed most|overlooks most|"
-    r"hardest hit|worst[- ]treated)\b", re.IGNORECASE
+    r"\b(worst|least|lowest|hardest hit|worst[- ]treated|"
+    r"(most (often )?(overlook|miss)\w*)|((overlook|miss)\w* (the )?most( often)?))",
+    re.IGNORECASE,
 )
 SUPERLATIVE_BEST = re.compile(
-    r"\b(best|highest|most often|best[- ]treated|found most)\b", re.IGNORECASE
+    r"\b(best|highest|best[- ]treated|"
+    r"(most (often )?(find|found|identif)\w*)|((find|finds|found) (the )?most( often)?))",
+    re.IGNORECASE,
 )
 
 @dataclass
@@ -296,11 +302,14 @@ def check_superlatives(text: str, f: Facts) -> list[Violation]:
         if len(named) != 1:
             continue  # a comparison of two groups is not a superlative claim
         name = named[0]
-        if SUPERLATIVE_WORST.search(sentence) and name != f.worst_tpr:
-            out.append(Violation(
-                "wrong_superlative",
-                f"calls {name!r} the worst treated; the audit says {f.worst_tpr!r}",
-            ))
+        # Decide what the sentence claims first, then check it once. Testing the best
+        # list after a correct "worst" claim is how a right answer got rejected.
+        if SUPERLATIVE_WORST.search(sentence):
+            if name != f.worst_tpr:
+                out.append(Violation(
+                    "wrong_superlative",
+                    f"calls {name!r} the worst treated; the audit says {f.worst_tpr!r}",
+                ))
         elif SUPERLATIVE_BEST.search(sentence) and name != f.best_tpr:
             out.append(Violation(
                 "wrong_superlative",

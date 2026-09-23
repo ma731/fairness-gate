@@ -224,8 +224,11 @@ deployment, Claude on Azure, or the Claude API), and run
 git-ignored. Any model works, a cheap one included: the checker rejects a bad draft
 whatever wrote it, so a weaker model only costs extra retries.
 
-`evals/` holds twelve drafts: ten with planted errors, and two clean ones that must
-pass. Building it caught a wrong number in this README: it said accuracy ran from 0.79,
+`evals/` holds fifteen drafts, scored for both misses and false alarms. Three come from
+the first live run with `gpt-4.1-mini` on Azure: the checker rightly caught a recall
+figure passed off as accuracy, but it also rejected two correct drafts, reading "most
+often" in "overlooks most often" as praise. That false alarm is fixed, and all three are
+permanent test cases. Building it caught a wrong number in this README: it said accuracy ran from 0.79,
 and the real figure is 0.77.
 
 ## The voice

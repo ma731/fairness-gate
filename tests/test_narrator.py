@@ -55,8 +55,7 @@ def test_every_eval_case_behaves(spec, f):
     raised = {v.code for v in narrator.verify(spec["text"], f)}
     expected = set(spec["expect"])
     assert not (expected - raised), f"missed {expected - raised}: {spec['why']}"
-    if not expected:
-        assert not raised, f"false alarm {raised} on a clean draft: {spec['why']}"
+    assert not (raised - expected), f"false alarm {raised - expected}: {spec['why']}"
 
 
 def test_a_clean_draft_publishes(f):

@@ -85,3 +85,18 @@ def test_the_example_file_holds_no_secret():
     line = next(ln for ln in text.splitlines() if ln.startswith("NARRATOR_API_KEY="))
     assert line == "NARRATOR_API_KEY="
     assert "your-resource-name" in text
+
+
+def test_a_failed_run_never_replaces_the_published_summary(tmp_path, monkeypatch):
+    published = tmp_path / "narration.json"
+    published.write_text('{"text": "good", "verified": true}', encoding="utf-8")
+    monkeypatch.setattr(narrate, "NARRATION_PATH", published)
+    monkeypatch.setattr(narrate, "REJECTED_PATH", tmp_path / "narration_rejected.json")
+    monkeypatch.setattr(narrate, "REPO_ROOT", tmp_path)
+
+    narrate.write_record({"text": "", "verified": False})
+    assert '"good"' in published.read_text(encoding="utf-8")
+    assert (tmp_path / "narration_rejected.json").exists()
+
+    narrate.write_record({"text": "better", "verified": True})
+    assert '"better"' in published.read_text(encoding="utf-8")
