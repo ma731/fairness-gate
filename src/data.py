@@ -1,8 +1,13 @@
 """Load ACS income data and build the train / validation / test splits.
 
 The task is the standard folktables ACSIncome problem: predict whether a person's
-income exceeds $50,000, from ten census variables. Real survey data, real ground
-truth, real distribution shift between years and between states.
+income exceeds $50,000, from ten census variables. Real survey answers from real
+people, with the real answer recorded, which is what makes it possible to ask not just
+whether the model is right but who it is wrong about.
+
+The splits are by year and by state rather than at random, so the test set is genuinely
+a different time and different places. Shuffling one year and cutting it in half would
+score better and prove less, because it hides the fact that the world moves.
 """
 
 from __future__ import annotations

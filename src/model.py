@@ -3,9 +3,11 @@
 Two things here are deliberate and worth defending in review:
 
 1. The threshold is chosen on the validation year, never on the test year.
-2. Probabilities are calibrated on the validation year too. An uncalibrated model can
-   look fine on AUC and still be useless for any decision that needs a probability,
-   which is most decisions anyone would actually make with this.
+2. Probabilities are calibrated on the validation year too. Calibrated means the
+   number can be taken at face value: out of a thousand people it scores at 0.7, about
+   seven hundred should actually qualify. A model can rank people well (good AUC, which
+   only measures ordering) and still be badly wrong about the probability itself, and
+   the probability is what an actual decision hangs on.
 """
 
 from __future__ import annotations

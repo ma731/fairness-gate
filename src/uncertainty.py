@@ -1,7 +1,9 @@
 """Confidence intervals for every rate and every gap.
 
-A true positive rate of 0.694 computed on 926 people is not the same claim as one
-computed on 434,022, and reporting both to three decimals pretends otherwise. Worse, a
+A confidence interval is just the range a number could plausibly have been, given how
+many people it was worked out from. A recall of 0.694 computed on 926 people is not the
+same claim as one computed on 434,022, and printing both to three decimals pretends
+otherwise. Worse, a
 policy gate comparing a point estimate to a threshold can fire on noise, which is the
 one thing a gate must never do: a red build nobody believes is a gate that has already
 stopped working.

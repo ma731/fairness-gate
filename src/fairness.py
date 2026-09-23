@@ -1,9 +1,15 @@
 """Group metrics and disparity summaries.
 
-Deliberately reports more than one fairness criterion. Demographic parity, equalised
-odds and calibration cannot all hold at once when base rates differ across groups,
-which they do here. Reporting one number and calling the model fair would be the
-dishonest version of this work.
+Three different ideas of what fair means, in plain terms:
+
+- demographic parity: does it say yes to each group at the same rate
+- equalised odds: does it make each kind of mistake at the same rate in each group
+- calibration: when it says 70%, is it right about 70% of the time, in every group
+
+Deliberately reports all three. They cannot all hold at once when groups genuinely
+differ in how often the outcome occurs, which here they do, by 0.270. That is a proved
+result, not a limitation of this code. Reporting one of them and calling the model fair
+would be choosing which unfairness to hide.
 """
 
 from __future__ import annotations
