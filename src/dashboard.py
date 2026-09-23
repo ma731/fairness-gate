@@ -494,9 +494,12 @@ def narration_block() -> str:
         f"<li>{esc(check.__name__.replace('check_', '').replace('_', ' '))}</li>"
         for check in CHECKS
     )
-    model = record.get("model") or "no model"
     attempts = record.get("attempts", 1)
     tries = "first attempt" if attempts == 1 else f"attempt {attempts}"
+    # Only shown when an API call actually produced it. The source line already says
+    # where the words came from, and "Model: no model" reads like a bug.
+    model = record.get("model")
+    model_line = f"Model: <code>{esc(model)}</code><br>" if model else ""
 
     return f"""<section id="summary">
   <div class="shell reveal">
@@ -512,8 +515,8 @@ def narration_block() -> str:
         <ul class="narr-checks">{passed}</ul>
         <p class="narr-meta">Passed on the {esc(tries)}<br>
           Source: {esc(record.get('source', 'unknown'))}<br>
-          Model: <code>{esc(model)}</code><br>
-          Against the audit of {esc(record.get('audit_generated_at', 'unknown'))}</p>
+          {model_line}Against the audit of
+          {esc(record.get('audit_generated_at', 'unknown'))}</p>
       </aside>
     </div>
     <p class="note">If no draft passes, nothing is published and this section does not
