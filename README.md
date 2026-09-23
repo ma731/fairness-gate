@@ -226,7 +226,10 @@ src/pointfield.py        the animated hero: one dot per person, no libraries
 src/voice.py             ask it out loud; every answer written from the audit
 src/glossary.py          plain English for every check name, in one place
 src/unaware.py           the same model without race and sex, and what that costs
+src/narrator.py          the generated summary, and the verifier that gates it
+evals/                   drafts with planted errors, and what should be caught
 scripts/review_pr.py     the pull request reviewer
+scripts/voice_audio.py   renders every spoken answer to a file, once
 scripts/run_audit.py     one command, every number
 scripts/check_policy.py  the gate
 docs/decisions/          why things are the way they are, including what I rejected
@@ -259,7 +262,38 @@ shape of the curve *is* the argument. I deliberately left out a couple of charts
 would have looked impressive, like a chord diagram, because this data has nothing for
 them to show and a chart that encodes nothing is decoration pretending to be evidence.
 
-There is also a button in the corner that lets you **ask the page questions out loud**.
+## The generated summary, and why it needs a verifier
+
+Everything else here builds its prose from templates, which cannot be wrong and also
+cannot say anything the template author did not think of. A language model writes a
+better summary, and will, given the chance, state a number that is not in the data. On a
+page arguing that you should check what your model is doing, publishing unverified
+generated text would be the joke writing itself.
+
+So the model never publishes. It proposes, and `src/narrator.py` decides. Every number
+in the draft has to trace to a measured value **at the precision it was written**.
+Superlatives have to name the right group. Suppressed groups stay suppressed. The
+mitigation is never described as adopted. Nothing may claim the model is fair. Nothing
+may make a finding about an attribute this audit never measured. A draft with any
+violation is rejected, the model is told exactly what was wrong, and it tries again. If
+nothing verifies, **nothing is published**. There is no least-bad fallback, because a
+guardrail with one is just a delay.
+
+`evals/` holds twelve drafts with known planted errors and scores both directions:
+misses, which are dangerous, and false alarms, which are how a check gets switched off by
+whoever has to live with it. It runs in CI, needs no API key and no data.
+
+Building it caught three bugs, two of them mine. My first fact set walked every number in
+the audit including a 41 point sweep, so the allowed set was so large that three planted
+errors matched something and passed. The second version still let through "accuracy
+between 0.79 and 0.84", because 0.79 is a rounding of an unrelated AUC sitting elsewhere
+in the file. The number existed. The claim was false: the measured range starts at 0.77.
+That figure was in this README. Membership in the audit turns out to be necessary and not
+sufficient, so claims with exactly one correct answer are now checked against that answer.
+
+## The voice
+
+There is a button in the corner that lets you **ask the page questions out loud**.
 Press it, say "what did you find" or "why did you not fix it", and it answers. The
 interesting part is what it cannot do: every sentence it speaks is written in
 `src/voice.py` out of `results/audit.json` at build time. No model, no API call, no
@@ -269,6 +303,21 @@ is capable of speaking traces back to a measured one. On a page arguing that you
 check what your model is doing, bolting on a chatbot nobody could verify would have been
 a bad joke. It falls back to a text box in browsers without speech recognition, and it
 tells you up front that Chrome sends your audio to Google to transcribe it.
+
+It speaks in a real voice rather than the browser's. The obvious way to do that is a
+hosted speech API, and the obvious problem with one on a static site is that an API key
+in a public page is a published API key. There is no server here to hide it behind. But
+the set of sentences this page can say is finite and known before anybody visits, because
+every answer is written in Python from the audit. So `scripts/voice_audio.py` renders
+them all to MP3 once and commits them: 16 clips, 2.5 MB, Microsoft neural voices through
+`edge-tts`, which needs no key and no account.
+
+Each clip records the hash of the text it was made from, and the page carries the hash of
+the text it is actually showing. If an answer changes and nobody re-renders, the hashes
+differ, the clip is refused, and the browser voice takes over. Audio confidently reading
+a figure the page has moved past is worse than a synthetic voice reading the right one,
+and it is exactly the failure this whole project exists to complain about. A test fails
+if any committed clip goes stale.
 
 `docs/about.html` is the only page not generated from the data, and it says so on the
 page. It is me explaining why I think this matters.
