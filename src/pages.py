@@ -159,13 +159,12 @@ def about(result: dict) -> str:
       with ground truth. The machinery is the point: a declared threshold, a measured
       audit, documents generated from the run so they cannot drift, and a build that goes
       red when a disparity crosses the line.</p>
-    <p class="say">On the current model, being in one racial group makes it
-      <b>{race['tpr_gap']:.3f}</b> more likely, in absolute terms, that a person who
-      genuinely qualifies is missed. Accuracy is almost identical across those same
+    <p class="say">On the current model, a person who genuinely qualifies is
+      <b>{race['tpr_gap'] * 100:.0f} percentage points</b> more likely to be missed in one
+      racial group than in another. Accuracy is almost identical across those same
       groups. That is the whole argument for measuring more than one number.</p>
-    <p class="note">Nothing on this page is generated from the audit. It is a person
-      explaining why he built the thing. Every number elsewhere on the site is produced
-      by <code>scripts/run_audit.py</code> and verified on every commit.</p>
+    <p class="note">This page is the only one I wrote by hand. Every number on the
+      others comes straight from the audit and is checked on every change.</p>
   </div>
 </div>
 
@@ -174,10 +173,9 @@ def about(result: dict) -> str:
     <p><strong>Built by Marco Ortiz Togashi.</strong> Information Management and
       Information Systems, Tsinghua University. Business Analytics and Data Science,
       IE University.</p>
-    <p>The evidence, the method and the sources are on the
-      <a href="index.html">main page</a>.</p>
-    <p>Not a deployable system, and not a product. No decision about any person should be
-      made with it.</p>
+    <p>Not a product. No decision about any person should be made with it.</p>
+    <p><a href="https://github.com/ma731/fairness-gate">Source and full results on
+      GitHub</a></p>
   </div>
 </footer>
 
