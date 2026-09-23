@@ -1,0 +1,153 @@
+"""Produce the written summary, verify it, and commit it only if it survives.
+
+Two ways in, because the interesting part is the verifier and it should not be gated on
+having an API key:
+
+    python scripts/narrate.py                      # call a model, retry on rejection
+    python scripts/narrate.py --from-file draft.md # verify a draft written elsewhere
+
+Both paths go through exactly the same checks. A draft I typed myself gets no more
+benefit of the doubt than one a model produced, which is the point: the verifier does not
+know or care where the words came from, and a guardrail that trusts some authors is not
+a guardrail.
+
+Nothing is written unless the draft passes clean. On rejection the record still gets
+written, with every attempt and every violation, because a refusal that does not say what
+it saw is not auditable. The page then falls back to its template prose, which is what it
+had before any of this existed.
+
+`--from-file` records that the draft came from a file and who supplied it, so the
+provenance on the page is honest about how the words were actually produced.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+import pandas as pd
+
+from src.narrator import NARRATION_PATH, facts, generate, prompt, verify
+from src.report import RESULTS_DIR
+
+DEFAULT_MODEL = "claude-opus-5"
+
+
+def load() -> tuple[dict, dict]:
+    audit = RESULTS_DIR / "audit.json"
+    if not audit.exists():
+        raise SystemExit(f"no audit at {audit}. Run scripts/run_audit.py first.")
+    result = json.loads(audit.read_text(encoding="utf-8"))
+    tables = {
+        split: pd.read_csv(RESULTS_DIR / f"groups_{split}.csv")
+        for split in ("test", "shift")
+    }
+    return result, tables
+
+
+def anthropic_caller(model: str):
+    """A `call(system, user)` backed by the API. Only built when a key is present."""
+    import anthropic
+
+    client = anthropic.Anthropic()
+
+    def call(system: str, user: str) -> str:
+        message = client.messages.create(
+            model=model,
+            max_tokens=700,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        return "".join(block.text for block in message.content if block.type == "text")
+
+    return call
+
+
+def write_record(record: dict) -> None:
+    NARRATION_PATH.parent.mkdir(parents=True, exist_ok=True)
+    NARRATION_PATH.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {NARRATION_PATH.relative_to(REPO_ROOT)}")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--from-file", help="verify a draft from this file instead")
+    ap.add_argument("--author", default="", help="who or what wrote a --from-file draft")
+    ap.add_argument("--show-prompt", action="store_true")
+    args = ap.parse_args()
+
+    result, tables = load()
+
+    if args.show_prompt:
+        print(prompt(result, tables))
+        return 0
+
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    audit_at = result.get("generated_at", "")
+
+    if args.from_file:
+        draft = Path(args.from_file).read_text(encoding="utf-8").strip()
+        violations = verify(draft, facts(result, tables))
+        for v in violations:
+            print(f"  rejected: {v}")
+        record = {
+            "text": draft if not violations else "",
+            "verified": not violations,
+            "attempts": 1,
+            "source": args.author or f"drafted by hand, from {args.from_file}",
+            "model": None,
+            "generated_at": now,
+            "audit_generated_at": audit_at,
+            "checks_passed": [] if violations else "all",
+            "history": [{
+                "attempt": 1,
+                "draft": draft,
+                "violations": [str(v) for v in violations],
+            }],
+        }
+        write_record(record)
+        print("VERIFIED" if not violations else "REJECTED, nothing published")
+        return 0 if not violations else 1
+
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print(
+            "ANTHROPIC_API_KEY is not set, so there is nothing to ask.\n"
+            "Either set it, or verify a draft you already have:\n"
+            "  python scripts/narrate.py --from-file draft.md --author 'who wrote it'",
+            file=sys.stderr,
+        )
+        return 1
+
+    out = generate(result, tables, anthropic_caller(args.model))
+    for entry in out["history"]:
+        if entry["violations"]:
+            print(f"  attempt {entry['attempt']} rejected:")
+            for v in entry["violations"]:
+                print(f"    {v}")
+
+    record = {
+        **out,
+        "source": f"generated by {args.model}, verified by src/narrator.py",
+        "model": args.model,
+        "generated_at": now,
+        "audit_generated_at": audit_at,
+        "checks_passed": "all" if out["verified"] else [],
+    }
+    write_record(record)
+    print(
+        f"VERIFIED after {out['attempts']} attempt(s)" if out["verified"]
+        else f"REJECTED after {out['attempts']} attempts, nothing published"
+    )
+    return 0 if out["verified"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

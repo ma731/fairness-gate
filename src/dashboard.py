@@ -477,17 +477,68 @@ def slope_chart(tables: dict, attribute: str) -> str:
     )
 
 
-def unaware_slope(result: dict, table: pd.DataFrame, attribute: str = "RAC1P") -> str:
-    """Recall per group with the protected columns in, and with them deleted.
+def narration_block() -> str:
+    """The generated summary, if one verified, with its receipt attached.
 
-    A slope chart because the expected shape is the finding. If deleting race and sex
-    worked, these lines would converge. They stay almost exactly where they were, which
-    is easier to see than to argue about.
+    Absent is a normal state and renders as nothing. A page that showed an empty
+    placeholder would be advertising a feature that is currently switched off, and a
+    page that showed an unverified draft would be the exact thing this is here to stop.
     """
-    arm = (result.get("unaware") or {})
+    from src.narrator import CHECKS, load
+
+    record = load()
+    if not record:
+        return ""
+
+    passed = "".join(
+        f"<li>{esc(check.__name__.replace('check_', '').replace('_', ' '))}</li>"
+        for check in CHECKS
+    )
+    model = record.get("model") or "no model"
+    attempts = record.get("attempts", 1)
+    tries = "first attempt" if attempts == 1 else f"attempt {attempts}"
+
+    return f"""<section id="summary">
+  <div class="shell reveal">
+    <p class="kicker">In words</p>
+    <h2>A summary, written by a language model and checked before you saw it.</h2>
+    <div class="narr">
+      <blockquote class="narr-text">{esc(record['text'])}</blockquote>
+      <aside class="narr-receipt">
+        <p class="narr-h">How this got here</p>
+        <p>A model wrote it. It was not allowed to publish it. Every number in it had
+          to trace back to a measured value at the precision it was written, and the
+          draft had to survive every check below before it could appear on this page.</p>
+        <ul class="narr-checks">{passed}</ul>
+        <p class="narr-meta">Passed on the {esc(tries)}<br>
+          Source: {esc(record.get('source', 'unknown'))}<br>
+          Model: <code>{esc(model)}</code><br>
+          Against the audit of {esc(record.get('audit_generated_at', 'unknown'))}</p>
+      </aside>
+    </div>
+    <p class="note">If no draft passes, nothing is published and this section does not
+      appear at all. There is no best-of-four fallback, because a guardrail with one is
+      only a delay. The checks themselves are scored against twelve drafts with known
+      planted errors on every commit, so they cannot rot quietly.</p>
+  </div>
+</section>
+
+"""
+
+
+def arm_slope(result: dict, table: pd.DataFrame, arm_key: str,
+              left: str, right: str, attribute: str = "RAC1P") -> str:
+    """Recall per group under the shipped model, and under some other arm.
+
+    A slope chart because in both places it is used the expected shape *is* the finding.
+    If deleting race and sex worked, or if the algorithm were the problem, these lines
+    would converge. They do not, and a reader can see that faster than they can be
+    argued into it.
+    """
+    arm = (result.get(arm_key) or {})
     groups = arm.get("groups") or {}
     if not groups:
-        return '<p class="empty">No unaware arm in this audit.</p>'
+        return f'<p class="empty">No {esc(arm_key)} arm in this audit.</p>'
 
     aware = table[(table["attribute"] == attribute) & table["reportable"]]
     rows = []
@@ -501,7 +552,7 @@ def unaware_slope(result: dict, table: pd.DataFrame, attribute: str = "RAC1P") -
     rows.sort(key=lambda t: -t[2])
 
     w, h = 780, 430
-    left, right = 190, 520
+    left_x, right_x = 190, 520
     top, bot = 46, h - 30
     vals = [v for r in rows for v in (r[2], r[3])]
     lo, hi = min(vals) * 0.93, max(vals) * 1.04
@@ -510,31 +561,31 @@ def unaware_slope(result: dict, table: pd.DataFrame, attribute: str = "RAC1P") -
         return round(top + (1 - (v - lo) / (hi - lo)) * (bot - top), 1)
 
     out = (
-        f'<line class="gr" x1="{left}" y1="{top - 16}" x2="{left}" y2="{bot + 10}"/>'
-        f'<line class="gr" x1="{right}" y1="{top - 16}" x2="{right}" y2="{bot + 10}"/>'
-        f'<text class="ax" x="{left}" y="{top - 24}" text-anchor="middle">'
-        f"Sees race and sex</text>"
-        f'<text class="ax" x="{right}" y="{top - 24}" text-anchor="middle">'
-        f"Both columns deleted</text>"
+        f'<line class="gr" x1="{left_x}" y1="{top - 16}" x2="{left}" y2="{bot + 10}"/>'
+        f'<line class="gr" x1="{right}" y1="{top - 16}" x2="{right_x}" y2="{bot + 10}"/>'
+        f'<text class="ax" x="{left_x}" y="{top - 24}" text-anchor="middle">'
+        f"{esc(left)}</text>"
+        f'<text class="ax" x="{right_x}" y="{top - 24}" text-anchor="middle">'
+        f"{esc(right)}</text>"
     )
     for code, name, before, after in rows:
         y1, y2 = Y(before), Y(after)
         cls = "s1" if after >= before else "s2"
         out += (
             f'<g class="row">'
-            f'<text class="gl" x="{left - 18}" y="{y1 + 4}" text-anchor="end">'
+            f'<text class="gl" x="{left_x - 18}" y="{y1 + 4}" text-anchor="end">'
             f"{esc(short(code, attribute))}<title>{esc(name)}</title></text>"
-            f'<line class="slope {cls}l" x1="{left}" y1="{y1}" x2="{right}" y2="{y2}"/>'
-            f'<circle class="{cls}" cx="{left}" cy="{y1}" r="4.5"/>'
-            f'<circle class="{cls}" cx="{right}" cy="{y2}" r="4.5"/>'
-            f'<text class="vl" x="{right + 15}" y="{y2 + 4}">'
+            f'<line class="slope {cls}l" x1="{left_x}" y1="{y1}" x2="{right_x}" y2="{y2}"/>'
+            f'<circle class="{cls}" cx="{left_x}" cy="{y1}" r="4.5"/>'
+            f'<circle class="{cls}" cx="{right_x}" cy="{y2}" r="4.5"/>'
+            f'<text class="vl" x="{right_x + 15}" y="{y2 + 4}">'
             f"{pct(after)} ({after - before:+.1%})"
             f"<title>{esc(name)}</title></text></g>"
         )
 
     return (
         f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" role="img" '
-        f'aria-label="recall per group with and without the protected attributes">'
+        f'aria-label="recall per group, {esc(left)} against {esc(right)}">'
         f"{out}</svg>"
     )
 
@@ -690,8 +741,62 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
     d = result["design"]
     ts, sh = (result["scores"][k] for k in ("test", "shift"))
     unaware_cmp = (result.get("unaware") or {}).get("comparison") or {}
+    linear_arm = result.get("linear") or {}
+    linear_cmp = linear_arm.get("comparison") or {}
 
     return {
+        "families":
+        f"""<section id="families">
+  <div class="shell reveal">
+    <p class="kicker">A second model</p>
+    <h2>Would a different algorithm simply not have this problem?</h2>
+    <p class="say">Every other number here comes from one gradient boosted tree, and
+      that is a real weakness in the argument. Boosting is very good at finding
+      interactions, and an interaction between occupation, region and hours is exactly
+      the shape of thing that could rebuild race without ever being told it. So the
+      obvious objection is that this is a fact about the algorithm rather than about
+      the world.</p>
+    <p class="say">I trained a <b>logistic regression</b> on the identical splits and
+      the identical features. Linear, additive, no interactions unless you build them,
+      and about as different from a boosted forest as you can get while still predicting
+      the same thing.</p>
+
+    <div class="numbers">
+      <div><div class="k">Gap, trees</div>
+        <div class="v">{fmt(float(linear_cmp.get('tpr_gap_tree', 0)))}</div>
+        <div class="c">AUC {fmt(float(linear_cmp.get('auc_tree', 0)), 3)}</div></div>
+      <div><div class="k">Gap, linear</div>
+        <div class="v">{fmt(float(linear_cmp.get('tpr_gap_linear', 0)))}</div>
+        <div class="c">AUC {fmt(float(linear_cmp.get('auc_linear', 0)), 3)}</div></div>
+      <div><div class="k">Gap that remains</div>
+        <div class="v">{linear_cmp.get('share_remaining', 0):.0%}</div>
+        <div class="c">of the original, after changing everything</div></div>
+      <div><div class="k">Rank correlation</div>
+        <div class="v">{fmt(float(linear_arm.get('rank_correlation') or 0), 2)}</div>
+        <div class="c">the same groups end up at the bottom</div></div>
+    </div>
+
+    {arm_slope(result, test, "linear", "Gradient boosted trees",
+               "Logistic regression")}
+
+    <p class="say" style="margin-top:34px">The linear model is a slightly worse
+      predictor and has a <b>slightly larger</b> gap. Swapping out the entire algorithm
+      moved the disparity by
+      {abs(float(linear_cmp.get('tpr_gap_linear', 0)) - float(linear_cmp.get('tpr_gap_tree', 0))):.4f}.
+      And the rank correlation says the two families do not merely fail equally hard,
+      they fail the same people: rank the groups by recall under each model and you get
+      almost the same order.</p>
+    <p class="note">So this is not a fact about gradient boosting. Two model families
+      with nothing in common, fitted to the same data, arrive at the same disparity and
+      put it on the same groups. That moves the finding from "this algorithm has a
+      problem" to "this data encodes an inequality, and a model fitted to it will
+      inherit it". The second is much harder to fix and much more useful to know, and
+      it is the reason picking a different library is not a plan.</p>
+  </div>
+</section>
+
+""",
+        "narration": narration_block(),
         "head_evidence": page_head(
             "The evidence",
             "Sixteen checks, and how sure I am of each one.",
@@ -752,7 +857,7 @@ def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
         <div class="c">and it is not free either</div></div>
     </div>
 
-    {unaware_slope(result, test)}
+    {arm_slope(result, test, "unaware", "Sees race and sex", "Both columns deleted")}
 
     <p class="say" style="margin-top:34px">The lines barely move. The model has no idea
       what race anyone is and it still finds about
@@ -1420,7 +1525,8 @@ PAGES = [
             "far more often. Measured on 600,551 people, and wired to a build that "
             "fails when the gap crosses a declared line."
         ),
-        ["hero", "marquee", "plain", "cost", "headline", "next_evidence"],
+        ["hero", "marquee", "plain", "cost", "headline", "narration",
+         "next_evidence"],
     ),
     (
         "evidence.html",
@@ -1440,7 +1546,7 @@ PAGES = [
             "at once, and the experiment showing that deleting race and sex leaves "
             "most of the gap behind."
         ),
-        ["head_method", "method", "unaware", "sources", "next_fix"],
+        ["head_method", "method", "unaware", "families", "sources", "next_fix"],
     ),
     (
         "fix.html",

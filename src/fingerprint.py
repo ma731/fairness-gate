@@ -34,6 +34,7 @@ PIPELINE_SOURCES = [
     "src/uncertainty.py",
     "src/mitigation.py",
     "src/unaware.py",
+    "src/compare.py",
     "scripts/run_audit.py",
 ]
 

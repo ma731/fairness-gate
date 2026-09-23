@@ -324,6 +324,28 @@ tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
 .note { font-size:13.5px; color:var(--ink-2); border-left:2px solid var(--axis);
   padding-left:16px; margin:22px 0 0; max-width:66ch; }
 
+/* ---- the generated summary and its receipt ----
+   The text gets the weight of a pull quote, because it is meant to be read. The receipt
+   sits beside it in the register of a footnote, because the claim is not "a model wrote
+   this" but "a model wrote this and here is what stopped it lying". */
+.narr { display:grid; grid-template-columns:1.5fr 1fr; gap:48px; align-items:start;
+  margin-top:40px; }
+@media (max-width:900px) { .narr { grid-template-columns:1fr; gap:30px; } }
+.narr-text { margin:0; padding:0 0 0 26px; border-left:2px solid var(--acid);
+  font-size:20px; line-height:1.62; color:var(--ink); letter-spacing:-.011em; }
+.narr-receipt { padding:24px 26px; border:1px solid var(--hair); border-radius:18px;
+  background:var(--surface); }
+.narr-h { margin:0 0 10px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
+  monospace; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--acid); }
+.narr-receipt p { margin:0 0 14px; font-size:14px; line-height:1.58; color:var(--ink-2); }
+.narr-checks { list-style:none; margin:0 0 16px; padding:0; display:grid; gap:5px; }
+.narr-checks li { font-size:12.5px; color:var(--ink-2);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.narr-checks li::before { content:"¹3  "; color:var(--acid); font-weight:700; }
+.narr-meta { margin:0 !important; font-size:11.5px; line-height:1.75; color:var(--mut); }
+.narr-meta code { color:var(--ink-2); }
+
 /* ---- page header (every page but the front one) ----
    The front page keeps the full-height hero. Repeating that five times would make each
    page feel like its own landing page and push the content below the fold every time. */

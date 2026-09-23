@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-23T09:54:27+00:00",
-  "git_sha": "e3b37e2",
+  "generated_at": "2026-09-23T10:44:43+00:00",
+  "git_sha": "4ab2a32",
   "python": "3.14.3",
-  "pipeline_fingerprint": "aba10eb137604312",
+  "pipeline_fingerprint": "6c1704bd41fd737a",
   "design": {
     "train_year": "2015",
     "val_year": "2016",
@@ -12836,6 +12836,80 @@
       "share_remaining": 0.924278,
       "accuracy_cost": 0.005603
     }
+  },
+  "linear": {
+    "tpr_gap": 0.315448,
+    "fpr_gap": 0.174875,
+    "groups": {
+      "1": {
+        "n": 434022,
+        "tpr": 0.833596,
+        "fpr": 0.254282
+      },
+      "2": {
+        "n": 49941,
+        "tpr": 0.704039,
+        "fpr": 0.173896
+      },
+      "3": {
+        "n": 2340,
+        "tpr": 0.673716,
+        "fpr": 0.162098
+      },
+      "5": {
+        "n": 926,
+        "tpr": 0.655556,
+        "fpr": 0.119303
+      },
+      "6": {
+        "n": 55374,
+        "tpr": 0.850292,
+        "fpr": 0.267418
+      },
+      "7": {
+        "n": 883,
+        "tpr": 0.718631,
+        "fpr": 0.21129
+      },
+      "8": {
+        "n": 40106,
+        "tpr": 0.534844,
+        "fpr": 0.092543
+      },
+      "9": {
+        "n": 16928,
+        "tpr": 0.766786,
+        "fpr": 0.17327
+      }
+    },
+    "family": "logistic regression",
+    "attribute": "RAC1P",
+    "threshold": 0.33,
+    "accuracy": 0.787658,
+    "auc": 0.874601,
+    "n": 600551,
+    "features": [
+      "AGEP",
+      "COW",
+      "SCHL",
+      "MAR",
+      "OCCP",
+      "POBP",
+      "RELP",
+      "WKHP",
+      "SEX",
+      "RAC1P"
+    ],
+    "comparison": {
+      "tpr_gap_tree": 0.311919,
+      "tpr_gap_linear": 0.315448,
+      "auc_tree": 0.8881,
+      "auc_linear": 0.874601,
+      "accuracy_tree": 0.8021,
+      "accuracy_linear": 0.787658,
+      "share_remaining": 1.011313
+    },
+    "rank_correlation": 0.9286
   },
   "policy_verdict": "warn",
   "checks": [

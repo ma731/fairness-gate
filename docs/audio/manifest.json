@@ -74,6 +74,12 @@
       "voice": "en-US-AndrewMultilingualNeural",
       "bytes": 165744
     },
+    "family": {
+      "file": "audio/family.mp3",
+      "sha": "3e9f69abd4b466d6",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 248256
+    },
     "protected": {
       "file": "audio/protected.mp3",
       "sha": "6cbdf119ff6381cf",

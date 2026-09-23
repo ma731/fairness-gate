@@ -226,6 +226,7 @@ src/pointfield.py        the animated hero: one dot per person, no libraries
 src/voice.py             ask it out loud; every answer written from the audit
 src/glossary.py          plain English for every check name, in one place
 src/unaware.py           the same model without race and sex, and what that costs
+src/compare.py           a logistic regression, to ask if it is the algorithm
 src/narrator.py          the generated summary, and the verifier that gates it
 evals/                   drafts with planted errors, and what should be caught
 scripts/review_pr.py     the pull request reviewer
@@ -261,6 +262,30 @@ somewhere, a dot grid because the denominator is people, a tradeoff curve becaus
 shape of the curve *is* the argument. I deliberately left out a couple of charts that
 would have looked impressive, like a chord diagram, because this data has nothing for
 them to show and a chart that encodes nothing is decoration pretending to be evidence.
+
+## Is it the algorithm, or the data?
+
+The obvious objection to everything above is that it all comes from one gradient boosted
+tree. Boosting is very good at finding interactions, and an interaction between
+occupation, region and hours is exactly the shape of thing that could rebuild race
+without being told. So maybe this is a fact about the algorithm.
+
+I trained a logistic regression on the identical splits and the identical features.
+Linear, additive, about as different from a boosted forest as you can get while still
+predicting the same thing.
+
+| | recall gap | AUC | accuracy |
+|---|---:|---:|---:|
+| gradient boosted trees | 0.3119 | 0.888 | 0.8021 |
+| logistic regression | 0.3154 | 0.875 | 0.7897 |
+
+The gap is **slightly worse**, not better. And the rank correlation between the two is
+**0.93**: rank the groups by recall under each model and you get almost the same order,
+so the two families do not merely fail equally hard, they fail the same people.
+
+That moves the finding from "this algorithm has a problem" to "this data encodes an
+inequality and a model fitted to it will inherit it". The second is much harder to fix
+and much more useful to know, and it is why picking a different library is not a plan.
 
 ## The generated summary, and why it needs a verifier
 

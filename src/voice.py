@@ -59,6 +59,8 @@ SECTIONS = {
     "fix": "fix.html#fix", "mitigat": "fix.html#fix", "solution": "fix.html#fix",
     "conclusion": "fix.html#conclusion", "takeaway": "fix.html#conclusion",
     "unaware": "method.html#unaware", "delete race": "method.html#unaware",
+    "another model": "method.html#families", "family": "method.html#families",
+    "logistic": "method.html#families",
     "method": "method.html#method",
     "source": "method.html#sources", "data": "method.html#sources",
 }
@@ -81,6 +83,9 @@ GRAMMAR = [
     (r"\b(ci gate|what is (this|a gate)|continuous integration|how does the gate)",
      "gate"),
     (r"\b(intersect|cross|both attributes|race and sex)", "intersection"),
+    # above "fix", because "would another model fix it" is a question about the family
+    ((r"\b((another|different|second|other) (model|algorithm|approach)|logistic|"
+      r"linear model|model family|xgboost|neural)"), "family"),
     (r"\b(fix|mitigat|solve|repair|close the gap)", "fix"),
     (r"\b(threshold|cut.?off|sweep)", "threshold"),
     (r"\b(certain|confiden|interval|noise|sure)", "certainty"),
@@ -134,6 +139,9 @@ def _answers(result: dict, tables: dict[str, pd.DataFrame]) -> dict:
     n = result["splits"]["test"]["n"]
     design = result["design"]
     unaware = (result.get("unaware") or {}).get("comparison") or {}
+    linear_arm = result.get("linear") or {}
+    fam = linear_arm.get("comparison") or {}
+    rank = float(linear_arm.get("rank_correlation") or 0)
 
     return {
         "gate": (
@@ -235,6 +243,17 @@ def _answers(result: dict, tables: dict[str, pd.DataFrame]) -> dict:
             f"{n:,} real people. Split by time rather than at random, because that is "
             "how a model actually gets used: built on the past, applied to the present. "
             "Four states are held out entirely and never trained on."
+        ),
+        "family": (
+            "I checked that too. Every other number here comes from one gradient "
+            "boosted tree, so I trained a logistic regression on the identical splits "
+            "and the identical features. Linear, additive, about as different as you "
+            "can get while still predicting the same thing. The gap went from "
+            f"{fam.get('tpr_gap_tree', 0):.4f} to {fam.get('tpr_gap_linear', 0):.4f}, "
+            "which is very slightly worse, not better. And the rank correlation between "
+            f"the two is {rank:.2f}, which means they do not merely fail equally hard, "
+            "they fail the same people. So this is not a fact about gradient boosting. "
+            "It is in the data, and picking a different library is not a plan."
         ),
         "protected": (
             "It does see them, and I tested what happens when it cannot. Training the "

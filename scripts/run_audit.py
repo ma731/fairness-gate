@@ -25,6 +25,9 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src import policy as pol
+from src.compare import build as build_linear
+from src.compare import compare as compare_families
+from src.compare import rank_correlation
 from src.config import RESULTS_DIR, TEST_YEAR, TRAIN_STATES, TRAIN_YEAR, VAL_YEAR
 from src.data import PROTECTED, load_splits
 from src.distributions import build as build_distributions
@@ -159,6 +162,31 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
         flush=True,
     )
 
+    # A second model family, so "would another algorithm just not have this problem"
+    # gets answered rather than left hanging.
+    print("\ntraining a logistic regression on the same splits ...", flush=True)
+    tree_arm = {
+        "tpr_gap": race_summary["tpr_gap"],
+        "auc": scores["test"]["auc"],
+        "accuracy": scores["test"]["accuracy"],
+    }
+    linear = build_linear(splits, "RAC1P")
+    linear["comparison"] = compare_families(tree_arm, linear)
+    reportable = group_tables["test"][
+        (group_tables["test"]["attribute"] == "RAC1P")
+        & group_tables["test"]["reportable"]
+    ]
+    linear["rank_correlation"] = rank_correlation(
+        {str(int(r["code"])): {"tpr": float(r["tpr"])} for _, r in reportable.iterrows()},
+        linear["groups"],
+    )
+    print(
+        f"  tree gap {tree_arm['tpr_gap']:.4f} (auc {tree_arm['auc']:.4f}), "
+        f"linear gap {linear['tpr_gap']:.4f} (auc {linear['auc']:.4f}), "
+        f"rank correlation {linear['rank_correlation']}",
+        flush=True,
+    )
+
     policy = pol.load_policy()
 
     test_gaps = {
@@ -207,6 +235,7 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
         "uncertainty": uncertainty,
         "mitigation": mitigation,
         "unaware": unaware,
+        "linear": linear,
         "policy_verdict": pol.verdict(checks),
         "checks": pol.as_records(checks),
     }
