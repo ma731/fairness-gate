@@ -230,11 +230,21 @@ svg.tree .tml { fill:var(--ink); font-size:14px; font-weight:600; }
 svg.tree .tmn { fill:var(--ink); opacity:.72; font-size:13px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 
-/* reliability */
-svg.rel .diag { stroke:var(--ink); stroke-width:1.5; stroke-dasharray:5 5;
-  opacity:.34; }
-svg.rel .cal { fill:none; stroke:var(--s1); stroke-width:2; opacity:.72; }
-svg.rel .cdot { fill:var(--s1); }
+/* reliability, faceted: one small panel per group on identical axes */
+svg.relf .facet { fill:var(--raised); stroke:var(--hair); stroke-width:1; }
+svg.relf .diag { stroke:var(--ink); stroke-width:1.25; stroke-dasharray:4 4;
+  opacity:.32; }
+svg.relf .cal { fill:none; stroke:var(--acid); stroke-width:2; opacity:.9;
+  stroke-linejoin:round; }
+svg.relf .cdot { fill:var(--acid); }
+svg.relf .facet-t { fill:var(--ink); font-size:12px; font-weight:600; }
+svg.relf .facet-n { fill:var(--mut); font-size:10.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.relf .row { transition:opacity 150ms cubic-bezier(.23,1,.32,1); }
+@media (hover:hover) and (pointer:fine) {
+  svg.relf:hover .row { opacity:.4; }
+  svg.relf .row:hover { opacity:1; }
+}
 
 /* ridgeline */
 svg.ridge-c .ridge { stroke-width:1.5; }

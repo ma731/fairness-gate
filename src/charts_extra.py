@@ -16,7 +16,7 @@ import html
 
 RACE_SHORT = {
     1: "White", 2: "Black", 3: "Am. Indian", 4: "Alaska Native",
-    5: "Am. Indian / Alaska Native", 6: "Asian", 7: "Pacific Islander",
+    5: "Native tribes", 6: "Asian", 7: "Pacific Islander",
     8: "Some other race", 9: "Two or more",
 }
 SEX_SHORT = {1: "Male", 2: "Female"}
@@ -41,8 +41,12 @@ def sankey(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
     """Everyone in the split, flowing from truth into the model's decision.
 
     A flow diagram is right here because the quantity is conserved: every person leaves
-    one box and arrives in exactly one other. The two error ribbons are the ones that
-    matter, and they are drawn in the error colour so they read before the labels do.
+    one box and arrives in exactly one other.
+
+    Each node box is sized as the sum of the ribbons that meet it, never computed
+    independently. Sizing them separately is what let rounding put a ribbon edge a
+    fraction outside its box, which is visible at this scale and reads as a broken
+    chart. Deriving the box from its ribbons makes the two agree by construction.
     """
     d = _dist(result, split, attribute)
     conf = d.get("confusion") or []
@@ -58,70 +62,72 @@ def sankey(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
         return '<p class="empty">No distribution data.</p>'
 
     w, h = 900, 440
-    x0, x1 = 240, 620
-    bw = 22
-    top, usable, gap = 34, h - 96, 26
+    x0, x1, bw = 240, 620, 22
+    top, gap = 36, 30
+    span = h - top - 48 - gap          # height available to the ribbons themselves
 
-    qual, not_qual = tp + fn, fp + tn
-    sel, not_sel = tp + fp, fn + tn
+    def px(n: int) -> float:
+        return n / total * span
 
-    def hgt(n: int) -> float:
-        return round(n / total * (usable - gap), 1)
+    h_tp, h_fn, h_fp, h_tn = px(tp), px(fn), px(fp), px(tn)
+
+    # Boxes are the sum of their own ribbons. No independent rounding anywhere.
+    left = [("Genuinely qualify", tp + fn, h_tp + h_fn),
+            ("Do not qualify", fp + tn, h_fp + h_tn)]
+    right = [("Model selects", tp + fp, h_tp + h_fp),
+             ("Model rejects", fn + tn, h_fn + h_tn)]
 
     ly0 = top
-    ly1 = top + hgt(qual) + gap
+    ly1 = ly0 + left[0][2] + gap
     ry0 = top
-    ry1 = top + hgt(sel) + gap
+    ry1 = ry0 + right[0][2] + gap
 
-    def ribbon(ax, ay, bx, by, thick, cls, label):
-        mid = (ax + bx) / 2
+    def ribbon(ay, by, thick, cls, label):
+        ax, bx = x0 + bw, x1
+        m = (ax + bx) / 2
         return (
-            f'<path class="rb {cls}" d="M{ax},{ay} C{mid},{ay} {mid},{by} {bx},{by} '
-            f'L{bx},{by + thick} C{mid},{by + thick} {mid},{ay + thick} '
-            f'{ax},{ay + thick} Z"><title>{label}</title></path>'
+            f'<path class="rb {cls}" d="M{ax},{ay:.2f} '
+            f"C{m},{ay:.2f} {m},{by:.2f} {bx},{by:.2f} "
+            f"L{bx},{by + thick:.2f} "
+            f"C{m},{by + thick:.2f} {m},{ay + thick:.2f} {ax},{ay + thick:.2f} Z\">"
+            f"<title>{label}</title></path>"
         )
 
-    flows = ""
-    # qualifies -> selected (true positives), then -> not selected (the overlooked)
-    flows += ribbon(x0 + bw, ly0, x1, ry0, hgt(tp), "ok",
-                    f"{tp:,} qualify and are selected")
-    flows += ribbon(x0 + bw, ly0 + hgt(tp), x1, ry1, hgt(fn), "bad",
-                    f"{fn:,} qualify and are OVERLOOKED")
-    # does not qualify -> selected (false positives), then -> not selected
-    flows += ribbon(x0 + bw, ly1, x1, ry0 + hgt(tp), hgt(fp), "warnrb",
-                    f"{fp:,} do not qualify but are selected")
-    flows += ribbon(x0 + bw, ly1 + hgt(fp), x1, ry1 + hgt(fn), hgt(tn), "ok",
-                    f"{tn:,} do not qualify and are not selected")
+    flows = (
+        ribbon(ly0, ry0, h_tp, "ok", f"{tp:,} qualify and are selected")
+        + ribbon(ly0 + h_tp, ry1, h_fn, "bad", f"{fn:,} qualify and are OVERLOOKED")
+        + ribbon(ly1, ry0 + h_tp, h_fp, "warnrb",
+                 f"{fp:,} do not qualify but are selected")
+        + ribbon(ly1 + h_fp, ry1 + h_fn, h_tn, "ok",
+                 f"{tn:,} do not qualify and are not selected")
+    )
 
-    def node(x, y, n, label, sub, anchor, tx):
-        # Label block is centred on the node so it never floats away from its box.
-        cy = y + hgt(n) / 2
+    def node(x, y, height, n, label, anchor, tx):
+        cy = y + height / 2
         return (
-            f'<rect class="nd" x="{x}" y="{y}" width="{bw}" height="{hgt(n)}" rx="4"/>'
-            f'<text class="nl" x="{tx}" y="{cy - 14:.1f}" text-anchor="{anchor}">'
+            f'<rect class="nd" x="{x}" y="{y:.2f}" width="{bw}" '
+            f'height="{height:.2f}" rx="4"/>'
+            f'<text class="nl" x="{tx}" y="{cy - 13:.1f}" text-anchor="{anchor}">'
             f"{label}</text>"
-            f'<text class="nn" x="{tx}" y="{cy + 8:.1f}" text-anchor="{anchor}">'
+            f'<text class="nn" x="{tx}" y="{cy + 9:.1f}" text-anchor="{anchor}">'
             f"{n:,}</text>"
-            f'<text class="ns" x="{tx}" y="{cy + 26:.1f}" text-anchor="{anchor}">'
-            f"{sub}</text>"
+            f'<text class="ns" x="{tx}" y="{cy + 27:.1f}" text-anchor="{anchor}">'
+            f"{n / total:.1%}</text>"
         )
 
     nodes = (
-        node(x0, ly0, qual, "Genuinely qualify", f"{qual / total:.1%} of everyone",
-             "end", x0 - 16)
-        + node(x0, ly1, not_qual, "Do not qualify", f"{not_qual / total:.1%}",
-               "end", x0 - 16)
-        + node(x1, ry0, sel, "Model selects", f"{sel / total:.1%}", "start", x1 + bw + 16)
-        + node(x1, ry1, not_sel, "Model rejects", f"{not_sel / total:.1%}", "start",
-               x1 + bw + 16)
+        node(x0, ly0, left[0][2], left[0][1], left[0][0], "end", x0 - 18)
+        + node(x0, ly1, left[1][2], left[1][1], left[1][0], "end", x0 - 18)
+        + node(x1, ry0, right[0][2], right[0][1], right[0][0], "start", x1 + bw + 18)
+        + node(x1, ry1, right[1][2], right[1][1], right[1][0], "start", x1 + bw + 18)
     )
 
     return (
         f'<svg class="chart sankey" viewBox="0 0 {w} {h}" width="100%" role="img" '
         f'aria-label="flow of {total:,} people from truth to decision">'
         f"{flows}{nodes}"
-        f'<text class="axt" x="{x0 - 16}" y="{h - 18}" text-anchor="end">Truth</text>'
-        f'<text class="axt" x="{x1 + bw + 16}" y="{h - 18}">Decision</text></svg>'
+        f'<text class="axt" x="{x0 - 18}" y="{h - 16}" text-anchor="end">Truth</text>'
+        f'<text class="axt" x="{x1 + bw + 18}" y="{h - 16}">Decision</text></svg>'
     )
 
 
@@ -281,58 +287,72 @@ def treemap(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
 # Reliability diagram
 # --------------------------------------------------------------------------- #
 def reliability(result: dict, split: str = "test", attribute: str = "RAC1P") -> str:
-    """Predicted against observed, per bin, per group. The diagonal is perfection."""
+    """One small reliability panel per group, against the diagonal.
+
+    Eight curves on one pair of axes in a single colour was unreadable: the lines
+    crossed, the labels collided, and nothing could be traced. Eight categorical hues
+    would not have fixed it either, because eight hues cannot clear the colour-vision
+    separation floor when every pair can appear together. Faceting is the sanctioned
+    answer to "too many series", so each group gets its own panel on identical axes and
+    comparison happens between panels rather than inside one.
+    """
     d = _dist(result, split, attribute)
-    curves = d.get("calibration") or []
+    curves = [c for c in (d.get("calibration") or []) if len(c.get("points", [])) >= 2]
     if not curves:
         return '<p class="empty">No distribution data.</p>'
 
-    w, h, pad = 560, 560, 56
-    px = w - pad * 2
+    cols = 4 if len(curves) > 4 else max(1, len(curves))
+    rows = (len(curves) + cols - 1) // cols
+    cw, ch, pad = 210, 210, 34
+    gx, gy = 22, 40
+    w = cols * cw + (cols - 1) * gx
+    h = rows * ch + (rows - 1) * gy + 26
 
-    def X(v):
-        return round(pad + v * px, 1)
+    out = ""
+    for i, c in enumerate(curves):
+        ox = (i % cols) * (cw + gx)
+        oy = (i // cols) * (ch + gy)
+        p0, p1 = ox + pad, ox + cw - 10
+        q0, q1 = oy + ch - pad, oy + 10
+        sx = p1 - p0
+        sy = q0 - q1
 
-    def Y(v):
-        return round(h - pad - v * px, 1)
+        def X(v, p0=p0, sx=sx):
+            return round(p0 + v * sx, 1)
 
-    grid = "".join(
-        f'<line class="gr" x1="{X(t)}" y1="{Y(0)}" x2="{X(t)}" y2="{Y(1)}"/>'
-        f'<line class="gr" x1="{X(0)}" y1="{Y(t)}" x2="{X(1)}" y2="{Y(t)}"/>'
-        f'<text class="ax" x="{X(t)}" y="{Y(0) + 20}" text-anchor="middle">{t:.2g}</text>'
-        f'<text class="ax" x="{X(0) - 10}" y="{Y(t) + 4}" text-anchor="end">{t:.2g}</text>'
-        for t in (0, 0.25, 0.5, 0.75, 1.0)
-    )
-    diag = (f'<line class="diag" x1="{X(0)}" y1="{Y(0)}" x2="{X(1)}" y2="{Y(1)}"/>'
-            f'<text class="axt" x="{X(0.74)}" y="{Y(0.79)}">perfectly calibrated</text>')
+        def Y(v, q0=q0, sy=sy):
+            return round(q0 - v * sy, 1)
 
-    lines = ""
-    for c in curves:
-        pts = c["points"]
-        if len(pts) < 2:
-            continue
-        dd = " ".join(f"{X(p['predicted'])},{Y(p['observed'])}" for p in pts)
-        lines += (
-            f'<g class="row"><polyline class="cal" points="{dd}"/>'
-            + "".join(
-                f'<circle class="cdot" cx="{X(p["predicted"])}" cy="{Y(p["observed"])}" '
-                f'r="3.5"><title>{esc(short(c["code"], attribute))}: predicted '
-                f'{p["predicted"]:.2f}, observed {p["observed"]:.2f} on {p["n"]:,} '
-                f'people</title></circle>'
-                for p in pts
+        frame = (
+            f'<rect class="facet" x="{ox}" y="{oy}" width="{cw}" height="{ch}" rx="10"/>'
+            f'<line class="diag" x1="{X(0)}" y1="{Y(0)}" x2="{X(1)}" y2="{Y(1)}"/>'
+        )
+        for t in (0, 0.5, 1.0):
+            frame += (
+                f'<line class="gr" x1="{X(t)}" y1="{Y(0)}" x2="{X(t)}" y2="{Y(1)}"/>'
+                f'<line class="gr" x1="{X(0)}" y1="{Y(t)}" x2="{X(1)}" y2="{Y(t)}"/>'
             )
-            + f'<text class="vl" x="{X(pts[-1]["predicted"]) + 8}" '
-              f'y="{Y(pts[-1]["observed"]) + 4}">{esc(short(c["code"], attribute))}</text>'
-              "</g>"
+        pts = c["points"]
+        poly = " ".join(f"{X(p['predicted'])},{Y(p['observed'])}" for p in pts)
+        dots = "".join(
+            f'<circle class="cdot" cx="{X(p["predicted"])}" cy="{Y(p["observed"])}" '
+            f'r="3"><title>predicted {p["predicted"]:.2f}, observed '
+            f'{p["observed"]:.2f}, {p["n"]:,} people</title></circle>'
+            for p in pts
+        )
+        # worst vertical distance from the diagonal, which is the thing to compare
+        worst = max(abs(p["observed"] - p["predicted"]) for p in pts)
+        out += (
+            f'<g class="row">{frame}<polyline class="cal" points="{poly}"/>{dots}'
+            f'<text class="facet-t" x="{ox + 12}" y="{oy + ch + 19}">'
+            f'{esc(short(c["code"], attribute))}</text>'
+            f'<text class="facet-n" x="{ox + cw - 10}" y="{oy + ch + 19}" '
+            f'text-anchor="end">max gap {worst:.2f}</text></g>'
         )
 
     return (
-        f'<svg class="chart rel" viewBox="0 0 {w} {h}" width="100%" role="img" '
-        f'aria-label="reliability diagram by {esc(attribute)}">{grid}{diag}{lines}'
-        f'<text class="axt" x="{X(0.5)}" y="{h - 14}" text-anchor="middle">'
-        f"What the model predicted</text>"
-        f'<text class="axt" transform="translate(16,{Y(0.5)}) rotate(-90)" '
-        f'text-anchor="middle">What actually happened</text></svg>'
+        f'<svg class="chart relf" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="reliability per group, predicted against observed">{out}</svg>'
     )
 
 
