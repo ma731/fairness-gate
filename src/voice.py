@@ -28,11 +28,15 @@ Two notes on being honest with whoever uses it:
 
 from __future__ import annotations
 
+import hashlib
 import json
+from pathlib import Path
 
 import pandas as pd
 
 from src.dashboard import human_cost
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Where "take me to the intersections" should actually land.
 #
@@ -317,16 +321,29 @@ SCRIPT = r"""
     log.scrollTop = log.scrollHeight;
   }
 
-  // Picking the voice by hand, because the default is whatever the machine's locale
-  // happens to be. On a Windows box set to China that meant a Chinese voice reading
-  // English sentences and American census figures out loud, which sounds broken and,
-  // on this page of all pages, lands badly. Setting utterance.lang is not enough: it
-  // is a request, and the engine ignores it if the selected voice cannot honour it.
-  // So the voice itself gets chosen.
+  // Every answer already has an MP3 rendered at build time by scripts/voice_audio.py,
+  // in a Microsoft neural voice. That is what plays. No key ships with the page, no
+  // request leaves it, and the clip is on the CDN before anybody asks.
   //
-  // Preference order is best-sounding first. The Microsoft "Natural" voices and
-  // Google US English are neural, free, and already on most machines, which beats
-  // calling out to a paid speech API for a page that otherwise needs no network.
+  // A clip is only played if its recorded hash still matches the answer on this page.
+  // If an answer changed and nobody re-rendered, the clip is stale, and audio confidently
+  // reading a number that is no longer true is worse than a synthetic voice reading the
+  // right one. So a stale clip is skipped and the browser voice takes over.
+  var AUDIO = DATA.audio || {};
+  var player = null;
+
+  function clipFor(key) {
+    var clip = AUDIO[key];
+    if (!clip || !clip.file) { return null; }
+    // The hash is of the answer this page is actually showing.
+    return clip.sha === DATA.hashes[key] ? clip.file : null;
+  }
+
+  // Fallback only. Picking the voice by hand, because the browser default is whatever
+  // the machine's locale happens to be. On a Windows box set to China that meant a
+  // Chinese voice reading American census figures, which sounds broken and, on this
+  // page of all pages, lands badly. Setting utterance.lang is not enough: it is a
+  // request, and the engine ignores it if the chosen voice cannot honour it.
   var VOICE_RANK = [
     function (v) { return /en(-|_)US/i.test(v.lang) && /natural|neural/i.test(v.name); },
     function (v) { return /^en/i.test(v.lang) && /natural|neural/i.test(v.name); },
@@ -354,11 +371,17 @@ SCRIPT = r"""
     window.speechSynthesis.onvoiceschanged = function () { picked = pickVoice(); };
   }
 
-  // Speaking is a nicety. If the browser has no voice, the answer is already on screen.
-  function speak(what) {
+  function hush() {
+    if (player) { player.pause(); player = null; }
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+  }
+
+  // Speaking is a nicety. If neither path works, the answer is already on screen.
+  function synthesise(what) {
     if (!('speechSynthesis' in window)) { return; }
     try {
-      window.speechSynthesis.cancel();
       if (!picked) { picked = pickVoice(); }
       // No English voice installed at all: stay quiet rather than read English
       // numbers through a voice that cannot pronounce them.
@@ -367,14 +390,32 @@ SCRIPT = r"""
       u.voice = picked;
       u.lang = picked.lang || 'en-US';
       u.rate = 0.98;
-      u.pitch = 1;
       window.speechSynthesis.speak(u);
     } catch (e) { /* no voice available */ }
   }
 
+  function speak(key, what) {
+    hush();
+    var file = key ? clipFor(key) : null;
+    if (!file) { synthesise(what); return; }
+    try {
+      player = new Audio(file);
+      // The clip may be missing, blocked, or the browser may refuse to autoplay it.
+      // Any of those and the synthetic voice picks it up, rather than silence.
+      player.onerror = function () { player = null; synthesise(what); };
+      var started = player.play();
+      if (started && started.catch) {
+        started.catch(function () { player = null; synthesise(what); });
+      }
+    } catch (e) {
+      player = null;
+      synthesise(what);
+    }
+  }
+
   function reply(key) {
     add('a', DATA.answers[key]);
-    speak(DATA.answers[key]);
+    speak(key, DATA.answers[key]);
   }
 
   function navigate(said) {
@@ -392,10 +433,10 @@ SCRIPT = r"""
         if (!el) { continue; }
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         add('a', 'Scrolling there now.');
-        speak('Scrolling there now.');
+        speak(null, 'Scrolling there now.');
       } else {
         add('a', 'That is on another page. Taking you there.');
-        speak('That is on another page. Taking you there.');
+        speak(null, 'That is on another page. Taking you there.');
         setTimeout(function () { location.href = target; }, 700);
       }
       return true;
@@ -466,7 +507,7 @@ SCRIPT = r"""
   function close() {
     panel.hidden = true;
     fab.setAttribute('aria-expanded', 'false');
-    if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+    hush();
   }
   fab.addEventListener('click', function () {
     if (panel.hidden) { open(); } else { close(); }
@@ -479,11 +520,31 @@ SCRIPT = r"""
 """
 
 
+AUDIO_MANIFEST = REPO_ROOT / "docs" / "audio" / "manifest.json"
+
+
+def _audio() -> dict:
+    """The pre-rendered clips, if any have been made. None is a normal state."""
+    if not AUDIO_MANIFEST.exists():
+        return {}
+    return json.loads(AUDIO_MANIFEST.read_text(encoding="utf-8")).get("clips", {})
+
+
 def build(result: dict, tables: dict[str, pd.DataFrame]) -> str:
     """The panel and its script, with every answer already written from the audit."""
+    answers = _answers(result, tables)
+    # The page carries the hash of the text it is actually showing. The player compares
+    # it to the hash the clip was rendered from and refuses a clip that no longer
+    # matches, so stale audio can never read out a number the page has moved past.
+    hashes = {
+        key: hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+        for key, text in answers.items()
+    }
     payload = json.dumps(
         {
-            "answers": _answers(result, tables),
+            "answers": answers,
+            "hashes": hashes,
+            "audio": _audio(),
             "grammar": [list(rule) for rule in GRAMMAR],
             "sections": SECTIONS,
         },

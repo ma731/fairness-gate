@@ -861,7 +861,7 @@ body { padding-top:0; }
 </aside>
 <script>
 (function () {
-  var DATA = {"answers": {"gate": "Continuous integration is a robot that runs a list of checks every time somebody changes the code. A gate is a check with the authority to refuse. Teams already block code that fails a test, but almost nobody blocks a model that fails a fairness check, because that check usually lives in a document nobody opens again. So here the fairness limits sit in a file next to the code, and if the model crosses one, the build turns red like a broken test. Right now the gate is at warn, with 7 checks passing, 9 warning and 0 failing.", "finding": "Out of every hundred people who genuinely earn above the threshold, this model finds about 85 in the Asian alone group and about 54 in the Some other race alone group. That is a recall gap of 0.312. The ninety five percent interval runs from 0.300 to 0.324, so it is not a quirk of the sample. And the accuracy is nearly identical across those groups, between 0.77 and 0.84. A model can be equally accurate everywhere and still put its mistakes on the same people every time.", "people": "42,517 qualifying people are overlooked across every reported group, in a single survey year, out of 600,551 tested. If a real decision hung on this model, that is the size of the room.", "recall": "Recall is the share of people who genuinely qualify that the model actually finds. If a hundred people really do earn above the line and it flags fifty four of them, recall is fifty four percent, and the other forty six are overlooked. It is the measure that tells you who gets missed, which is the question accuracy cannot answer.", "accuracy": "Accuracy sits between 0.77 and 0.84 across the racial groups, which is almost flat. That is exactly the trap. Accuracy is the number most projects report, and by that number this model looks even handed. It is not. It is equally accurate everywhere while placing its errors on the same people.", "intersection": "Audit race on its own and the false positive gap is 0.145. Audit sex on its own and it is 0.080. Cross the two together and it is 0.221. Two acceptable averages with a much worse cell hiding underneath them. Auditing one attribute at a time will never find that.", "fix": "Yes, partly. Giving each group its own cut-off takes the recall gap from 0.3119 down to 0.1143, and it costs 0.0042 of accuracy. By the number most projects report, that is nearly free. I built it, measured it, and did not ship it. Ask me why not.", "why": "Two reasons. First, it needs to know the person's race at the moment it decides, because it has to look up which cut-off applies to you. In hiring or lending that is either illegal or is the exact harm you were trying to prevent. Second, it moves the unfairness rather than removing it. The false positive gap goes up, from 0.145 to 0.196. When groups genuinely differ in how often the outcome happens, equalising one kind of error forces the other kind to become unequal. That is proved, not a bug in my code. You are always choosing which unfairness to keep.", "threshold": "The threshold is the cut-off, currently 0.3450, chosen on the 2016 data and never on the test year. The model gives a probability, and the threshold is the line above which it says yes. Moving it trades one kind of mistake for the other. I swept it end to end, and the best any single cut-off can do for the gap is 0.034, at an accuracy of 0.602, where the model says yes to almost everybody. That is not a fix, that is turning the model off.", "certainty": "A gap measured on a few hundred people and one measured on a hundred thousand are not the same claim. So every rate carries a confidence interval, and a check only fails when the whole interval is past the limit. If the estimate is over the line but the interval still straddles it, that drops to a warning and says so in words. Uncertainty can soften a failure. It can never invent one. A build that goes red on luck is a build people learn to rerun until it passes.", "small": "Any group under five hundred people gets measured and then withheld. 6 of the 18 race by sex cells fall below that line. They are drawn hatched rather than deleted, because the absence is part of the finding. The groups most likely to be harmed are the ones a national survey is least likely to contain enough of to say anything about.", "data": "United States census microdata, the American Community Survey, through the folktables package. Trained on 2015, tuned on 2016, tested on 2018, which is 600,551 real people. Split by time rather than at random, because that is how a model actually gets used: built on the past, applied to the present. Four states are held out entirely and never trained on.", "protected": "It does see them, and I tested what happens when it cannot. Training the same model with race and sex deleted takes the recall gap from 0.3119 to 0.2883. That is 92% of the gap surviving, for 0.0056 of accuracy. Deleting the column does not delete the problem, it deletes your ability to see it. The model rebuilds almost all of the signal from occupation, education, hours and birthplace, because those carry the history of who got which opportunities.", "status": "The gate is at warn. 7 checks pass, 9 are warnings and 0 fail. A warning means the model is past the standard I want but still inside the limit I tolerate. Both numbers are written down on purpose, so the distance between what is tolerated and what is wanted stays visible.", "help": "Ask me what a CI gate is, what the audit found, how many people are overlooked, what recall means, whether it can be fixed and why I did not ship the fix, what happens at the intersections, how sure I am, or where the data comes from. You can also say take me to the checks, or any other section, and I will scroll you there.", "unknown": "I only answer from what the audit actually measured, so I would rather say I do not know than guess. Try asking what the finding is, whether it can be fixed, what a CI gate is, or just say help."}, "grammar": [["\\b(help|what can (i|you)|options|commands)\\b", "help"], ["\\b(why not\\b|why\\b.{0,30}\\bnot\\b|reject|refus|did ?n.t ship|not ship)", "why"], ["\\b(ci gate|what is (this|a gate)|continuous integration|how does the gate)", "gate"], ["\\b(intersect|cross|both attributes|race and sex)", "intersection"], ["\\b(fix|mitigat|solve|repair|close the gap)", "fix"], ["\\b(threshold|cut.?off|sweep)", "threshold"], ["\\b(certain|confiden|interval|noise|sure)", "certainty"], ["\\b(small group|suppress|hidden|withheld|hatch)", "small"], ["\\b(protected|see race|use race|unawareness|remove race|delete race)", "protected"], ["\\b(data|census|source|survey|where.*(from|come))", "data"], ["\\b(how many|people|overlooked|missed|room)", "people"], ["\\b(recall|true positive|tpr)\\b", "recall"], ["\\b(accuracy|accurate)", "accuracy"], ["\\b(status|passing|failing|build|red|green|verdict)", "status"], ["\\b(find|found|finding|result|gap|disparity|problem|wrong)", "finding"]], "sections": {"start": "index.html#plain", "plain": "index.html#plain", "basic": "index.html#plain", "beginning": "index.html#plain", "miss": "index.html#cost", "overlook": "index.html#cost", "who": "index.html#cost", "cost": "index.html#cost", "check": "evidence.html#checks", "policy": "evidence.html#checks", "gate": "evidence.html#checks", "intersect": "evidence.html#intersections", "cross": "evidence.html#intersections", "certain": "evidence.html#certainty", "confiden": "evidence.html#certainty", "noise": "evidence.html#certainty", "group": "evidence.html#groups", "table": "evidence.html#groups", "flow": "evidence.html#flow", "sankey": "evidence.html#flow", "fix": "fix.html#fix", "mitigat": "fix.html#fix", "solution": "fix.html#fix", "conclusion": "fix.html#conclusion", "takeaway": "fix.html#conclusion", "unaware": "method.html#unaware", "delete race": "method.html#unaware", "method": "method.html#method", "source": "method.html#sources", "data": "method.html#sources"}};
+  var DATA = {"answers": {"gate": "Continuous integration is a robot that runs a list of checks every time somebody changes the code. A gate is a check with the authority to refuse. Teams already block code that fails a test, but almost nobody blocks a model that fails a fairness check, because that check usually lives in a document nobody opens again. So here the fairness limits sit in a file next to the code, and if the model crosses one, the build turns red like a broken test. Right now the gate is at warn, with 7 checks passing, 9 warning and 0 failing.", "finding": "Out of every hundred people who genuinely earn above the threshold, this model finds about 85 in the Asian alone group and about 54 in the Some other race alone group. That is a recall gap of 0.312. The ninety five percent interval runs from 0.300 to 0.324, so it is not a quirk of the sample. And the accuracy is nearly identical across those groups, between 0.77 and 0.84. A model can be equally accurate everywhere and still put its mistakes on the same people every time.", "people": "42,517 qualifying people are overlooked across every reported group, in a single survey year, out of 600,551 tested. If a real decision hung on this model, that is the size of the room.", "recall": "Recall is the share of people who genuinely qualify that the model actually finds. If a hundred people really do earn above the line and it flags fifty four of them, recall is fifty four percent, and the other forty six are overlooked. It is the measure that tells you who gets missed, which is the question accuracy cannot answer.", "accuracy": "Accuracy sits between 0.77 and 0.84 across the racial groups, which is almost flat. That is exactly the trap. Accuracy is the number most projects report, and by that number this model looks even handed. It is not. It is equally accurate everywhere while placing its errors on the same people.", "intersection": "Audit race on its own and the false positive gap is 0.145. Audit sex on its own and it is 0.080. Cross the two together and it is 0.221. Two acceptable averages with a much worse cell hiding underneath them. Auditing one attribute at a time will never find that.", "fix": "Yes, partly. Giving each group its own cut-off takes the recall gap from 0.3119 down to 0.1143, and it costs 0.0042 of accuracy. By the number most projects report, that is nearly free. I built it, measured it, and did not ship it. Ask me why not.", "why": "Two reasons. First, it needs to know the person's race at the moment it decides, because it has to look up which cut-off applies to you. In hiring or lending that is either illegal or is the exact harm you were trying to prevent. Second, it moves the unfairness rather than removing it. The false positive gap goes up, from 0.145 to 0.196. When groups genuinely differ in how often the outcome happens, equalising one kind of error forces the other kind to become unequal. That is proved, not a bug in my code. You are always choosing which unfairness to keep.", "threshold": "The threshold is the cut-off, currently 0.3450, chosen on the 2016 data and never on the test year. The model gives a probability, and the threshold is the line above which it says yes. Moving it trades one kind of mistake for the other. I swept it end to end, and the best any single cut-off can do for the gap is 0.034, at an accuracy of 0.602, where the model says yes to almost everybody. That is not a fix, that is turning the model off.", "certainty": "A gap measured on a few hundred people and one measured on a hundred thousand are not the same claim. So every rate carries a confidence interval, and a check only fails when the whole interval is past the limit. If the estimate is over the line but the interval still straddles it, that drops to a warning and says so in words. Uncertainty can soften a failure. It can never invent one. A build that goes red on luck is a build people learn to rerun until it passes.", "small": "Any group under five hundred people gets measured and then withheld. 6 of the 18 race by sex cells fall below that line. They are drawn hatched rather than deleted, because the absence is part of the finding. The groups most likely to be harmed are the ones a national survey is least likely to contain enough of to say anything about.", "data": "United States census microdata, the American Community Survey, through the folktables package. Trained on 2015, tuned on 2016, tested on 2018, which is 600,551 real people. Split by time rather than at random, because that is how a model actually gets used: built on the past, applied to the present. Four states are held out entirely and never trained on.", "protected": "It does see them, and I tested what happens when it cannot. Training the same model with race and sex deleted takes the recall gap from 0.3119 to 0.2883. That is 92% of the gap surviving, for 0.0056 of accuracy. Deleting the column does not delete the problem, it deletes your ability to see it. The model rebuilds almost all of the signal from occupation, education, hours and birthplace, because those carry the history of who got which opportunities.", "status": "The gate is at warn. 7 checks pass, 9 are warnings and 0 fail. A warning means the model is past the standard I want but still inside the limit I tolerate. Both numbers are written down on purpose, so the distance between what is tolerated and what is wanted stays visible.", "help": "Ask me what a CI gate is, what the audit found, how many people are overlooked, what recall means, whether it can be fixed and why I did not ship the fix, what happens at the intersections, how sure I am, or where the data comes from. You can also say take me to the checks, or any other section, and I will scroll you there.", "unknown": "I only answer from what the audit actually measured, so I would rather say I do not know than guess. Try asking what the finding is, whether it can be fixed, what a CI gate is, or just say help."}, "hashes": {"gate": "a750a33d815d88e4", "finding": "1869157877f49e4b", "people": "9e2baec014db1ce8", "recall": "c1188ace0a256baf", "accuracy": "901da3662ab00588", "intersection": "195b96986c6a0b9e", "fix": "5818cab66af5144d", "why": "83a5fa469f61fb57", "threshold": "12127d3fe27800cb", "certainty": "8eb246f55270723b", "small": "c77be5e6861e12c1", "data": "bb7fd276b0c994e8", "protected": "6cbdf119ff6381cf", "status": "022970dc02bce780", "help": "771af0388b3affb1", "unknown": "4fa467aed743c32c"}, "audio": {"gate": {"file": "audio/gate.mp3", "sha": "a750a33d815d88e4", "voice": "en-US-AndrewMultilingualNeural", "bytes": 214128}, "finding": {"file": "audio/finding.mp3", "sha": "1869157877f49e4b", "voice": "en-US-AndrewMultilingualNeural", "bytes": 226800}, "people": {"file": "audio/people.mp3", "sha": "9e2baec014db1ce8", "voice": "en-US-AndrewMultilingualNeural", "bytes": 95904}, "recall": {"file": "audio/recall.mp3", "sha": "c1188ace0a256baf", "voice": "en-US-AndrewMultilingualNeural", "bytes": 126720}, "accuracy": {"file": "audio/accuracy.mp3", "sha": "901da3662ab00588", "voice": "en-US-AndrewMultilingualNeural", "bytes": 135504}, "intersection": {"file": "audio/intersection.mp3", "sha": "195b96986c6a0b9e", "voice": "en-US-AndrewMultilingualNeural", "bytes": 132912}, "fix": {"file": "audio/fix.mp3", "sha": "5818cab66af5144d", "voice": "en-US-AndrewMultilingualNeural", "bytes": 126576}, "why": {"file": "audio/why.mp3", "sha": "83a5fa469f61fb57", "voice": "en-US-AndrewMultilingualNeural", "bytes": 240768}, "threshold": {"file": "audio/threshold.mp3", "sha": "12127d3fe27800cb", "voice": "en-US-AndrewMultilingualNeural", "bytes": 210528}, "certainty": {"file": "audio/certainty.mp3", "sha": "8eb246f55270723b", "voice": "en-US-AndrewMultilingualNeural", "bytes": 179712}, "small": {"file": "audio/small.mp3", "sha": "c77be5e6861e12c1", "voice": "en-US-AndrewMultilingualNeural", "bytes": 132768}, "data": {"file": "audio/data.mp3", "sha": "bb7fd276b0c994e8", "voice": "en-US-AndrewMultilingualNeural", "bytes": 165744}, "protected": {"file": "audio/protected.mp3", "sha": "6cbdf119ff6381cf", "voice": "en-US-AndrewMultilingualNeural", "bytes": 218016}, "status": {"file": "audio/status.mp3", "sha": "022970dc02bce780", "voice": "en-US-AndrewMultilingualNeural", "bytes": 113328}, "help": {"file": "audio/help.mp3", "sha": "771af0388b3affb1", "voice": "en-US-AndrewMultilingualNeural", "bytes": 117648}, "unknown": {"file": "audio/unknown.mp3", "sha": "4fa467aed743c32c", "voice": "en-US-AndrewMultilingualNeural", "bytes": 77328}}, "grammar": [["\\b(help|what can (i|you)|options|commands)\\b", "help"], ["\\b(why not\\b|why\\b.{0,30}\\bnot\\b|reject|refus|did ?n.t ship|not ship)", "why"], ["\\b(ci gate|what is (this|a gate)|continuous integration|how does the gate)", "gate"], ["\\b(intersect|cross|both attributes|race and sex)", "intersection"], ["\\b(fix|mitigat|solve|repair|close the gap)", "fix"], ["\\b(threshold|cut.?off|sweep)", "threshold"], ["\\b(certain|confiden|interval|noise|sure)", "certainty"], ["\\b(small group|suppress|hidden|withheld|hatch)", "small"], ["\\b(protected|see race|use race|unawareness|remove race|delete race)", "protected"], ["\\b(data|census|source|survey|where.*(from|come))", "data"], ["\\b(how many|people|overlooked|missed|room)", "people"], ["\\b(recall|true positive|tpr)\\b", "recall"], ["\\b(accuracy|accurate)", "accuracy"], ["\\b(status|passing|failing|build|red|green|verdict)", "status"], ["\\b(find|found|finding|result|gap|disparity|problem|wrong)", "finding"]], "sections": {"start": "index.html#plain", "plain": "index.html#plain", "basic": "index.html#plain", "beginning": "index.html#plain", "miss": "index.html#cost", "overlook": "index.html#cost", "who": "index.html#cost", "cost": "index.html#cost", "check": "evidence.html#checks", "policy": "evidence.html#checks", "gate": "evidence.html#checks", "intersect": "evidence.html#intersections", "cross": "evidence.html#intersections", "certain": "evidence.html#certainty", "confiden": "evidence.html#certainty", "noise": "evidence.html#certainty", "group": "evidence.html#groups", "table": "evidence.html#groups", "flow": "evidence.html#flow", "sankey": "evidence.html#flow", "fix": "fix.html#fix", "mitigat": "fix.html#fix", "solution": "fix.html#fix", "conclusion": "fix.html#conclusion", "takeaway": "fix.html#conclusion", "unaware": "method.html#unaware", "delete race": "method.html#unaware", "method": "method.html#method", "source": "method.html#sources", "data": "method.html#sources"}};
   var panel = document.getElementById('vx');
   var fab = document.getElementById('vx-open');
   var log = document.getElementById('vx-log');
@@ -883,16 +883,29 @@ body { padding-top:0; }
     log.scrollTop = log.scrollHeight;
   }
 
-  // Picking the voice by hand, because the default is whatever the machine's locale
-  // happens to be. On a Windows box set to China that meant a Chinese voice reading
-  // English sentences and American census figures out loud, which sounds broken and,
-  // on this page of all pages, lands badly. Setting utterance.lang is not enough: it
-  // is a request, and the engine ignores it if the selected voice cannot honour it.
-  // So the voice itself gets chosen.
+  // Every answer already has an MP3 rendered at build time by scripts/voice_audio.py,
+  // in a Microsoft neural voice. That is what plays. No key ships with the page, no
+  // request leaves it, and the clip is on the CDN before anybody asks.
   //
-  // Preference order is best-sounding first. The Microsoft "Natural" voices and
-  // Google US English are neural, free, and already on most machines, which beats
-  // calling out to a paid speech API for a page that otherwise needs no network.
+  // A clip is only played if its recorded hash still matches the answer on this page.
+  // If an answer changed and nobody re-rendered, the clip is stale, and audio confidently
+  // reading a number that is no longer true is worse than a synthetic voice reading the
+  // right one. So a stale clip is skipped and the browser voice takes over.
+  var AUDIO = DATA.audio || {};
+  var player = null;
+
+  function clipFor(key) {
+    var clip = AUDIO[key];
+    if (!clip || !clip.file) { return null; }
+    // The hash is of the answer this page is actually showing.
+    return clip.sha === DATA.hashes[key] ? clip.file : null;
+  }
+
+  // Fallback only. Picking the voice by hand, because the browser default is whatever
+  // the machine's locale happens to be. On a Windows box set to China that meant a
+  // Chinese voice reading American census figures, which sounds broken and, on this
+  // page of all pages, lands badly. Setting utterance.lang is not enough: it is a
+  // request, and the engine ignores it if the chosen voice cannot honour it.
   var VOICE_RANK = [
     function (v) { return /en(-|_)US/i.test(v.lang) && /natural|neural/i.test(v.name); },
     function (v) { return /^en/i.test(v.lang) && /natural|neural/i.test(v.name); },
@@ -920,11 +933,17 @@ body { padding-top:0; }
     window.speechSynthesis.onvoiceschanged = function () { picked = pickVoice(); };
   }
 
-  // Speaking is a nicety. If the browser has no voice, the answer is already on screen.
-  function speak(what) {
+  function hush() {
+    if (player) { player.pause(); player = null; }
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
+  }
+
+  // Speaking is a nicety. If neither path works, the answer is already on screen.
+  function synthesise(what) {
     if (!('speechSynthesis' in window)) { return; }
     try {
-      window.speechSynthesis.cancel();
       if (!picked) { picked = pickVoice(); }
       // No English voice installed at all: stay quiet rather than read English
       // numbers through a voice that cannot pronounce them.
@@ -933,14 +952,32 @@ body { padding-top:0; }
       u.voice = picked;
       u.lang = picked.lang || 'en-US';
       u.rate = 0.98;
-      u.pitch = 1;
       window.speechSynthesis.speak(u);
     } catch (e) { /* no voice available */ }
   }
 
+  function speak(key, what) {
+    hush();
+    var file = key ? clipFor(key) : null;
+    if (!file) { synthesise(what); return; }
+    try {
+      player = new Audio(file);
+      // The clip may be missing, blocked, or the browser may refuse to autoplay it.
+      // Any of those and the synthetic voice picks it up, rather than silence.
+      player.onerror = function () { player = null; synthesise(what); };
+      var started = player.play();
+      if (started && started.catch) {
+        started.catch(function () { player = null; synthesise(what); });
+      }
+    } catch (e) {
+      player = null;
+      synthesise(what);
+    }
+  }
+
   function reply(key) {
     add('a', DATA.answers[key]);
-    speak(DATA.answers[key]);
+    speak(key, DATA.answers[key]);
   }
 
   function navigate(said) {
@@ -958,10 +995,10 @@ body { padding-top:0; }
         if (!el) { continue; }
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         add('a', 'Scrolling there now.');
-        speak('Scrolling there now.');
+        speak(null, 'Scrolling there now.');
       } else {
         add('a', 'That is on another page. Taking you there.');
-        speak('That is on another page. Taking you there.');
+        speak(null, 'That is on another page. Taking you there.');
         setTimeout(function () { location.href = target; }, 700);
       }
       return true;
@@ -1032,7 +1069,7 @@ body { padding-top:0; }
   function close() {
     panel.hidden = true;
     fab.setAttribute('aria-expanded', 'false');
-    if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+    hush();
   }
   fab.addEventListener('click', function () {
     if (panel.hidden) { open(); } else { close(); }

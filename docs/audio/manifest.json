@@ -1,0 +1,102 @@
+{
+  "voice": "en-US-AndrewMultilingualNeural",
+  "rate": "-4%",
+  "clips": {
+    "gate": {
+      "file": "audio/gate.mp3",
+      "sha": "a750a33d815d88e4",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 214128
+    },
+    "finding": {
+      "file": "audio/finding.mp3",
+      "sha": "1869157877f49e4b",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 226800
+    },
+    "people": {
+      "file": "audio/people.mp3",
+      "sha": "9e2baec014db1ce8",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 95904
+    },
+    "recall": {
+      "file": "audio/recall.mp3",
+      "sha": "c1188ace0a256baf",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 126720
+    },
+    "accuracy": {
+      "file": "audio/accuracy.mp3",
+      "sha": "901da3662ab00588",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 135504
+    },
+    "intersection": {
+      "file": "audio/intersection.mp3",
+      "sha": "195b96986c6a0b9e",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 132912
+    },
+    "fix": {
+      "file": "audio/fix.mp3",
+      "sha": "5818cab66af5144d",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 126576
+    },
+    "why": {
+      "file": "audio/why.mp3",
+      "sha": "83a5fa469f61fb57",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 240768
+    },
+    "threshold": {
+      "file": "audio/threshold.mp3",
+      "sha": "12127d3fe27800cb",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 210528
+    },
+    "certainty": {
+      "file": "audio/certainty.mp3",
+      "sha": "8eb246f55270723b",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 179712
+    },
+    "small": {
+      "file": "audio/small.mp3",
+      "sha": "c77be5e6861e12c1",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 132768
+    },
+    "data": {
+      "file": "audio/data.mp3",
+      "sha": "bb7fd276b0c994e8",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 165744
+    },
+    "protected": {
+      "file": "audio/protected.mp3",
+      "sha": "6cbdf119ff6381cf",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 218016
+    },
+    "status": {
+      "file": "audio/status.mp3",
+      "sha": "022970dc02bce780",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 113328
+    },
+    "help": {
+      "file": "audio/help.mp3",
+      "sha": "771af0388b3affb1",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 117648
+    },
+    "unknown": {
+      "file": "audio/unknown.mp3",
+      "sha": "4fa467aed743c32c",
+      "voice": "en-US-AndrewMultilingualNeural",
+      "bytes": 77328
+    }
+  }
+}

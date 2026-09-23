@@ -11,6 +11,7 @@ here rather than in a headless browser.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 
@@ -179,3 +180,40 @@ def test_the_agent_picks_an_english_voice(result, tables):
     assert "VOICE_RANK" in markup
     assert "u.voice = picked" in markup
     assert "onvoiceschanged" in markup
+
+
+def test_clips_are_played_from_files_not_synthesised(result, tables):
+    """A hosted speech API would need a key, and a key in a public page is published."""
+    markup = voice.build(result, tables)
+    assert "new Audio(file)" in markup
+    assert "clipFor" in markup
+
+
+def test_a_stale_clip_is_refused(result, tables):
+    """Audio confidently reading a number the page has moved past is the worst case.
+
+    The clip records the hash of the text it was rendered from. If the answer changed
+    and nobody re-rendered, the hashes differ and the browser voice takes over.
+    """
+    markup = voice.build(result, tables)
+    assert "clip.sha === DATA.hashes[key]" in markup
+
+
+def test_every_committed_clip_matches_its_answer(result, tables):
+    """If this fails, run scripts/voice_audio.py. It means the audio is out of date."""
+    clips = voice._audio()
+    if not clips:
+        pytest.skip("no clips rendered yet")
+    answers = voice._answers(result, tables)
+    stale = [
+        key for key, clip in clips.items()
+        if key in answers
+        and clip["sha"] != hashlib.sha256(answers[key].encode("utf-8")).hexdigest()[:16]
+    ]
+    assert not stale, f"stale audio for {stale}; re-run scripts/voice_audio.py"
+
+
+def test_synthesis_is_only_the_fallback(result, tables):
+    markup = voice.build(result, tables)
+    assert "function synthesise(" in markup
+    assert "player = null; synthesise(what)" in markup
