@@ -35,6 +35,7 @@ from src.charts_extra import (
     tradeoff_curve,
     treemap,
 )
+from src.glossary import explain as explain_check
 from src.pointfield import SCRIPT as FIELD_SCRIPT
 from src.pointfield import markup as field_markup
 from src.theme import STYLE
@@ -476,6 +477,68 @@ def slope_chart(tables: dict, attribute: str) -> str:
     )
 
 
+def unaware_slope(result: dict, table: pd.DataFrame, attribute: str = "RAC1P") -> str:
+    """Recall per group with the protected columns in, and with them deleted.
+
+    A slope chart because the expected shape is the finding. If deleting race and sex
+    worked, these lines would converge. They stay almost exactly where they were, which
+    is easier to see than to argue about.
+    """
+    arm = (result.get("unaware") or {})
+    groups = arm.get("groups") or {}
+    if not groups:
+        return '<p class="empty">No unaware arm in this audit.</p>'
+
+    aware = table[(table["attribute"] == attribute) & table["reportable"]]
+    rows = []
+    for _, r in aware.iterrows():
+        key = str(int(r["code"]))
+        if key in groups:
+            rows.append((int(r["code"]), str(r["group"]), float(r["tpr"]),
+                         float(groups[key]["tpr"])))
+    if not rows:
+        return '<p class="empty">No group reportable in both arms.</p>'
+    rows.sort(key=lambda t: -t[2])
+
+    w, h = 780, 430
+    left, right = 190, 520
+    top, bot = 46, h - 30
+    vals = [v for r in rows for v in (r[2], r[3])]
+    lo, hi = min(vals) * 0.93, max(vals) * 1.04
+
+    def Y(v: float) -> float:
+        return round(top + (1 - (v - lo) / (hi - lo)) * (bot - top), 1)
+
+    out = (
+        f'<line class="gr" x1="{left}" y1="{top - 16}" x2="{left}" y2="{bot + 10}"/>'
+        f'<line class="gr" x1="{right}" y1="{top - 16}" x2="{right}" y2="{bot + 10}"/>'
+        f'<text class="ax" x="{left}" y="{top - 24}" text-anchor="middle">'
+        f"Sees race and sex</text>"
+        f'<text class="ax" x="{right}" y="{top - 24}" text-anchor="middle">'
+        f"Both columns deleted</text>"
+    )
+    for code, name, before, after in rows:
+        y1, y2 = Y(before), Y(after)
+        cls = "s1" if after >= before else "s2"
+        out += (
+            f'<g class="row">'
+            f'<text class="gl" x="{left - 18}" y="{y1 + 4}" text-anchor="end">'
+            f"{esc(short(code, attribute))}<title>{esc(name)}</title></text>"
+            f'<line class="slope {cls}l" x1="{left}" y1="{y1}" x2="{right}" y2="{y2}"/>'
+            f'<circle class="{cls}" cx="{left}" cy="{y1}" r="4.5"/>'
+            f'<circle class="{cls}" cx="{right}" cy="{y2}" r="4.5"/>'
+            f'<text class="vl" x="{right + 15}" y="{y2 + 4}">'
+            f"{pct(after)} ({after - before:+.1%})"
+            f"<title>{esc(name)}</title></text></g>"
+        )
+
+    return (
+        f'<svg class="chart" viewBox="0 0 {w} {h}" width="100%" role="img" '
+        f'aria-label="recall per group with and without the protected attributes">'
+        f"{out}</svg>"
+    )
+
+
 def group_table(table: pd.DataFrame, attribute: str) -> str:
     sub = (
         table[(table["attribute"] == attribute) & table["reportable"]]
@@ -556,17 +619,23 @@ def _checks(result: dict) -> str:
     for c in sorted(result["checks"], key=lambda c: (order[c["status"]], c["name"])):
         target = "n/a" if c["warn_at"] is None else fmt(c["warn_at"])
         limit = "n/a" if c["fail_at"] is None else fmt(c["fail_at"])
-        name = c["name"].replace("fairness.", "").replace("performance.", "")
+        # The raw name stays on the row because it is the string you would search for
+        # in policy.yaml. It just no longer has to carry the explaining on its own.
+        title, why = explain_check(c["name"])
         out += (
             f'<li class="chk s-{c["status"]}">'
-            f'<div class="chk-top"><code>{esc(name)}</code>'
+            f'<div class="chk-top"><div class="chk-id">'
+            f'<span class="chk-h">{esc(title)}</span>'
+            f'<code title="{esc(why)}">{esc(c["name"])}</code></div>'
             f'<span class="tag">{STATUS_LABEL[c["status"]]}</span></div>'
             f"{bullet(c, ci=_ci_for(result, c))}"
             f'<div class="chk-bot"><span class="big">{fmt(c["measured"], 4)}</span>'
             f'<span class="mut">target {target}</span>'
             f'<span class="mut">limit {limit}</span>'
             + (f'<span class="mut ci-note">{esc(c["note"])}</span>' if c.get("note") else "")
-            + "</div></li>"
+            + "</div>"
+            + (f'<p class="chk-why">{esc(why)}</p>' if why else "")
+            + "</li>"
         )
     return out
 
@@ -590,8 +659,12 @@ def _splits_compact(result: dict) -> str:
     )
 
 
-def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
-    from src.voice import build as voice_build  # circular at module level
+def _sections(result: dict, tables: dict[str, pd.DataFrame]) -> dict[str, str]:
+    """Every block of the site, built once and dealt out across the pages.
+
+    This used to be one enormous return. Splitting it here is what lets the same
+    numbers appear on whichever page they belong to without being computed twice.
+    """
     test = tables["test"]
     race = next(s for s in result["fairness"]["test"] if s["attribute"] == "RAC1P")
     sex = next(s for s in result["fairness"]["test"] if s["attribute"] == "SEX")
@@ -616,48 +689,138 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
     v = result["policy_verdict"]
     d = result["design"]
     ts, sh = (result["scores"][k] for k in ("test", "shift"))
+    unaware_cmp = (result.get("unaware") or {}).get("comparison") or {}
 
-    return f"""<!doctype html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fairness gate</title>
-<meta name="description" content="A CI gate for model fairness. Declared thresholds, a measured audit, and a build that fails when a disparity crosses the line.">
-<style>
-{STYLE}</style>
-</head>
-<body class="v-{esc(v)}">
+    return {
+        "head_evidence": page_head(
+            "The evidence",
+            "Sixteen checks, and how sure I am of each one.",
+            "Every measured number, what it is being held to, and the interval around "
+            "it. Nothing here fails the build yet, and the section on certainty "
+            "explains why that is deliberate rather than lucky.",
+        ),
+        "head_method": page_head(
+            "Method",
+            "How it was measured, and what I refused to measure.",
+            "Split by time and by geography, three fairness criteria reported at once "
+            "because they contradict each other, a floor under what gets published, "
+            "and the experiment that tests the fix everybody suggests first.",
+        ),
+        "head_fix": page_head(
+            "The fix",
+            "It can be closed. I did not close it.",
+            "Per-group thresholds take two thirds off the recall gap for four tenths "
+            "of a point of accuracy. Here is the measurement, and here is why shipping "
+            "it would have been the wrong call.",
+        ),
+        "next_evidence": onward(
+            "evidence.html", "The evidence",
+            "Sixteen checks, the intersectional audit, and how certain each number is."),
+        "next_method": onward(
+            "method.html", "How I measured it",
+            "The splits, the reporting floor, and what happens when you delete race "
+            "and sex from the features."),
+        "next_fix": onward(
+            "fix.html", "The fix I did not ship",
+            "What closing the gap would cost, and the two reasons I refused it."),
+        "unaware":
+        f"""<section id="unaware">
+  <div class="shell reveal">
+    <p class="kicker">The obvious fix</p>
+    <h2>What happens if the model cannot see race or sex.</h2>
+    <p class="say">This is the first thing almost everybody suggests, including me
+      before I measured it. It has a name, <b>fairness through unawareness</b>: if the
+      model cannot see the attribute, it cannot discriminate on it. It is testable, so
+      I tested it instead of citing someone.</p>
+    <p class="say">The shipped model does use race and sex, because they are part of
+      the standard feature set for this task. So I trained the whole pipeline a second
+      time with both columns deleted, gave it its own threshold chosen on the
+      validation year, and scored it on the same test year.</p>
 
-<div class="prog" aria-hidden="true"></div>
-<div class="dither" aria-hidden="true"></div>
-<svg class="grain" aria-hidden="true" focusable="false">
-  <filter id="gr"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="4"
-    stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
-  <rect width="100%" height="100%" filter="url(#gr)"/>
-</svg>
+    <div class="numbers">
+      <div><div class="k">Gap, sees both</div>
+        <div class="v">{fmt(float(unaware_cmp.get('tpr_gap_aware', 0)))}</div>
+        <div class="c">the shipped model</div></div>
+      <div><div class="k">Gap, both deleted</div>
+        <div class="v">{fmt(float(unaware_cmp.get('tpr_gap_unaware', 0)))}</div>
+        <div class="c">fairness through unawareness</div></div>
+      <div><div class="k">Gap that survives</div>
+        <div class="v">{unaware_cmp.get('share_remaining', 0):.0%}</div>
+        <div class="c">removing them changes almost nothing</div></div>
+      <div><div class="k">Accuracy cost</div>
+        <div class="v">{fmt(float(unaware_cmp.get('accuracy_cost', 0)), 4)}</div>
+        <div class="c">and it is not free either</div></div>
+    </div>
 
-<nav>
-  <span class="mark">fairness&#8209;gate <i>/ ACS income</i></span>
-  <ul>
-    <li><a href="#plain">Start here</a></li>
-    <li><a href="#cost">Who it misses</a></li>
-    <li><a href="#checks">Checks</a></li>
-    <li><a href="#intersections">Intersections</a></li>
-    <li><a href="#certainty">Certainty</a></li>
-    <li><a href="#groups">Groups</a></li>
-    <li><a href="#flow">Flow</a></li>
-    <li><a href="#fix">The fix</a></li>
-    <li><a href="#method">Method</a></li>
-    <li><a href="#sources">Sources</a></li>
-  </ul>
-  <div class="right">
-    <span class="pill"><i></i>{esc(STATUS_LABEL[v])}</span>
-    <button type="button" class="tgl" id="themer" aria-label="Switch colour theme">Light</button>
+    {unaware_slope(result, test)}
+
+    <p class="say" style="margin-top:34px">The lines barely move. The model has no idea
+      what race anyone is and it still finds about
+      {round(100 - hurt['per_100'])} out of every hundred qualifying people in one
+      group and {round(100 - spared['per_100'])} in another. It rebuilds nearly all of
+      the signal from occupation, education, hours worked and place of birth, because
+      those carry the history of who got which opportunities.</p>
+    <p class="note">So an attribute is protected whether or not the model is allowed to
+      look at it. Deleting the column does not delete the problem. It deletes your
+      ability to see the problem, while leaving you feeling like you did something, and
+      a team in that position is worse off than one that never tried.</p>
   </div>
-</nav>
+</section>
 
-<header class="hero">
+""",
+        "conclusion":
+        f"""<div class="band" id="conclusion">
+  <div class="shell band-in reveal">
+    <p class="kicker">Conclusion</p>
+    <h2>What I would tell a team about to ship this.</h2>
+    <div class="steps">
+      <div class="step">
+        <h3>The gap is real, and it is not an artefact of the attributes</h3>
+        <p>{fmt(race['tpr_gap'])} between the best and worst treated racial group, with
+          a 95% interval that does not come near zero. Deleting race and sex from the
+          features leaves {unaware_cmp.get('share_remaining', 0):.0%} of it standing.
+          You cannot make this go away by not looking.</p>
+      </div>
+      <div class="step">
+        <h3>Accuracy will tell you everything is fine</h3>
+        <p>It sits between {fmt(float(sub['accuracy'].min()), 2)} and
+          {fmt(float(sub['accuracy'].max()), 2)} across those same groups. A model can
+          be equally accurate everywhere and still place its errors on the same people
+          every time. If one number is all you check, this is invisible to you.</p>
+      </div>
+      <div class="step">
+        <h3>Audit where the attributes cross, not one at a time</h3>
+        <p>False positive gap {fmt(race['fpr_gap'])} by race, {fmt(sex['fpr_gap'])} by
+          sex, {fmt(xsex.get('fpr_gap', 0))} by the two together. Two acceptable
+          averages can hide a much worse cell underneath them, and marginal audits are
+          built to miss exactly that.</p>
+      </div>
+      <div class="step">
+        <h3>The fix that works may not be one you can use</h3>
+        <p>Per-group thresholds cut the gap to
+          {fmt(float((mt.get('per_group') or {{}}).get('tpr_gap', 0)))} for
+          {fmt(float(mt.get('accuracy_cost', 0)), 4)} of accuracy, and need the
+          person's race at the moment of decision, and push the false positive gap up.
+          There is no setting where everything is fair at once. You are choosing which
+          unfairness to keep, so choose it out loud.</p>
+      </div>
+      <div class="step">
+        <h3>Put the limits somewhere a build can read them</h3>
+        <p>The reason any of this is still true tomorrow is that the numbers are held
+          against a declared file, regenerated on every commit, and checked monthly by
+          a job nobody has to remember to run. A standard that lives in a document
+          drifts. A standard that fails a build does not.</p>
+      </div>
+    </div>
+    <p class="note">The honest move was never to find a model with no disparity. It was
+      to measure the disparity, publish what closing it would cost, say which cost I
+      was not willing to pay, and make it impossible to quietly change my mind later.</p>
+  </div>
+</div>
+
+""",
+        "hero":
+        f"""<header class="hero">
   <div class="mesh" aria-hidden="true"><i class="m1"></i><i class="m2"></i>
     <i class="m3"></i><i class="m4"></i></div>
   {field_markup(result)}
@@ -685,11 +848,15 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </header>
 
-<div class="mq" aria-hidden="true">
+""",
+        "marquee":
+        f"""<div class="mq" aria-hidden="true">
   <div class="mq-track">{_marquee(cost)}{_marquee(cost)}</div>
 </div>
 
-<section id="plain">
+""",
+        "plain":
+        """<section id="plain">
   <div class="shell reveal">
     <p class="kicker">Plain language</p>
     <h2>What a gate is, before any of the numbers.</h2>
@@ -734,7 +901,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </section>
 
-<div class="band" id="cost">
+""",
+        "cost":
+        f"""<div class="band" id="cost">
   <div class="shell band-in reveal">
     <p class="kicker">Who it misses</p>
     <h2>Out of every hundred people who qualify.</h2>
@@ -769,7 +938,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </div>
 
-<div class="acid">
+""",
+        "headline":
+        f"""<div class="acid">
   {topo_lines(13, 3)}
   <div class="acid-in">
     <div class="shell"><p class="kicker tiny">The disparity</p></div>
@@ -804,7 +975,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </section>
 
-<div class="band" id="checks">
+""",
+        "checks":
+        f"""<div class="band" id="checks">
   <div class="shell band-in reveal">
     <p class="kicker">The gate</p>
     <h2>Every threshold, measured on every commit.</h2>
@@ -817,7 +990,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </div>
 
-<div class="band" id="intersections">
+""",
+        "intersections":
+        f"""<div class="band" id="intersections">
   <div class="shell band-in reveal">
     <p class="kicker">Where the attributes cross</p>
     <h2>Two acceptable averages can hide one bad cell.</h2>
@@ -837,7 +1012,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </div>
 
-<section id="certainty">
+""",
+        "certainty":
+        f"""<section id="certainty">
   <div class="shell reveal">
     <p class="kicker">How much to trust these numbers</p>
     <h2>Three decimals do not mean three decimals.</h2>
@@ -853,7 +1030,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </section>
 
-<section id="groups">
+""",
+        "groups":
+        f"""<section id="groups">
   <div class="shell reveal">
     <p class="kicker">By group</p>
     <h2>Where the errors land.</h2>
@@ -905,7 +1084,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </section>
 
-<section id="flow">
+""",
+        "flow":
+        f"""<section id="flow">
   <div class="shell reveal">
     <p class="kicker">The whole population</p>
     <h2>Where every person actually goes.</h2>
@@ -985,7 +1166,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </section>
 
-<div class="band" id="fix">
+""",
+        "fix":
+        f"""<div class="band" id="fix">
   <div class="shell band-in reveal">
     <p class="kicker">What it would take to fix</p>
     <h2>The gap can be closed. Here is the bill.</h2>
@@ -1045,7 +1228,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </section>
 
-<div class="band" id="method">
+""",
+        "method":
+        f"""<div class="band" id="method">
   <div class="shell band-in reveal">
     <p class="kicker">Method</p>
     <h2>Four decisions that shaped every number above.</h2>
@@ -1078,7 +1263,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </div>
 
-<div class="band" id="sources">
+""",
+        "sources":
+        f"""<div class="band" id="sources">
   <div class="shell band-in reveal">
     <p class="kicker">Sources</p>
     <h2>Where the data and the definitions come from.</h2>
@@ -1139,7 +1326,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </div>
 
-<footer>
+""",
+        "footer":
+        f"""<footer>
   <div class="shell">
     <p><strong>Generated, not written.</strong> This page, the model card, the Annex IV
       technical documentation and the DPIA all come out of
@@ -1154,8 +1343,9 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
   </div>
 </footer>
 
-{voice_build(result, tables)}
-<script>{FIELD_SCRIPT}</script>
+""",
+        "tail":
+        f"""<script>{FIELD_SCRIPT}</script>
 <script>
 (function () {{
   var root = document.documentElement;
@@ -1199,11 +1389,165 @@ def render(result: dict, tables: dict[str, pd.DataFrame]) -> str:
 
 }})();
 </script>
+""",
+    }
+
+
+
+# ---------------------------------------------------------------------------- #
+# Pages
+# ---------------------------------------------------------------------------- #
+# It was one endless scroll and it asked too much of a reader. Now it is five pages in
+# the order the argument actually runs: here is what I found, here is the evidence,
+# here is how I measured it, here is the fix and why I refused it, here is why I care.
+#
+# Every page is a real file rather than a tab, so links go straight to a section, the
+# browser back button behaves, and nothing depends on JavaScript to show you content.
+NAV = [
+    ("index.html", "The finding"),
+    ("evidence.html", "Evidence"),
+    ("method.html", "Method"),
+    ("fix.html", "The fix"),
+    ("about.html", "Why"),
+]
+
+PAGES = [
+    (
+        "index.html",
+        "Fairness gate",
+        (
+            "A model that is equally accurate for everyone and still misses one group "
+            "far more often. Measured on 600,551 people, and wired to a build that "
+            "fails when the gap crosses a declared line."
+        ),
+        ["hero", "marquee", "plain", "cost", "headline", "next_evidence"],
+    ),
+    (
+        "evidence.html",
+        "The evidence",
+        (
+            "Every check, every group, and how certain each number is. Sixteen policy "
+            "checks, the intersectional audit, confidence intervals and the full flow "
+            "of 600,551 people through the model."
+        ),
+        ["head_evidence", "checks", "intersections", "certainty", "groups", "flow", "next_method"],
+    ),
+    (
+        "method.html",
+        "How I measured it",
+        (
+            "Temporal and geographic splits, a reporting floor, three fairness criteria "
+            "at once, and the experiment showing that deleting race and sex leaves "
+            "most of the gap behind."
+        ),
+        ["head_method", "method", "unaware", "sources", "next_fix"],
+    ),
+    (
+        "fix.html",
+        "The fix I did not ship",
+        (
+            "Per-group thresholds close two thirds of the recall gap for almost no "
+            "accuracy. Here is the measurement, and here is why shipping it would "
+            "have been the wrong call."
+        ),
+        ["head_fix", "fix", "conclusion"],
+    ),
+]
+
+
+def _nav(active: str, verdict: str) -> str:
+    items = []
+    for href, label in NAV:
+        current = ' aria-current="page"' if href == active else ""
+        items.append(f'<li><a href="{href}"{current}>{esc(label)}</a></li>')
+    return f"""<nav>
+  <span class="mark"><a href="index.html">fairness&#8209;gate</a> <i>/ ACS income</i></span>
+  <ul>{''.join(items)}</ul>
+  <div class="right">
+    <span class="pill"><i></i>{esc(STATUS_LABEL[verdict])}</span>
+    <button type="button" class="tgl" id="themer" aria-label="Switch colour theme">Light</button>
+  </div>
+</nav>"""
+
+
+def page_head(kicker: str, title: str, lead: str) -> str:
+    """The compact header every page except the front one gets.
+
+    The front page keeps the full-height hero. Repeating that on all five would make
+    each one feel like a landing page and bury the content four screens down.
+    """
+    return f"""<header class="phead">
+  <div class="mesh" aria-hidden="true"><i class="m1"></i><i class="m2"></i></div>
+  <div class="shell">
+    <p class="kicker">{esc(kicker)}</p>
+    <h1 class="ptitle">{esc(title)}</h1>
+    <p class="lead">{lead}</p>
+  </div>
+</header>"""
+
+
+def onward(href: str, label: str, blurb: str) -> str:
+    """The link at the foot of a page to the next step in the argument."""
+    return f"""<div class="band onward">
+  <div class="shell band-in">
+    <a class="onward-in" href="{href}">
+      <span class="kicker">Next</span>
+      <span class="onward-t">{esc(label)}</span>
+      <span class="onward-b">{blurb}</span>
+    </a>
+  </div>
+</div>"""
+
+
+def _shell(title: str, description: str, active: str, body: str,
+           result: dict, tables: dict[str, pd.DataFrame], sections: dict) -> str:
+    # imported here, not at module level: voice.py reads human_cost out of this module
+    from src.voice import build as voice_build
+    v = result["policy_verdict"]
+    return f"""<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{esc(title)}</title>
+<meta name="description" content="{esc(description)}">
+<style>
+{STYLE}</style>
+</head>
+<body class="v-{esc(v)}">
+
+<div class="prog" aria-hidden="true"></div>
+<div class="dither" aria-hidden="true"></div>
+<svg class="grain" aria-hidden="true" focusable="false">
+  <filter id="gr"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="4"
+    stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  <rect width="100%" height="100%" filter="url(#gr)"/>
+</svg>
+
+{_nav(active, v)}
+{body}
+{sections['footer']}
+{voice_build(result, tables)}
+{sections['tail']}
 </body>
 </html>
 """
 
 
+def render(result: dict, tables: dict[str, pd.DataFrame],
+           page: str = "index.html") -> str:
+    """One page of the site, composed from the shared sections."""
+    sections = _sections(result, tables)
+    spec = next(p for p in PAGES if p[0] == page)
+    _, title, description, keys = spec
+    body = "\n".join(sections[k] for k in keys)
+    return _shell(title, description, page, body, result, tables, sections)
+
+
 def write(result: dict, tables: dict[str, pd.DataFrame]) -> None:
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
-    (DOCS_DIR / "index.html").write_text(render(result, tables), encoding="utf-8")
+    sections = _sections(result, tables)
+    for name, title, description, keys in PAGES:
+        body = "\n".join(sections[k] for k in keys)
+        html_text = _shell(title, description, name, body, result, tables, sections)
+        (DOCS_DIR / name).write_text(html_text, encoding="utf-8")

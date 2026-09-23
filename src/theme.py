@@ -150,8 +150,14 @@ section { padding:104px 0; }
 .checks { list-style:none; margin:0; padding:0; }
 .chk { padding:17px 0; border-bottom:1px solid var(--hair); }
 .chk:last-child { border-bottom:0; }
-.chk-top { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
-.chk-top code { font-size:13px; color:var(--ink-2); }
+.chk-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:10px; }
+/* The readable title leads, the policy key sits under it in mono. Both are needed:
+   one so you know what is being measured, the other so you can find it in the file. */
+.chk-id { display:grid; gap:3px; min-width:0; }
+.chk-h { font-size:15px; font-weight:600; letter-spacing:-.015em; color:var(--ink); }
+.chk-top code { font-size:11.5px; color:var(--mut); letter-spacing:.01em; }
+.chk-why { margin:10px 0 0; font-size:13px; line-height:1.6; color:var(--ink-2);
+  max-width:74ch; }
 .tag { margin-left:auto; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
   padding:3px 10px; border-radius:999px; border:1px solid var(--hair-2); color:var(--mut); }
 .s-warn .tag { color:var(--warn); border-color:color-mix(in srgb,var(--warn) 42%,transparent); }
@@ -317,6 +323,35 @@ tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
 .scroll-x { overflow-x:auto; }
 .note { font-size:13.5px; color:var(--ink-2); border-left:2px solid var(--axis);
   padding-left:16px; margin:22px 0 0; max-width:66ch; }
+
+/* ---- page header (every page but the front one) ----
+   The front page keeps the full-height hero. Repeating that five times would make each
+   page feel like its own landing page and push the content below the fold every time. */
+.phead { position:relative; overflow:hidden; padding:150px 0 62px;
+  border-bottom:1px solid var(--hair); }
+.phead .mesh { opacity:.4; }
+.phead .kicker { margin-bottom:18px; }
+.ptitle { font-size:clamp(34px, 5.4vw, 66px); line-height:1.02; letter-spacing:-.035em;
+  font-weight:660; margin:0 0 22px; max-width:17ch; }
+.phead .lead { max-width:58ch; font-size:18px; line-height:1.6; color:var(--ink-2);
+  margin:0; }
+@media (max-width:760px) { .phead { padding:120px 0 48px; } }
+
+/* ---- the link onward ----
+   The pages are an argument in order, so the foot of each one names the next step
+   rather than dropping the reader at a dead end. */
+.onward { border-top:1px solid var(--hair); }
+.onward-in { display:grid; gap:7px; text-decoration:none; padding:34px 0;
+  border-radius:16px; }
+.onward-in:hover .onward-t { color:var(--acid); }
+.onward-t { font-size:clamp(26px, 3.4vw, 40px); letter-spacing:-.03em; font-weight:640;
+  color:var(--ink); line-height:1.1; }
+.onward-t::after { content:" 92"; color:var(--acid); }
+.onward-b { color:var(--ink-2); font-size:15.5px; max-width:56ch; line-height:1.55; }
+
+/* the mark is a link home now that there is more than one page */
+nav .mark a { color:inherit; text-decoration:none; }
+nav .mark a:hover { color:var(--acid); }
 
 /* Plain-language primer. Most people who open this have never heard of a CI gate,
    and the finding is worth understanding without that background. */

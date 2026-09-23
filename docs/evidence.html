@@ -1,0 +1,1334 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The evidence</title>
+<meta name="description" content="Every check, every group, and how certain each number is. Sixteen policy checks, the intersectional audit, confidence intervals and the full flow of 600,551 people through the model.">
+<style>
+
+:root, :root[data-theme="dark"] {
+  color-scheme: dark;
+  --plane:#070809; --surface:#0f1113; --raised:#15181b;
+  --hair:rgba(255,255,255,.07); --hair-2:rgba(255,255,255,.15);
+  --ink:#f6f8f9; --ink-2:#b4bbc1; --mut:#7d848a;
+  --grid:#1d2125; --axis:#2a2f34;
+  --s1:#3987e5; --s2:#d95926;
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
+  --glow:rgba(57,135,229,.15);
+  /* Narrative accent. Used only in the story sections, never in the gate, where a
+     colour has to mean pass, warn or fail and nothing else. */
+  --acid:#ccff00; --acid-ink:#0a0b00;
+  --grain:.055;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --plane:#f2f2f0; --surface:#fcfcfb; --raised:#ffffff;
+  --hair:rgba(11,11,11,.09); --hair-2:rgba(11,11,11,.18);
+  --ink:#0b0b0b; --ink-2:#52514e; --mut:#898781;
+  --grid:#e6e5df; --axis:#c3c2b7;
+  --s1:#2a78d6; --s2:#eb6834;
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
+  --glow:rgba(42,120,214,.10);
+  --acid:#5c7400; --acid-ink:#ffffff;
+  --grain:.03;
+}
+*,*::before,*::after { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; scroll-behavior:smooth; scroll-padding-top:80px; }
+/* 100vw bleeds are wider than the content box once a vertical scrollbar exists. */
+html, body { overflow-x:clip; max-width:100%; }
+body {
+  margin:0; background:var(--plane); color:var(--ink);
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
+  font-size:17px; line-height:1.6; letter-spacing:-.008em;
+  font-feature-settings:"kern" 1; text-rendering:optimizeLegibility;
+}
+.mono, code, table, .num { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums lining-nums; }
+.shell { max-width:1240px; margin:0 auto; padding:0 32px; }
+.mut { color:var(--mut); }
+h2 { font-size:clamp(32px,3.9vw,52px); line-height:1.02; letter-spacing:-.04em;
+  font-weight:900; margin:0 0 18px; max-width:18ch; }
+.kicker { font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--mut); margin:0 0 20px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.say { max-width:58ch; font-size:18px; line-height:1.6; color:var(--ink-2);
+  margin:0 0 32px; }
+.say b { color:var(--ink); font-weight:600; }
+
+/* nav */
+nav { position:sticky; top:0; z-index:20; height:64px; display:flex; align-items:center;
+  gap:30px; padding:0 32px; border-bottom:1px solid var(--hair);
+  background:color-mix(in srgb, var(--plane) 82%, transparent);
+  backdrop-filter:blur(16px) saturate(140%);
+  -webkit-backdrop-filter:blur(16px) saturate(140%); }
+nav .mark { font-size:14px; font-weight:660; letter-spacing:-.015em; }
+nav .mark i { font-style:normal; color:var(--mut); font-weight:400; }
+nav ul { display:flex; flex-wrap:nowrap; gap:21px; list-style:none; margin:0;
+  padding:0; }
+nav a { color:var(--ink-2); text-decoration:none; font-size:12px;
+  white-space:nowrap;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  letter-spacing:.06em; text-transform:uppercase;
+  transition:color 150ms ease; }
+nav a:hover { color:var(--ink); }
+nav .right { margin-left:auto; display:flex; align-items:center; gap:14px; }
+.pill { display:inline-flex; align-items:center; gap:7px; font-size:12px;
+  padding:5px 12px; border-radius:999px; border:1px solid var(--hair-2);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.pill i { width:7px; height:7px; border-radius:50%; background:var(--vc); font-style:normal; }
+.tgl { appearance:none; border:1px solid var(--hair-2); background:transparent;
+  color:var(--ink-2); border-radius:8px; padding:6px 12px; font:inherit; font-size:12.5px;
+  cursor:pointer; transition:transform 130ms cubic-bezier(.23,1,.32,1),
+    color 150ms ease, border-color 150ms ease; }
+.tgl:hover { color:var(--ink); border-color:var(--ink-2); }
+.tgl:active { transform:scale(.96); }
+@media (max-width:860px) { nav ul { display:none; } }
+
+/* hero */
+.hero { min-height:min(calc(100dvh - 64px), 880px); display:flex;
+  flex-direction:column; justify-content:center; padding:64px 0 72px;
+  position:relative; overflow:hidden; }
+.hero::before { content:""; position:absolute; inset:-20% -10% auto auto;
+  width:min(78vw,900px); aspect-ratio:1; pointer-events:none; z-index:0;
+  background:radial-gradient(circle at 62% 34%,
+    color-mix(in srgb, var(--vc) 15%, transparent), transparent 62%); }
+.hero > * { position:relative; z-index:1; }
+.v-pass { --vc:var(--good); } .v-warn { --vc:var(--warn); } .v-fail { --vc:var(--crit); }
+.hero h1 { font-size:clamp(76px,16vw,232px); line-height:.8; letter-spacing:-.07em;
+  font-weight:900; margin:0; color:var(--vc); }
+.hero .under { display:flex; align-items:baseline; gap:20px; flex-wrap:wrap;
+  margin-top:26px; }
+.hero .lead { max-width:54ch; font-size:clamp(18px,2vw,23px); line-height:1.42;
+  color:var(--ink-2); letter-spacing:-.015em; margin:30px 0 0; }
+.hero .lead b { color:var(--ink); font-weight:600; }
+.tally { font-size:14px; color:var(--ink-2);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+/* the finding: a full-bleed contrast band */
+.band { background:var(--surface); border-block:1px solid var(--hair); margin-top:0;
+  position:relative; }
+/* corner ticks: drafting marks, not decoration for its own sake. They mark where the
+   measured content starts and stops. */
+.band::before, .band::after { content:""; position:absolute; width:11px; height:11px;
+  pointer-events:none; opacity:.5; }
+.band::before { top:-1px; left:24px; border-top:1px solid var(--acid);
+  border-left:1px solid var(--acid); }
+.band::after { bottom:-1px; right:24px; border-bottom:1px solid var(--acid);
+  border-right:1px solid var(--acid); }
+.band-in { padding:104px 0; }
+.duel { display:grid; grid-template-columns:1fr 1fr; gap:56px; margin-top:44px; }
+.duel > div { border-top:2px solid currentColor; padding-top:20px; }
+.duel .hi { color:var(--s1); } .duel .lo { color:var(--s2); }
+.duel .fig { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(44px,7vw,84px); line-height:1; letter-spacing:-.05em; }
+.duel .who { color:var(--ink); font-size:16px; margin-top:12px; font-weight:560; }
+.duel .what { color:var(--mut); font-size:13.5px; margin-top:4px; }
+@media (max-width:760px) { .duel { grid-template-columns:1fr; gap:34px; } }
+
+/* stat band: numbers on hairlines, no cards */
+section { padding:104px 0; }
+.numbers { display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+  background:var(--hair); border-block:1px solid var(--hair); }
+.numbers > div { background:var(--plane); padding:30px 26px 34px; }
+.numbers .k { font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.numbers .v { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-variant-numeric:tabular-nums; font-size:clamp(30px,3.6vw,44px);
+  letter-spacing:-.04em; line-height:1.08; margin-top:14px; }
+.numbers .c { font-size:12.5px; color:var(--mut); margin-top:8px; }
+@media (max-width:900px) { .numbers { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:520px) { .numbers { grid-template-columns:1fr; } }
+
+.panel { background:var(--surface); border:1px solid var(--hair); border-radius:18px;
+  padding:26px 28px; box-shadow:inset 0 1px 0 var(--hair-2); }
+.split { display:grid; grid-template-columns:1.35fr 1fr; gap:22px; align-items:start; }
+@media (max-width:960px) { .split { grid-template-columns:1fr; } }
+
+/* checks */
+.checks { list-style:none; margin:0; padding:0; }
+.chk { padding:17px 0; border-bottom:1px solid var(--hair); }
+.chk:last-child { border-bottom:0; }
+.chk-top { display:flex; align-items:flex-start; gap:12px; margin-bottom:10px; }
+/* The readable title leads, the policy key sits under it in mono. Both are needed:
+   one so you know what is being measured, the other so you can find it in the file. */
+.chk-id { display:grid; gap:3px; min-width:0; }
+.chk-h { font-size:15px; font-weight:600; letter-spacing:-.015em; color:var(--ink); }
+.chk-top code { font-size:11.5px; color:var(--mut); letter-spacing:.01em; }
+.chk-why { margin:10px 0 0; font-size:13px; line-height:1.6; color:var(--ink-2);
+  max-width:74ch; }
+.tag { margin-left:auto; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+  padding:3px 10px; border-radius:999px; border:1px solid var(--hair-2); color:var(--mut); }
+.s-warn .tag { color:var(--warn); border-color:color-mix(in srgb,var(--warn) 42%,transparent); }
+.s-fail .tag { color:var(--crit); border-color:color-mix(in srgb,var(--crit) 46%,transparent); }
+.s-pass .tag { color:var(--good); border-color:color-mix(in srgb,var(--good) 42%,transparent); }
+.chk-bot { display:flex; align-items:baseline; gap:22px; margin-top:10px; font-size:12px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--mut); }
+.chk-bot .big { font-size:16px; color:var(--ink); letter-spacing:-.02em; }
+.chk-bot .ci-note { flex:1 1 100%; margin-top:4px; font-size:11.5px; opacity:.85;
+  font-family:ui-sans-serif,system-ui,sans-serif; letter-spacing:0; }
+svg.bullet { display:block; }
+svg.bullet .trk { fill:var(--grid); }
+svg.bullet .fil { transition:width 480ms cubic-bezier(.23,1,.32,1); }
+.s-pass svg.bullet .fil { fill:var(--good); }
+.s-warn svg.bullet .fil { fill:var(--warn); }
+.s-fail svg.bullet .fil { fill:var(--crit); }
+svg.bullet line { stroke:var(--ink); stroke-width:2; vector-effect:non-scaling-stroke; }
+svg.bullet .t-warn line { opacity:.4; stroke-dasharray:3 3; }
+svg.bullet .t-fail line { opacity:.75; }
+svg.bullet .ci { fill:var(--ink); opacity:.22; }
+svg.bullet .ci-cap { stroke:var(--ink); stroke-width:1.5; opacity:.5;
+  vector-effect:non-scaling-stroke; }
+
+/* controls */
+.controls { display:flex; align-items:center; gap:26px; flex-wrap:wrap; margin:0 0 24px; }
+.ctl { display:flex; align-items:center; gap:10px; }
+.ctl-k { font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--mut); }
+.segs { display:inline-flex; background:var(--surface); border:1px solid var(--hair);
+  border-radius:10px; padding:3px; gap:2px; }
+.seg { appearance:none; border:0; background:transparent; color:var(--ink-2); font:inherit;
+  font-size:13px; padding:6px 14px; border-radius:7px; cursor:pointer;
+  transition:background 160ms cubic-bezier(.23,1,.32,1), color 150ms ease,
+    transform 120ms cubic-bezier(.23,1,.32,1); }
+.seg:hover { color:var(--ink); }
+.seg:active { transform:scale(.97); }
+.seg.is-on { background:var(--raised); color:var(--ink);
+  box-shadow:inset 0 1px 0 var(--hair-2), 0 1px 3px rgba(0,0,0,.3); }
+.ctl-note { font-size:12.5px; color:var(--mut); margin:0 0 0 auto; }
+.pane { display:none; } .pane.is-on { display:block; }
+
+/* charts */
+svg.chart { display:block; overflow:hidden; height:auto; }
+svg.chart .gr { stroke:var(--grid); stroke-width:1; }
+svg.chart .ax { fill:var(--mut); font-size:10.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.chart .gl { fill:var(--ink); font-size:12.5px; }
+svg.chart .gn, svg.chart .vl { fill:var(--mut); font-size:10.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.chart .s1, svg.chart .d1 { fill:var(--s1); }
+svg.chart .s2, svg.chart .d2 { fill:var(--s2); }
+svg.chart .lnk { stroke:var(--axis); stroke-width:2.5; }
+svg.chart .lead { stroke:var(--mut); stroke-width:1; fill:none; opacity:.5; }
+svg.chart .row { transition:opacity 150ms cubic-bezier(.23,1,.32,1); }
+@media (hover:hover) and (pointer:fine) {
+  svg.chart:hover .row { opacity:.35; }
+  svg.chart .row:hover { opacity:1; }
+}
+/* sankey */
+svg.sankey .rb { opacity:.5; transition:opacity 180ms ease; }
+svg.sankey .rb.ok { fill:var(--s1); }
+svg.sankey .rb.bad { fill:var(--acid); opacity:.82; }
+svg.sankey .rb.warnrb { fill:var(--s2); opacity:.62; }
+svg.sankey:hover .rb { opacity:.22; }
+svg.sankey .rb:hover { opacity:.95; }
+svg.sankey .nd { fill:var(--ink); opacity:.85; }
+svg.sankey .nl { fill:var(--ink); font-size:13px; font-weight:600; }
+svg.sankey .nn { fill:var(--ink); font-size:16px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.sankey .ns { fill:var(--mut); font-size:11px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+/* heatmap */
+svg.heat .cell { fill:var(--s1); fill-opacity:calc(.12 + var(--v) * .8); }
+svg.heat .cell.bad { fill:var(--acid); fill-opacity:calc(.14 + var(--v) * 1.5); }
+svg.heat .cv { fill:var(--ink); font-size:12px; font-weight:600;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  pointer-events:none; }
+
+/* treemap */
+svg.tree .tm { fill:var(--s1); fill-opacity:calc(.2 + var(--v) * .7);
+  stroke:var(--surface); stroke-width:1; }
+svg.tree .tml { fill:var(--ink); font-size:14px; font-weight:600; }
+svg.tree .tmn { fill:var(--ink); opacity:.72; font-size:13px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+/* tradeoff frontier */
+svg.trade .frontier { fill:none; stroke:var(--s1); stroke-width:2; opacity:.55; }
+svg.trade .swp { fill:var(--s1); opacity:.5; }
+svg.trade .mk-base { fill:var(--warn); stroke:var(--surface); stroke-width:2; }
+svg.trade .mk-fix { fill:var(--acid); stroke:var(--surface); stroke-width:2; }
+svg.trade .mk { fill:var(--ink); font-size:13px; font-weight:600; }
+svg.trade .mkn { fill:var(--mut); font-size:11px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+/* intersection matrix */
+svg.xmat .muted-cell { fill:var(--ink); fill-opacity:.05; stroke:var(--hair-2);
+  stroke-width:1; stroke-dasharray:4 4; }
+svg.xmat .cn { fill:var(--mut); font-size:11px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.xmat .cv { font-size:15px; }
+svg.xmat .sup { fill:var(--mut); font-size:12px; font-weight:400; }
+svg.xmat .on-bright { fill:#0a0b00; }
+svg.xmat .cn.on-bright { fill:#0a0b00; opacity:.62; }
+
+/* intervals */
+svg.ivl .whisk { stroke:var(--s1); stroke-width:3; opacity:.55; }
+svg.ivl .cap { stroke:var(--s1); stroke-width:2; opacity:.8; }
+svg.ivl .pt { fill:var(--acid); }
+
+/* reliability, faceted: one small panel per group on identical axes */
+svg.relf .facet { fill:var(--raised); stroke:var(--hair); stroke-width:1; }
+svg.relf .diag { stroke:var(--ink); stroke-width:1.25; stroke-dasharray:4 4;
+  opacity:.32; }
+svg.relf .cal { fill:none; stroke:var(--acid); stroke-width:2; opacity:.9;
+  stroke-linejoin:round; }
+svg.relf .cdot { fill:var(--acid); }
+svg.relf .facet-t { fill:var(--ink); font-size:12px; font-weight:600; }
+svg.relf .facet-n { fill:var(--mut); font-size:10.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+svg.relf .row { transition:opacity 150ms cubic-bezier(.23,1,.32,1); }
+@media (hover:hover) and (pointer:fine) {
+  svg.relf:hover .row { opacity:.4; }
+  svg.relf .row:hover { opacity:1; }
+}
+
+/* ridgeline */
+svg.ridge-c .ridge { stroke-width:1.5; }
+svg.ridge-c .neg { fill:var(--ink); fill-opacity:.1; stroke:var(--ink);
+  stroke-opacity:.3; }
+svg.ridge-c .pos { fill:var(--acid); fill-opacity:.2; stroke:var(--acid);
+  stroke-opacity:.78; }
+
+svg.chart .bub { fill:var(--s1); opacity:.78; stroke:var(--surface);
+  stroke-width:2; }
+svg.chart .zero { stroke:var(--axis); stroke-width:1.5; }
+svg.chart .axt { fill:var(--mut); font-size:11px; letter-spacing:.04em; }
+svg.chart .slope { stroke-width:2.5; fill:none; opacity:.85; }
+svg.chart .s1l { stroke:var(--s1); } svg.chart .s2l { stroke:var(--s2); }
+
+/* charts breathe: fill the panel rather than sitting in it */
+.chartbox { padding:26px 14px 12px; }
+.chartbox svg.chart { max-height:560px; }
+.split .chartbox svg.chart { max-height:460px; }
+.chartbox .legend { padding-left:14px; }
+
+.legend { display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--ink-2);
+  margin:0 0 16px; }
+.key { width:11px; height:11px; border-radius:3px; display:inline-block; }
+.k1 { background:var(--s1); } .k2 { background:var(--s2); margin-left:16px; }
+.empty { color:var(--mut); font-size:13px; margin:0; }
+
+table { border-collapse:collapse; width:100%; font-size:12.5px; }
+th, td { padding:10px 12px; text-align:right; white-space:nowrap; }
+thead th { font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--mut); font-weight:600; border-bottom:1px solid var(--axis); }
+/* the first column holds names, not numbers, so its header follows the body */
+thead th:first-child { text-align:left; }
+tbody th { text-align:left; font-weight:500; color:var(--ink);
+  font-family:ui-sans-serif,system-ui,sans-serif; }
+tbody tr { transition:background 130ms ease; }
+tbody tr:hover { background:var(--raised); }
+tbody tr + tr th, tbody tr + tr td { border-top:1px solid var(--hair); }
+.scroll-x { overflow-x:auto; }
+.note { font-size:13.5px; color:var(--ink-2); border-left:2px solid var(--axis);
+  padding-left:16px; margin:22px 0 0; max-width:66ch; }
+
+/* ---- page header (every page but the front one) ----
+   The front page keeps the full-height hero. Repeating that five times would make each
+   page feel like its own landing page and push the content below the fold every time. */
+.phead { position:relative; overflow:hidden; padding:150px 0 62px;
+  border-bottom:1px solid var(--hair); }
+.phead .mesh { opacity:.4; }
+.phead .kicker { margin-bottom:18px; }
+.ptitle { font-size:clamp(34px, 5.4vw, 66px); line-height:1.02; letter-spacing:-.035em;
+  font-weight:660; margin:0 0 22px; max-width:17ch; }
+.phead .lead { max-width:58ch; font-size:18px; line-height:1.6; color:var(--ink-2);
+  margin:0; }
+@media (max-width:760px) { .phead { padding:120px 0 48px; } }
+
+/* ---- the link onward ----
+   The pages are an argument in order, so the foot of each one names the next step
+   rather than dropping the reader at a dead end. */
+.onward { border-top:1px solid var(--hair); }
+.onward-in { display:grid; gap:7px; text-decoration:none; padding:34px 0;
+  border-radius:16px; }
+.onward-in:hover .onward-t { color:var(--acid); }
+.onward-t { font-size:clamp(26px, 3.4vw, 40px); letter-spacing:-.03em; font-weight:640;
+  color:var(--ink); line-height:1.1; }
+.onward-t::after { content:" 92"; color:var(--acid); }
+.onward-b { color:var(--ink-2); font-size:15.5px; max-width:56ch; line-height:1.55; }
+
+/* the mark is a link home now that there is more than one page */
+nav .mark a { color:inherit; text-decoration:none; }
+nav .mark a:hover { color:var(--acid); }
+
+/* Plain-language primer. Most people who open this have never heard of a CI gate,
+   and the finding is worth understanding without that background. */
+.primer { display:grid; grid-template-columns:1.25fr 1fr; gap:56px; align-items:start;
+  margin-top:44px; }
+@media (max-width:900px) { .primer { grid-template-columns:1fr; gap:34px; } }
+.primer .lede { font-size:21px; line-height:1.58; color:var(--ink-2); max-width:52ch;
+  margin:0 0 20px; }
+.primer .lede b { color:var(--ink); font-weight:600; }
+.primer p { color:var(--ink-2); font-size:16px; line-height:1.65; max-width:52ch; }
+
+/* the glossary reads as a side note, not as body copy */
+.defs { margin:0; padding:24px 26px; background:var(--surface);
+  border:1px solid var(--hair); border-radius:18px; }
+.defs dt { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--acid);
+  margin-top:20px; }
+.defs dt:first-child { margin-top:0; }
+.defs dd { margin:6px 0 0; font-size:14.5px; line-height:1.6; color:var(--ink-2); }
+.defs dd b { color:var(--ink); font-weight:600; }
+
+/* method: a numbered narrative, not cards */
+.steps { counter-reset:s; display:grid; gap:2px; margin-top:40px; }
+.step { display:grid; grid-template-columns:64px 1fr; gap:24px; padding:26px 0;
+  border-top:1px solid var(--hair); align-items:start; }
+.step::before { counter-increment:s; content:counter(s,decimal-leading-zero);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px;
+  color:var(--mut); padding-top:4px; }
+.step h3 { font-size:19px; margin:0 0 8px; font-weight:600; letter-spacing:-.02em; }
+.step p { margin:0; color:var(--ink-2); max-width:64ch; font-size:15px; }
+@media (max-width:620px) { .step { grid-template-columns:1fr; gap:8px; } }
+
+footer { border-top:1px solid var(--hair); padding:44px 0 64px; font-size:13px;
+  color:var(--mut); line-height:1.75; }
+footer code { color:var(--ink-2); }
+footer strong { color:var(--ink-2); font-weight:600; }
+
+.grain { position:fixed; inset:0; z-index:90; pointer-events:none;
+  opacity:var(--grain); mix-blend-mode:overlay; }
+/* Dither: shade simulated with a dot pattern on a limited palette, which is also what
+   the unit chart further down does with people. Same device, two scales. */
+.dither { position:fixed; inset:0; z-index:89; pointer-events:none; opacity:.5;
+  background-image:radial-gradient(currentColor .5px, transparent .5px);
+  background-size:3px 3px; color:var(--ink); mix-blend-mode:soft-light; }
+
+/* ---- full-bleed acid field: the single dominant colour moment ---- */
+.acid { background:var(--acid); color:var(--acid-ink); position:relative;
+  overflow:hidden; padding:0; }
+.acid .kicker, .acid .yr { color:color-mix(in srgb, var(--acid-ink) 58%, transparent); }
+.acid .say, .acid p { color:color-mix(in srgb, var(--acid-ink) 78%, transparent); }
+.acid .say b, .acid b { color:var(--acid-ink); }
+.topo { position:absolute; inset:0; width:100%; height:100%; pointer-events:none;
+  opacity:.16; }
+.topo path { fill:none; stroke:currentColor; stroke-width:1.2;
+  vector-effect:non-scaling-stroke; }
+.acid-in { position:relative; z-index:1; padding:120px 0 128px; }
+
+/* ---- type that runs off both edges, the way a poster does ---- */
+.mega { font-size:clamp(84px,21vw,300px); line-height:.78; letter-spacing:-.07em;
+  font-weight:900; margin:0; white-space:nowrap; }
+.bleed { width:100vw; margin-left:calc(50% - 50vw); padding:0 24px; }
+.mega-wrap { overflow:hidden; }
+.mega.cut { margin-left:-.06em; }
+
+/* horizontal slice displacement, the way the reference slices a portrait */
+.sliced { position:relative; display:inline-block; isolation:isolate; }
+.sliced > span { display:block; position:relative; z-index:2; }
+.sliced .sl { position:absolute; left:0; top:0; white-space:nowrap; z-index:1; }
+/* two inks, slightly out of register, the way a risograph misprints */
+.sliced .sl1 { transform:translate(.9%, .055em); color:var(--acid); opacity:.85;
+  mix-blend-mode:screen; }
+.sliced .sl2 { transform:translate(-.7%, -.045em); color:var(--s1); opacity:.7;
+  mix-blend-mode:screen; }
+.sliced .sl3 { display:none; }
+:root[data-theme="light"] .sliced .sl1,
+:root[data-theme="light"] .sliced .sl2 { mix-blend-mode:multiply; opacity:.5; }
+
+/* ---- one marquee, and only one ---- */
+.mq { width:100vw; margin-left:calc(50% - 50vw); overflow:hidden; padding:22px 0;
+  border-block:1px solid currentColor; }
+.mq-track { display:flex; gap:56px; width:max-content;
+  animation:slide 34s linear infinite; }
+.mq span { font-size:clamp(22px,3.4vw,46px); font-weight:700; letter-spacing:-.03em;
+  white-space:nowrap; }
+.mq em { font-style:normal; opacity:.42; }
+@keyframes slide { to { transform:translateX(-50%); } }
+@media (prefers-reduced-motion:reduce) { .mq-track { animation:none; } }
+
+/* ---- scale contrast: tiny chrome beside monumental figures ---- */
+.tiny { font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+/* human cost */
+.cost { display:grid; grid-template-columns:1fr 1fr; gap:64px; margin-top:56px; }
+.cost h3 { font-size:15px; font-weight:600; margin:0 0 6px; letter-spacing:-.01em; }
+.cost .of { font-size:12.5px; color:var(--mut); margin:0 0 20px; }
+.cost .count { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(46px,7.4vw,92px); line-height:.94; letter-spacing:-.05em;
+  margin:20px 0 4px; }
+.cost .count.bad { color:var(--acid); }
+.cost .cap { font-size:13.5px; color:var(--ink-2); max-width:34ch; }
+svg.dots { display:block; overflow:hidden; height:auto; }
+svg.dots .off { fill:var(--ink); opacity:.13; }
+svg.dots .on { fill:var(--acid); transform-origin:center; transform-box:fill-box; }
+@media (max-width:820px) { .cost { grid-template-columns:1fr; gap:48px; } }
+
+.ratio { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(84px,17vw,240px); line-height:.82; letter-spacing:-.06em;
+  color:var(--acid); margin:0; }
+.ratio-say { max-width:30ch; font-size:clamp(18px,2.1vw,26px); line-height:1.38;
+  letter-spacing:-.02em; color:var(--ink); margin:26px 0 0; }
+.total { border-top:1px solid var(--hair); margin-top:64px; padding-top:34px;
+  display:flex; align-items:baseline; gap:24px; flex-wrap:wrap; }
+.total .n { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:clamp(38px,5.4vw,68px); letter-spacing:-.045em; line-height:1; }
+.total p { margin:0; max-width:46ch; color:var(--ink-2); font-size:15px; }
+
+/* sources */
+/* Sources as cards with a numbered bubble. A list of hairline rows reads as fine
+   print; a card with a badge reads as something worth clicking. */
+.srcs { list-style:none; margin:44px 0 0; padding:0; display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
+.srcs li { position:relative; }
+.srcs a.card { display:grid; grid-template-columns:44px 1fr; gap:16px;
+  align-items:start; padding:22px 22px 24px; border-radius:18px;
+  background:var(--raised); border:1px solid var(--hair);
+  box-shadow:inset 0 1px 0 var(--hair-2); text-decoration:none; color:inherit;
+  height:100%; position:relative; overflow:hidden;
+  transition:transform 200ms cubic-bezier(.23,1,.32,1),
+    border-color 200ms ease, box-shadow 200ms ease; }
+.srcs a.card::after { content:""; position:absolute; inset:0; pointer-events:none;
+  opacity:0; transition:opacity 220ms ease;
+  background:radial-gradient(360px 180px at 88% -10%,
+    color-mix(in srgb, var(--acid) 16%, transparent), transparent 66%); }
+@media (hover:hover) and (pointer:fine) {
+  .srcs a.card:hover { transform:translateY(-3px); border-color:var(--hair-2);
+    box-shadow:inset 0 1px 0 var(--hair-2), 0 14px 34px rgba(0,0,0,.34); }
+  .srcs a.card:hover::after { opacity:1; }
+  .srcs a.card:hover .bubble { background:var(--acid); color:var(--acid-ink);
+    border-color:var(--acid); }
+}
+.srcs a.card:active { transform:translateY(-1px) scale(.995); }
+.bubble { width:44px; height:44px; border-radius:999px; display:grid;
+  place-items:center; border:1px solid var(--hair-2); color:var(--ink-2);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px;
+  transition:background 200ms ease, color 200ms ease, border-color 200ms ease; }
+.srcs .ttl { font-size:16.5px; font-weight:600; letter-spacing:-.018em;
+  line-height:1.25; display:block; }
+.srcs .what { display:block; font-weight:400; font-size:13.5px; color:var(--mut);
+  margin-top:9px; line-height:1.5; }
+.srcs .yr { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11px; color:var(--mut); letter-spacing:.1em; margin-top:12px;
+  display:inline-block; border:1px solid var(--hair); border-radius:999px;
+  padding:3px 10px; }
+@media (max-width:620px) { .srcs { grid-template-columns:1fr; } }
+
+/* ---- animated mesh: four colour fields drifting over the dark plane ----
+   Kept inside our own palette rather than a rainbow. A cheerful gradient would fight
+   the subject, and a fifth hue would break the rule that colour means one thing here. */
+.field { position:absolute; inset:0; width:100%; height:100%; z-index:1;
+  pointer-events:none; display:block; }
+.hero .shell, .hero .mega-wrap { position:relative; z-index:2; }
+.hero .topo { z-index:1; }
+.mesh { position:absolute; inset:-30%; z-index:0; pointer-events:none;
+  filter:blur(52px) saturate(120%); opacity:.5; }
+.mesh i { position:absolute; display:block; border-radius:50%; }
+.mesh .m1 { width:52%; aspect-ratio:1; left:4%; top:6%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--vc) 62%, transparent),
+    transparent 66%); }
+.mesh .m2 { width:46%; aspect-ratio:1; right:2%; top:0%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--s1) 58%, transparent),
+    transparent 66%); }
+.mesh .m3 { width:44%; aspect-ratio:1; left:26%; bottom:2%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--acid) 30%, transparent),
+    transparent 68%); }
+.mesh .m4 { width:38%; aspect-ratio:1; right:16%; bottom:8%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--s2) 44%, transparent),
+    transparent 66%); }
+@media (prefers-reduced-motion: no-preference) {
+  .mesh .m1 { animation:float1 28s ease-in-out infinite alternate; }
+  .mesh .m2 { animation:float2 34s ease-in-out infinite alternate; }
+  .mesh .m3 { animation:float3 24s ease-in-out infinite alternate; }
+  .mesh .m4 { animation:float4 40s ease-in-out infinite alternate; }
+}
+@keyframes float1 { to { transform:translate3d(16%, 12%, 0) scale(1.18); } }
+@keyframes float2 { to { transform:translate3d(-18%, 16%, 0) scale(.86); } }
+@keyframes float3 { to { transform:translate3d(12%, -16%, 0) scale(1.22); } }
+@keyframes float4 { to { transform:translate3d(-12%, -10%, 0) scale(1.1); } }
+:root[data-theme="light"] .mesh { opacity:.34; filter:blur(64px) saturate(130%); }
+
+/* ---- floating pill nav ---- */
+nav { position:fixed; top:14px; left:50%; transform:translateX(-50%);
+  width:min(1120px, calc(100% - 32px)); height:56px; border-radius:999px;
+  border:1px solid var(--hair-2); padding:0 10px 0 20px;
+  background:color-mix(in srgb, var(--plane) 72%, transparent);
+  box-shadow:0 10px 34px rgba(0,0,0,.34), inset 0 1px 0 var(--hair-2); }
+nav ul { margin:0 auto; }
+body { padding-top:0; }
+.hero { padding-top:104px; }
+
+/* ---- motion layer: all of it scroll-driven CSS, none of it load-bearing ----
+   animation-timeline drives these off the scroller itself, so there is no scroll
+   listener, no rAF loop and no main-thread work per frame. Browsers without support
+   simply get the static page, which is why nothing here hides content. */
+
+.prog { position:fixed; top:0; left:0; right:0; height:2px; z-index:30;
+  background:var(--acid); transform-origin:0 50%; transform:scaleX(0); }
+
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .prog { animation:prog linear both; animation-timeline:scroll(root); }
+
+    /* parallax: the texture drifts slower than the page, the glow drifts faster */
+    .hero .topo { animation:drift linear both; animation-timeline:scroll(root);
+      animation-range:0 110vh; }
+    .hero::before { animation:driftfast linear both; animation-timeline:scroll(root);
+      animation-range:0 110vh; }
+    .acid .topo { animation:driftslow linear both; animation-timeline:view();
+      animation-range:cover 0% cover 100%; }
+
+    /* the headline settles as you leave it */
+    .hero .mega-wrap { animation:settle linear both; animation-timeline:scroll(root);
+      animation-range:0 80vh; }
+
+    /* charts wipe in from the left, which reads as the bars being drawn */
+    .chartbox svg.chart { animation:wipe cubic-bezier(.23,1,.32,1) both;
+      animation-timeline:view(); animation-range:entry 8% cover 26%; }
+
+    /* the acid wall lifts in rather than cutting */
+    .acid-in { animation:liftin cubic-bezier(.23,1,.32,1) both;
+      animation-timeline:view(); animation-range:entry 0% cover 24%; }
+  }
+}
+@keyframes prog { to { transform:scaleX(1); } }
+@keyframes drift { to { transform:translateY(16%) scale(1.1); opacity:.06; } }
+@keyframes driftslow { from { transform:translateY(-6%); }
+  to { transform:translateY(6%); } }
+@keyframes driftfast { to { transform:translateY(-22%); opacity:.4; } }
+@keyframes settle { to { transform:translateY(-4%) scale(1.14); opacity:.14; } }
+@keyframes wipe { from { clip-path:inset(0 100% 0 0); }
+  to { clip-path:inset(0 0 0 0); } }
+@keyframes liftin { from { transform:translateY(34px); opacity:.35; } }
+
+/* switching a control cross-fades rather than cutting, where the browser supports it */
+@view-transition { navigation:auto; }
+::view-transition-old(pane), ::view-transition-new(pane) {
+  animation-duration:280ms; animation-timing-function:cubic-bezier(.23,1,.32,1); }
+.pane.is-on { view-transition-name:pane; }
+
+/* Reveal is scroll-driven CSS, not script. If the browser cannot do it, content is
+   simply visible: an entrance animation must never be load-bearing for legibility. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { animation:rise both; animation-timeline:view();
+      animation-range:entry 0% cover 20%; }
+    .cost svg.dots .on { animation:pop 420ms cubic-bezier(.23,1,.32,1) both;
+      animation-delay:var(--d,0ms); animation-timeline:view();
+      animation-range:entry 0% cover 16%; }
+  }
+}
+@keyframes rise { from { opacity:0; transform:translateY(20px); } }
+@keyframes pop { from { opacity:0; transform:scale(.4); } }
+@media (prefers-reduced-motion:reduce) {
+  html { scroll-behavior:auto; }
+  *, *::before, *::after { transition-duration:1ms !important; animation:none !important; }
+}
+/* ---- ask the audit ---- */
+.vx-fab { position:fixed; right:22px; bottom:22px; z-index:60; display:flex;
+  align-items:center; gap:9px; padding:12px 18px 12px 14px; border-radius:999px;
+  border:1px solid var(--hair-2); background:var(--acid); color:var(--acid-ink);
+  font:inherit; font-size:13px; font-weight:640; letter-spacing:-.01em; cursor:pointer;
+  box-shadow:0 12px 30px rgba(0,0,0,.34); }
+.vx-fab:hover { transform:translateY(-1px); }
+.vx-fab svg { width:17px; height:17px; fill:none; stroke:currentColor;
+  stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+
+.vx { position:fixed; right:22px; bottom:80px; z-index:61; width:min(392px,
+  calc(100vw - 44px)); max-height:min(560px, calc(100vh - 120px)); display:flex;
+  flex-direction:column; border-radius:20px; border:1px solid var(--hair-2);
+  background:var(--plane); box-shadow:0 26px 60px rgba(0,0,0,.44); overflow:hidden; }
+.vx[hidden] { display:none; }
+.vx header { display:flex; align-items:center; justify-content:space-between;
+  padding:14px 12px 14px 18px; border-bottom:1px solid var(--hair); }
+.vx-title { font-size:13px; font-weight:640; letter-spacing:-.01em; }
+.vx-x { background:none; border:0; color:var(--mut); font-size:20px; line-height:1;
+  cursor:pointer; padding:2px 8px; }
+.vx-x:hover { color:var(--ink); }
+
+.vx-log { flex:1; overflow-y:auto; padding:16px 18px; display:grid; gap:12px;
+  align-content:start; }
+.vx-log p { margin:0; font-size:14px; line-height:1.58; }
+/* the question reads as an aside, the answer as the page's own voice */
+.vx-q { color:var(--mut); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
+  monospace; font-size:12px; letter-spacing:.02em; }
+.vx-q::before { content:"you: "; color:var(--acid); }
+.vx-a { color:var(--ink-2); }
+
+.vx-note { margin:0; padding:0 18px 12px; font-size:11.5px; line-height:1.5;
+  color:var(--mut); }
+.vx-bar { display:grid; gap:8px; padding:0 14px 14px; }
+.vx-mic { width:100%; padding:11px; border-radius:12px; border:1px solid var(--hair-2);
+  background:var(--surface); color:var(--ink); font:inherit; font-size:13px;
+  font-weight:600; cursor:pointer; }
+.vx-mic:hover { border-color:var(--acid); }
+.vx-mic.is-live { background:var(--acid); color:var(--acid-ink);
+  border-color:var(--acid); }
+.vx-form { display:flex; gap:8px; }
+.vx-form input { flex:1; min-width:0; padding:10px 13px; border-radius:12px;
+  border:1px solid var(--hair); background:var(--surface); color:var(--ink);
+  font:inherit; font-size:13px; }
+.vx-form input:focus { outline:none; border-color:var(--acid); }
+.vx-form button { padding:10px 15px; border-radius:12px; border:1px solid var(--hair-2);
+  background:var(--surface); color:var(--ink); font:inherit; cursor:pointer; }
+.vx-form button:hover { border-color:var(--acid); }
+
+@media (max-width:520px) {
+  .vx-fab span { display:none; }
+  .vx-fab { padding:13px; }
+}
+@media print { .vx, .vx-fab { display:none; } }
+
+@media (max-width:760px) { .shell { padding:0 20px; } section, .band-in { padding:64px 0; } }
+@media print {
+  body { background:#fff; } nav, .controls { display:none; }
+  .pane { display:block !important; } .reveal { opacity:1; transform:none; }
+  .hero { min-height:auto; }
+}
+</style>
+</head>
+<body class="v-warn">
+
+<div class="prog" aria-hidden="true"></div>
+<div class="dither" aria-hidden="true"></div>
+<svg class="grain" aria-hidden="true" focusable="false">
+  <filter id="gr"><feTurbulence type="fractalNoise" baseFrequency="0.86" numOctaves="4"
+    stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+  <rect width="100%" height="100%" filter="url(#gr)"/>
+</svg>
+
+<nav>
+  <span class="mark"><a href="index.html">fairness&#8209;gate</a> <i>/ ACS income</i></span>
+  <ul><li><a href="index.html">The finding</a></li><li><a href="evidence.html" aria-current="page">Evidence</a></li><li><a href="method.html">Method</a></li><li><a href="fix.html">The fix</a></li><li><a href="about.html">Why</a></li></ul>
+  <div class="right">
+    <span class="pill"><i></i>Warn</span>
+    <button type="button" class="tgl" id="themer" aria-label="Switch colour theme">Light</button>
+  </div>
+</nav>
+<header class="phead">
+  <div class="mesh" aria-hidden="true"><i class="m1"></i><i class="m2"></i></div>
+  <div class="shell">
+    <p class="kicker">The evidence</p>
+    <h1 class="ptitle">Sixteen checks, and how sure I am of each one.</h1>
+    <p class="lead">Every measured number, what it is being held to, and the interval around it. Nothing here fails the build yet, and the section on certainty explains why that is deliberate rather than lucky.</p>
+  </div>
+</header>
+<div class="band" id="checks">
+  <div class="shell band-in reveal">
+    <p class="kicker">The gate</p>
+    <h2>Every threshold, measured on every commit.</h2>
+    <p class="say">The solid tick is the limit that fails the build. The dashed tick is
+      the target being aimed at. The distance between them is deliberate: a limit pinned
+      to wherever the model lands today would make the gate meaningless, and one pinned
+      to the aspiration would mean a permanently red build that everyone learns to
+      ignore.</p>
+    <div class="panel"><ul class="checks"><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">Calibration gap, racial groups</span><code title="Calibrated means the probability can be taken at face value: out of a thousand people scored at 0.7, about seven hundred should qualify. This is how differently that holds from one group to the next. A big number means the same score means different things depending on which group you are in, so a single cut-off is not treating people alike.">fairness.RAC1P.max_calibration_gap</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.0410"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="284.1" height="8" rx="4"><title>measured 0.0410</title></rect><g class="t-warn"><line x1="276.9" y1="0" x2="276.9" y2="20"/><title>target 0.040</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.080</title></g></svg><div class="chk-bot"><span class="big">0.0410</span><span class="mut">target 0.040</span><span class="mut">limit 0.080</span></div><p class="chk-why">Calibrated means the probability can be taken at face value: out of a thousand people scored at 0.7, about seven hundred should qualify. This is how differently that holds from one group to the next. A big number means the same score means different things depending on which group you are in, so a single cut-off is not treating people alike.</p></li><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">Selection rate gap, racial groups</span><code title="How often the model says yes to each group, regardless of whether it was right. This is the distance between the highest and lowest rate. A big number means groups are being selected at very different rates. Some of that gap is in the data itself, which is why this one is judged alongside the base rate rather than on its own.">fairness.RAC1P.max_demographic_parity_difference</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.3445"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="424.0" height="8" rx="4"><title>measured 0.3445</title></rect><rect class="ci" x="417.0" y="3" width="13.800000000000011" height="14" rx="3"><title>95% interval [0.339, 0.350]</title></rect><line class="ci-cap" x1="417.0" y1="3" x2="417.0" y2="17"/><line class="ci-cap" x1="430.8" y1="3" x2="430.8" y2="17"/><g class="t-warn"><line x1="369.2" y1="0" x2="369.2" y2="20"/><title>target 0.300</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.450</title></g></svg><div class="chk-bot"><span class="big">0.3445</span><span class="mut">target 0.300</span><span class="mut">limit 0.450</span><span class="mut ci-note">95% CI [0.339, 0.350]</span></div><p class="chk-why">How often the model says yes to each group, regardless of whether it was right. This is the distance between the highest and lowest rate. A big number means groups are being selected at very different rates. Some of that gap is in the data itself, which is why this one is judged alongside the base rate rather than on its own.</p></li><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">False alarm gap, racial groups</span><code title="A false positive is somebody flagged who should not have been. This is the distance between the group it happens to most and the group it happens to least. A big number means one group is being wrongly flagged much more often than another.">fairness.RAC1P.max_fpr_gap</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.1447"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="400.8" height="8" rx="4"><title>measured 0.1447</title></rect><rect class="ci" x="388.0" y="3" width="32.89999999999998" height="14" rx="3"><title>95% interval [0.140, 0.152]</title></rect><line class="ci-cap" x1="388.0" y1="3" x2="388.0" y2="17"/><line class="ci-cap" x1="420.9" y1="3" x2="420.9" y2="17"/><g class="t-warn"><line x1="276.9" y1="0" x2="276.9" y2="20"/><title>target 0.100</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.200</title></g></svg><div class="chk-bot"><span class="big">0.1447</span><span class="mut">target 0.100</span><span class="mut">limit 0.200</span><span class="mut ci-note">95% CI [0.140, 0.152]</span></div><p class="chk-why">A false positive is somebody flagged who should not have been. This is the distance between the group it happens to most and the group it happens to least. A big number means one group is being wrongly flagged much more often than another.</p></li><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">Recall gap, racial groups</span><code title="Recall is the share of people who genuinely qualify that the model actually finds. This is the distance between the group it finds most often and the group it finds least often. A big number means the model is overlooking one group far more than another, even though both genuinely qualify.">fairness.RAC1P.max_tpr_gap</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.3119"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="493.6" height="8" rx="4"><title>measured 0.3119</title></rect><rect class="ci" x="474.9" y="3" width="38.0" height="14" rx="3"><title>95% interval [0.300, 0.324]</title></rect><line class="ci-cap" x1="474.9" y1="3" x2="474.9" y2="17"/><line class="ci-cap" x1="512.9" y1="3" x2="512.9" y2="17"/><g class="t-warn"><line x1="237.4" y1="0" x2="237.4" y2="20"/><title>target 0.150</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.350</title></g></svg><div class="chk-bot"><span class="big">0.3119</span><span class="mut">target 0.150</span><span class="mut">limit 0.350</span><span class="mut ci-note">95% CI [0.300, 0.324]</span></div><p class="chk-why">Recall is the share of people who genuinely qualify that the model actually finds. This is the distance between the group it finds most often and the group it finds least often. A big number means the model is overlooking one group far more than another, even though both genuinely qualify.</p></li><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">Selection rate gap, race and sex together</span><code title="How often the model says yes to each group, regardless of whether it was right. This is the distance between the highest and lowest rate. A big number means groups are being selected at very different rates. Some of that gap is in the data itself, which is why this one is judged alongside the base rate rather than on its own.">fairness.RACExSEX.max_demographic_parity_difference</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.4405"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="443.5" height="8" rx="4"><title>measured 0.4405</title></rect><rect class="ci" x="436.8" y="3" width="14.199999999999989" height="14" rx="3"><title>95% interval [0.434, 0.448]</title></rect><line class="ci-cap" x1="436.8" y1="3" x2="436.8" y2="17"/><line class="ci-cap" x1="451.0" y1="3" x2="451.0" y2="17"/><g class="t-warn"><line x1="382.7" y1="0" x2="382.7" y2="20"/><title>target 0.380</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.550</title></g></svg><div class="chk-bot"><span class="big">0.4405</span><span class="mut">target 0.380</span><span class="mut">limit 0.550</span><span class="mut ci-note">95% CI [0.434, 0.448]</span></div><p class="chk-why">How often the model says yes to each group, regardless of whether it was right. This is the distance between the highest and lowest rate. A big number means groups are being selected at very different rates. Some of that gap is in the data itself, which is why this one is judged alongside the base rate rather than on its own.</p></li><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">False alarm gap, race and sex together</span><code title="A false positive is somebody flagged who should not have been. This is the distance between the group it happens to most and the group it happens to least. A big number means one group is being wrongly flagged much more often than another.">fairness.RACExSEX.max_fpr_gap</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.2209"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="436.9" height="8" rx="4"><title>measured 0.2209</title></rect><rect class="ci" x="427.8" y="3" width="18.0" height="14" rx="3"><title>95% interval [0.216, 0.225]</title></rect><line class="ci-cap" x1="427.8" y1="3" x2="427.8" y2="17"/><line class="ci-cap" x1="445.8" y1="3" x2="445.8" y2="17"/><g class="t-warn"><line x1="276.9" y1="0" x2="276.9" y2="20"/><title>target 0.140</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.280</title></g></svg><div class="chk-bot"><span class="big">0.2209</span><span class="mut">target 0.140</span><span class="mut">limit 0.280</span><span class="mut ci-note">95% CI [0.216, 0.225]</span></div><p class="chk-why">A false positive is somebody flagged who should not have been. This is the distance between the group it happens to most and the group it happens to least. A big number means one group is being wrongly flagged much more often than another.</p></li><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">Recall gap, race and sex together</span><code title="Recall is the share of people who genuinely qualify that the model actually finds. This is the distance between the group it finds most often and the group it finds least often. A big number means the model is overlooking one group far more than another, even though both genuinely qualify.">fairness.RACExSEX.max_tpr_gap</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.3285"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="363.9" height="8" rx="4"><title>measured 0.3285</title></rect><rect class="ci" x="351.7" y="3" width="30.69999999999999" height="14" rx="3"><title>95% interval [0.318, 0.345]</title></rect><line class="ci-cap" x1="351.7" y1="3" x2="351.7" y2="17"/><line class="ci-cap" x1="382.4" y1="3" x2="382.4" y2="17"/><g class="t-warn"><line x1="276.9" y1="0" x2="276.9" y2="20"/><title>target 0.250</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.500</title></g></svg><div class="chk-bot"><span class="big">0.3285</span><span class="mut">target 0.250</span><span class="mut">limit 0.500</span><span class="mut ci-note">95% CI [0.318, 0.345]</span></div><p class="chk-why">Recall is the share of people who genuinely qualify that the model actually finds. This is the distance between the group it finds most often and the group it finds least often. A big number means the model is overlooking one group far more than another, even though both genuinely qualify.</p></li><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">Selection rate gap, men and women</span><code title="How often the model says yes to each group, regardless of whether it was right. This is the distance between the highest and lowest rate. A big number means groups are being selected at very different rates. Some of that gap is in the data itself, which is why this one is judged alongside the base rate rather than on its own.">fairness.SEX.max_demographic_parity_difference</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.1575"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="349.0" height="8" rx="4"><title>measured 0.1575</title></rect><rect class="ci" x="343.6" y="3" width="10.899999999999977" height="14" rx="3"><title>95% interval [0.155, 0.160]</title></rect><line class="ci-cap" x1="343.6" y1="3" x2="343.6" y2="17"/><line class="ci-cap" x1="354.5" y1="3" x2="354.5" y2="17"/><g class="t-warn"><line x1="332.3" y1="0" x2="332.3" y2="20"/><title>target 0.150</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.250</title></g></svg><div class="chk-bot"><span class="big">0.1575</span><span class="mut">target 0.150</span><span class="mut">limit 0.250</span><span class="mut ci-note">95% CI [0.155, 0.160]</span></div><p class="chk-why">How often the model says yes to each group, regardless of whether it was right. This is the distance between the highest and lowest rate. A big number means groups are being selected at very different rates. Some of that gap is in the data itself, which is why this one is judged alongside the base rate rather than on its own.</p></li><li class="chk s-warn"><div class="chk-top"><div class="chk-id"><span class="chk-h">False alarm gap, men and women</span><code title="A false positive is somebody flagged who should not have been. This is the distance between the group it happens to most and the group it happens to least. A big number means one group is being wrongly flagged much more often than another.">fairness.SEX.max_fpr_gap</code></div><span class="tag">Warn</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.0802"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-warn" x="0" y="6" width="296.1" height="8" rx="4"><title>measured 0.0802</title></rect><rect class="ci" x="286.5" y="3" width="19.600000000000023" height="14" rx="3"><title>95% interval [0.078, 0.083]</title></rect><line class="ci-cap" x1="286.5" y1="3" x2="286.5" y2="17"/><line class="ci-cap" x1="306.1" y1="3" x2="306.1" y2="17"/><g class="t-warn"><line x1="295.4" y1="0" x2="295.4" y2="20"/><title>target 0.080</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.150</title></g></svg><div class="chk-bot"><span class="big">0.0802</span><span class="mut">target 0.080</span><span class="mut">limit 0.150</span><span class="mut ci-note">95% CI [0.078, 0.083]</span></div><p class="chk-why">A false positive is somebody flagged who should not have been. This is the distance between the group it happens to most and the group it happens to least. A big number means one group is being wrongly flagged much more often than another.</p></li><li class="chk s-pass"><div class="chk-top"><div class="chk-id"><span class="chk-h">Calibration gap, men and women</span><code title="Calibrated means the probability can be taken at face value: out of a thousand people scored at 0.7, about seven hundred should qualify. This is how differently that holds from one group to the next. A big number means the same score means different things depending on which group you are in, so a single cut-off is not treating people alike.">fairness.SEX.max_calibration_gap</code></div><span class="tag">Pass</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.0344"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-pass" x="0" y="6" width="238.0" height="8" rx="4"><title>measured 0.0344</title></rect><g class="t-warn"><line x1="276.9" y1="0" x2="276.9" y2="20"/><title>target 0.040</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.080</title></g></svg><div class="chk-bot"><span class="big">0.0344</span><span class="mut">target 0.040</span><span class="mut">limit 0.080</span></div><p class="chk-why">Calibrated means the probability can be taken at face value: out of a thousand people scored at 0.7, about seven hundred should qualify. This is how differently that holds from one group to the next. A big number means the same score means different things depending on which group you are in, so a single cut-off is not treating people alike.</p></li><li class="chk s-pass"><div class="chk-top"><div class="chk-id"><span class="chk-h">Recall gap, men and women</span><code title="Recall is the share of people who genuinely qualify that the model actually finds. This is the distance between the group it finds most often and the group it finds least often. A big number means the model is overlooking one group far more than another, even though both genuinely qualify.">fairness.SEX.max_tpr_gap</code></div><span class="tag">Pass</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.0710"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-pass" x="0" y="6" width="196.7" height="8" rx="4"><title>measured 0.0710</title></rect><rect class="ci" x="187.5" y="3" width="18.5" height="14" rx="3"><title>95% interval [0.068, 0.074]</title></rect><line class="ci-cap" x1="187.5" y1="3" x2="187.5" y2="17"/><line class="ci-cap" x1="206.0" y1="3" x2="206.0" y2="17"/><g class="t-warn"><line x1="221.5" y1="0" x2="221.5" y2="20"/><title>target 0.080</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.200</title></g></svg><div class="chk-bot"><span class="big">0.0710</span><span class="mut">target 0.080</span><span class="mut">limit 0.200</span><span class="mut ci-note">95% CI [0.068, 0.074]</span></div><p class="chk-why">Recall is the share of people who genuinely qualify that the model actually finds. This is the distance between the group it finds most often and the group it finds least often. A big number means the model is overlooking one group far more than another, even though both genuinely qualify.</p></li><li class="chk s-pass"><div class="chk-top"><div class="chk-id"><span class="chk-h">Beating the lazy answer</span><code title="How much better the model does than always guessing the more common answer and never looking at anybody. If this is small the model is not doing much work, and no amount of fairness analysis would make it worth deploying.">performance.accuracy_over_majority</code></div><span class="tag">Pass</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.1881"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-pass" x="0" y="6" width="135.4" height="8" rx="4"><title>measured 0.1881</title></rect><g class="t-warn"><line x1="108.0" y1="0" x2="108.0" y2="20"/><title>target 0.150</title></g><g class="t-fail"><line x1="72.0" y1="0" x2="72.0" y2="20"/><title>limit 0.100</title></g></svg><div class="chk-bot"><span class="big">0.1881</span><span class="mut">target 0.150</span><span class="mut">limit 0.100</span></div><p class="chk-why">How much better the model does than always guessing the more common answer and never looking at anybody. If this is small the model is not doing much work, and no amount of fairness analysis would make it worth deploying.</p></li><li class="chk s-pass"><div class="chk-top"><div class="chk-id"><span class="chk-h">Ranking quality</span><code title="AUC measures whether the model puts people in the right order: given one person who qualifies and one who does not, how often does it score the first higher. 0.5 is a coin flip, 1.0 is perfect. The model has to be genuinely useful before its fairness is worth arguing about, so this is a floor rather than a ceiling.">performance.auc</code></div><span class="tag">Pass</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.8881"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-pass" x="0" y="6" width="639.4" height="8" rx="4"><title>measured 0.8881</title></rect><g class="t-warn"><line x1="633.6" y1="0" x2="633.6" y2="20"/><title>target 0.880</title></g><g class="t-fail"><line x1="612.0" y1="0" x2="612.0" y2="20"/><title>limit 0.850</title></g></svg><div class="chk-bot"><span class="big">0.8881</span><span class="mut">target 0.880</span><span class="mut">limit 0.850</span></div><p class="chk-why">AUC measures whether the model puts people in the right order: given one person who qualifies and one who does not, how often does it score the first higher. 0.5 is a coin flip, 1.0 is perfect. The model has to be genuinely useful before its fairness is worth arguing about, so this is a floor rather than a ceiling.</p></li><li class="chk s-pass"><div class="chk-top"><div class="chk-id"><span class="chk-h">Calibration error</span><code title="How far the model&#x27;s stated probabilities drift from what actually happens, averaged across the whole range. A big number means the probabilities cannot be taken at face value, which matters for any decision that uses the score rather than the yes or no.">performance.ece</code></div><span class="tag">Pass</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.0257"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-pass" x="0" y="6" width="284.7" height="8" rx="4"><title>measured 0.0257</title></rect><g class="t-warn"><line x1="332.3" y1="0" x2="332.3" y2="20"/><title>target 0.030</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.050</title></g></svg><div class="chk-bot"><span class="big">0.0257</span><span class="mut">target 0.030</span><span class="mut">limit 0.050</span></div><p class="chk-why">How far the model&#x27;s stated probabilities drift from what actually happens, averaged across the whole range. A big number means the probabilities cannot be taken at face value, which matters for any decision that uses the score rather than the yes or no.</p></li><li class="chk s-pass"><div class="chk-top"><div class="chk-id"><span class="chk-h">Ranking quality, unseen states</span><code title="The same ranking measure, in four states the model was never trained on. Models are usually scored where they were built. This asks whether it still works somewhere it has not seen.">shift.auc</code></div><span class="tag">Pass</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.8642"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-pass" x="0" y="6" width="622.2" height="8" rx="4"><title>measured 0.8642</title></rect><g class="t-warn"><line x1="612.0" y1="0" x2="612.0" y2="20"/><title>target 0.850</title></g><g class="t-fail"><line x1="576.0" y1="0" x2="576.0" y2="20"/><title>limit 0.800</title></g></svg><div class="chk-bot"><span class="big">0.8642</span><span class="mut">target 0.850</span><span class="mut">limit 0.800</span></div><p class="chk-why">The same ranking measure, in four states the model was never trained on. Models are usually scored where they were built. This asks whether it still works somewhere it has not seen.</p></li><li class="chk s-pass"><div class="chk-top"><div class="chk-id"><span class="chk-h">Does the gap get worse elsewhere</span><code title="How much larger the recall gap becomes in those unseen states, compared with the test year. A big number means the disparity is not stable, so measuring it once where you built the model would have told you only the comfortable half of the story.">shift.tpr_gap_increase_vs_test</code></div><span class="tag">Pass</span></div><svg class="bullet" viewBox="0 0 720 20" width="100%" height="20" preserveAspectRatio="none" role="img" aria-label="measured 0.0790"><rect class="trk" x="0" y="6" width="720" height="8" rx="4"/><rect class="fil s-pass" x="0" y="6" width="291.8" height="8" rx="4"><title>measured 0.0790</title></rect><g class="t-warn"><line x1="295.4" y1="0" x2="295.4" y2="20"/><title>target 0.080</title></g><g class="t-fail"><line x1="553.8" y1="0" x2="553.8" y2="20"/><title>limit 0.150</title></g></svg><div class="chk-bot"><span class="big">0.0790</span><span class="mut">target 0.080</span><span class="mut">limit 0.150</span><span class="mut ci-note">test gap 0.3119, shift gap 0.3910</span></div><p class="chk-why">How much larger the recall gap becomes in those unseen states, compared with the test year. A big number means the disparity is not stable, so measuring it once where you built the model would have told you only the comfortable half of the story.</p></li></ul></div>
+  </div>
+</div>
+
+
+<div class="band" id="intersections">
+  <div class="shell band-in reveal">
+    <p class="kicker">Where the attributes cross</p>
+    <h2>Two acceptable averages can hide one bad cell.</h2>
+    <p class="say">Race and sex audited separately can both look tolerable while the
+      combination of the two is far worse than either suggests. A pair of bar charts
+      cannot show that, because it never puts the axes together. This is a grid, because
+      the data is a grid: recall in each cell, with the group size underneath.</p>
+    <p class="say">It is not hypothetical here. The false positive gap is
+      <b>0.221</b> across these cells, against 0.145 for
+      race alone and 0.080 for sex alone. Crossing the attributes roughly
+      doubles the disparity that either marginal reports.</p>
+    <div class="panel chartbox"><svg class="chart heat xmat" viewBox="0 0 820 636" width="100%" role="img" aria-label="recall by race and sex"><text class="ax" x="355.0" y="34" text-anchor="middle">Male</text><text class="ax" x="565.0" y="34" text-anchor="middle">Female</text><text class="gl" x="232" y="87.0" text-anchor="end">White</text><g class="row"><rect class="cell bad" x="253" y="55" width="204" height="56" rx="6" style="--v:0.010"><title>White alone, Male: recall 0.865 on 229,247 people</title></rect><text class="cv" x="355.0" y="82.0" text-anchor="middle">0.865</text><text class="cn" x="355.0" y="98.0" text-anchor="middle">229,247</text></g><g class="row"><rect class="cell bad" x="463" y="55" width="204" height="56" rx="6" style="--v:0.266"><title>White alone, Female: recall 0.781 on 204,775 people</title></rect><text class="cv" x="565.0" y="82.0" text-anchor="middle">0.781</text><text class="cn" x="565.0" y="98.0" text-anchor="middle">204,775</text></g><text class="gl" x="232" y="149.0" text-anchor="end">Black</text><g class="row"><rect class="cell bad" x="253" y="117" width="204" height="56" rx="6" style="--v:0.452"><title>Black or African American alone, Male: recall 0.719 on 23,013 people</title></rect><text class="cv on-bright" x="355.0" y="144.0" text-anchor="middle">0.719</text><text class="cn on-bright" x="355.0" y="160.0" text-anchor="middle">23,013</text></g><g class="row"><rect class="cell bad" x="463" y="117" width="204" height="56" rx="6" style="--v:0.518"><title>Black or African American alone, Female: recall 0.698 on 26,928 people</title></rect><text class="cv on-bright" x="565.0" y="144.0" text-anchor="middle">0.698</text><text class="cn on-bright" x="565.0" y="160.0" text-anchor="middle">26,928</text></g><text class="gl" x="232" y="211.0" text-anchor="end">Am. Indian</text><g class="row"><rect class="cell bad" x="253" y="179" width="204" height="56" rx="6" style="--v:0.332"><title>American Indian alone, Male: recall 0.759 on 1,254 people</title></rect><text class="cv" x="355.0" y="206.0" text-anchor="middle">0.759</text><text class="cn" x="355.0" y="222.0" text-anchor="middle">1,254</text></g><g class="row"><rect class="cell bad" x="463" y="179" width="204" height="56" rx="6" style="--v:0.600"><title>American Indian alone, Female: recall 0.671 on 1,086 people</title></rect><text class="cv on-bright" x="565.0" y="206.0" text-anchor="middle">0.671</text><text class="cn on-bright" x="565.0" y="222.0" text-anchor="middle">1,086</text></g><text class="gl" x="232" y="273.0" text-anchor="end">Alaska Native</text><g class="row"><rect class="cell muted-cell" x="253" y="241" width="204" height="56" rx="6"><title>Alaska Native alone, Male: 13 people, below the 500-person reporting floor</title></rect><text class="cv sup" x="355.0" y="273.0" text-anchor="middle">too few (13)</text></g><g class="row"><rect class="cell muted-cell" x="463" y="241" width="204" height="56" rx="6"><title>Alaska Native alone, Female: 18 people, below the 500-person reporting floor</title></rect><text class="cv sup" x="565.0" y="273.0" text-anchor="middle">too few (18)</text></g><text class="gl" x="232" y="335.0" text-anchor="end">Native tribes</text><g class="row"><rect class="cell muted-cell" x="253" y="303" width="204" height="56" rx="6"><title>American Indian and Alaska Native tribes specified, Male: 497 people, below the 500-person reporting floor</title></rect><text class="cv sup" x="355.0" y="335.0" text-anchor="middle">too few (497)</text></g><g class="row"><rect class="cell muted-cell" x="463" y="303" width="204" height="56" rx="6"><title>American Indian and Alaska Native tribes specified, Female: 429 people, below the 500-person reporting floor</title></rect><text class="cv sup" x="565.0" y="335.0" text-anchor="middle">too few (429)</text></g><text class="gl" x="232" y="397.0" text-anchor="end">Asian</text><g class="row"><rect class="cell bad" x="253" y="365" width="204" height="56" rx="6" style="--v:0.000"><title>Asian alone, Male: recall 0.868 on 28,003 people</title></rect><text class="cv" x="355.0" y="392.0" text-anchor="middle">0.868</text><text class="cn" x="355.0" y="408.0" text-anchor="middle">28,003</text></g><g class="row"><rect class="cell bad" x="463" y="365" width="204" height="56" rx="6" style="--v:0.098"><title>Asian alone, Female: recall 0.836 on 27,371 people</title></rect><text class="cv" x="565.0" y="392.0" text-anchor="middle">0.836</text><text class="cn" x="565.0" y="408.0" text-anchor="middle">27,371</text></g><text class="gl" x="232" y="459.0" text-anchor="end">Pacific Islander</text><g class="row"><rect class="cell muted-cell" x="253" y="427" width="204" height="56" rx="6"><title>Native Hawaiian and Other Pacific Islander alone, Male: 461 people, below the 500-person reporting floor</title></rect><text class="cv sup" x="355.0" y="459.0" text-anchor="middle">too few (461)</text></g><g class="row"><rect class="cell muted-cell" x="463" y="427" width="204" height="56" rx="6"><title>Native Hawaiian and Other Pacific Islander alone, Female: 422 people, below the 500-person reporting floor</title></rect><text class="cv sup" x="565.0" y="459.0" text-anchor="middle">too few (422)</text></g><text class="gl" x="232" y="521.0" text-anchor="end">Some other race</text><g class="row"><rect class="cell bad" x="253" y="489" width="204" height="56" rx="6" style="--v:1.000"><title>Some other race alone, Male: recall 0.540 on 22,135 people</title></rect><text class="cv on-bright" x="355.0" y="516.0" text-anchor="middle">0.540</text><text class="cn on-bright" x="355.0" y="532.0" text-anchor="middle">22,135</text></g><g class="row"><rect class="cell bad" x="463" y="489" width="204" height="56" rx="6" style="--v:0.977"><title>Some other race alone, Female: recall 0.547 on 17,971 people</title></rect><text class="cv on-bright" x="565.0" y="516.0" text-anchor="middle">0.547</text><text class="cn on-bright" x="565.0" y="532.0" text-anchor="middle">17,971</text></g><text class="gl" x="232" y="583.0" text-anchor="end">Two or more</text><g class="row"><rect class="cell bad" x="253" y="551" width="204" height="56" rx="6" style="--v:0.163"><title>Two or more races, Male: recall 0.815 on 8,513 people</title></rect><text class="cv" x="355.0" y="578.0" text-anchor="middle">0.815</text><text class="cn" x="355.0" y="594.0" text-anchor="middle">8,513</text></g><g class="row"><rect class="cell bad" x="463" y="551" width="204" height="56" rx="6" style="--v:0.394"><title>Two or more races, Female: recall 0.739 on 8,415 people</title></rect><text class="cv" x="565.0" y="578.0" text-anchor="middle">0.739</text><text class="cn" x="565.0" y="594.0" text-anchor="middle">8,415</text></g></svg></div>
+    <p class="note">Hatched cells fall below the 500-person reporting floor and are
+      withheld. Their absence is itself the finding: 6 of
+      18 cells are too small to say anything about, and the groups most exposed to
+      harm are the ones a survey is least likely to have enough of.</p>
+  </div>
+</div>
+
+
+<section id="certainty">
+  <div class="shell reveal">
+    <p class="kicker">How much to trust these numbers</p>
+    <h2>Three decimals do not mean three decimals.</h2>
+    <p class="say">Every other chart here prints rates to the same precision whatever the
+      group size. This one shows what that precision is worth. The dot is the measured
+      recall, the bar is the 95% interval, and the groups are ordered by how uncertain
+      they are, so the caveat arrives before the ranking.</p>
+    <p class="say">This is also what the gate now runs on. A check fails only when the
+      whole interval clears the declared limit. A point estimate over the line with an
+      interval straddling it is a warning instead, because a build that goes red on
+      sampling noise is a build people learn to re-run until it passes.</p>
+    <div class="panel chartbox"><svg class="chart ivl" viewBox="0 0 860 416" width="100%" role="img" aria-label="recall with 95 percent intervals by RAC1P"><line class="gr" x1="190.0" y1="28" x2="190.0" y2="398"/><text class="ax" x="190.0" y="18" text-anchor="middle">0.45</text><line class="gr" x1="320.0" y1="28" x2="320.0" y2="398"/><text class="ax" x="320.0" y="18" text-anchor="middle">0.56</text><line class="gr" x1="450.0" y1="28" x2="450.0" y2="398"/><text class="ax" x="450.0" y="18" text-anchor="middle">0.68</text><line class="gr" x1="580.0" y1="28" x2="580.0" y2="398"/><text class="ax" x="580.0" y="18" text-anchor="middle">0.79</text><line class="gr" x1="710.0" y1="28" x2="710.0" y2="398"/><text class="ax" x="710.0" y="18" text-anchor="middle">0.90</text><g class="row"><text class="gl" x="174" y="41" text-anchor="end">Native tribes<title>American Indian and Alaska Native tribes specified</title></text><text class="gn" x="174" y="58" text-anchor="end">180 qualify</text><line class="whisk" x1="390.7" y1="44" x2="544.9" y2="44"/><line class="cap" x1="390.7" y1="37" x2="390.7" y2="51"/><line class="cap" x1="544.9" y1="37" x2="544.9" y2="51"/><circle class="pt" cx="472.4" cy="44" r="5"><title>American Indian and Alaska Native tribes specified: 0.694, 95% interval [0.624, 0.757] on 180 qualifying people</title></circle><text class="vl" x="557.9" y="48">&#177;0.067</text></g><g class="row"><text class="gl" x="174" y="87" text-anchor="end">Pacific Islander<title>Native Hawaiian and Other Pacific Islander alone</title></text><text class="gn" x="174" y="104" text-anchor="end">263 qualify</text><line class="whisk" x1="434.3" y1="90" x2="559.2" y2="90"/><line class="cap" x1="434.3" y1="83" x2="434.3" y2="97"/><line class="cap" x1="559.2" y1="83" x2="559.2" y2="97"/><circle class="pt" cx="500.4" cy="90" r="5"><title>Native Hawaiian and Other Pacific Islander alone: 0.719, 95% interval [0.661, 0.769] on 263 qualifying people</title></circle><text class="vl" x="572.2" y="94">&#177;0.054</text></g><g class="row"><text class="gl" x="174" y="133" text-anchor="end">Am. Indian<title>American Indian alone</title></text><text class="gn" x="174" y="150" text-anchor="end">662 qualify</text><line class="whisk" x1="469.0" y1="136" x2="547.3" y2="136"/><line class="cap" x1="469.0" y1="129" x2="469.0" y2="143"/><line class="cap" x1="547.3" y1="129" x2="547.3" y2="143"/><circle class="pt" cx="509.6" cy="136" r="5"><title>American Indian alone: 0.727, 95% interval [0.691, 0.759] on 662 qualifying people</title></circle><text class="vl" x="560.3" y="140">&#177;0.034</text></g><g class="row"><text class="gl" x="174" y="179" text-anchor="end">Some other race<title>Some other race alone</title></text><text class="gn" x="174" y="196" text-anchor="end">7,548 qualify</text><line class="whisk" x1="283.3" y1="182" x2="309.3" y2="182"/><line class="cap" x1="283.3" y1="175" x2="283.3" y2="189"/><line class="cap" x1="309.3" y1="175" x2="309.3" y2="189"/><circle class="pt" cx="296.3" cy="182" r="5"><title>Some other race alone: 0.542, 95% interval [0.531, 0.553] on 7,548 qualifying people</title></circle><text class="vl" x="322.3" y="186">&#177;0.011</text></g><g class="row"><text class="gl" x="174" y="225" text-anchor="end">Two or more<title>Two or more races</title></text><text class="gn" x="174" y="242" text-anchor="end">5,570 qualify</text><line class="whisk" x1="560.1" y1="228" x2="585.2" y2="228"/><line class="cap" x1="560.1" y1="221" x2="560.1" y2="235"/><line class="cap" x1="585.2" y1="221" x2="585.2" y2="235"/><circle class="pt" cx="572.8" cy="228" r="5"><title>Two or more races: 0.781, 95% interval [0.770, 0.792] on 5,570 qualifying people</title></circle><text class="vl" x="598.2" y="232">&#177;0.011</text></g><g class="row"><text class="gl" x="174" y="271" text-anchor="end">Black<title>Black or African American alone</title></text><text class="gn" x="174" y="288" text-anchor="end">13,816 qualify</text><line class="whisk" x1="480.4" y1="274" x2="497.8" y2="274"/><line class="cap" x1="480.4" y1="267" x2="480.4" y2="281"/><line class="cap" x1="497.8" y1="267" x2="497.8" y2="281"/><circle class="pt" cx="489.2" cy="274" r="5"><title>Black or African American alone: 0.709, 95% interval [0.701, 0.716] on 13,816 qualifying people</title></circle><text class="vl" x="510.8" y="278">&#177;0.008</text></g><g class="row"><text class="gl" x="174" y="317" text-anchor="end">Asian<title>Asian alone</title></text><text class="gn" x="174" y="334" text-anchor="end">25,376 qualify</text><line class="whisk" x1="651.6" y1="320" x2="661.7" y2="320"/><line class="cap" x1="651.6" y1="313" x2="651.6" y2="327"/><line class="cap" x1="661.7" y1="313" x2="661.7" y2="327"/><circle class="pt" cx="656.7" cy="320" r="5"><title>Asian alone: 0.854, 95% interval [0.850, 0.858] on 25,376 qualifying people</title></circle><text class="vl" x="674.7" y="324">&#177;0.004</text></g><g class="row"><text class="gl" x="174" y="363" text-anchor="end">White<title>White alone</title></text><text class="gn" x="174" y="380" text-anchor="end">178,373 qualify</text><line class="whisk" x1="630.5" y1="366" x2="634.4" y2="366"/><line class="cap" x1="630.5" y1="359" x2="630.5" y2="373"/><line class="cap" x1="634.4" y1="359" x2="634.4" y2="373"/><circle class="pt" cx="632.5" cy="366" r="5"><title>White alone: 0.833, 95% interval [0.831, 0.835] on 178,373 qualifying people</title></circle><text class="vl" x="647.4" y="370">&#177;0.002</text></g></svg></div>
+  </div>
+</section>
+
+
+<section id="groups">
+  <div class="shell reveal">
+    <p class="kicker">By group</p>
+    <h2>Where the errors land.</h2>
+    <p class="say">Grouped rather than stacked, because these are two independent rates
+      and not parts of a whole. Sorted by group size so the ordering is not read as a
+      ranking of severity.</p>
+    <div class="controls"><div class="ctl"><span class="ctl-k">Attribute</span><div class="segs"><button type="button" class="seg is-on" data-k="attr" data-v="RAC1P">Race</button><button type="button" class="seg" data-k="attr" data-v="SEX">Sex</button></div></div><div class="ctl"><span class="ctl-k">Population</span><div class="segs"><button type="button" class="seg is-on" data-k="split" data-v="test">Test year</button><button type="button" class="seg" data-k="split" data-v="shift">Held-out states</button></div></div><p class="ctl-note">Held-out states were never trained on.</p></div>
+    <div class="panel">
+      <p class="legend"><span class="key k1"></span>Found, of those who qualify
+        <span class="key k2"></span>Wrongly flagged</p>
+      <div class="pane is-on" data-split="test" data-attr="RAC1P"><svg class="chart" viewBox="0 0 866 472" width="100%" role="img" aria-label="error rates by RAC1P"><line class="gr" x1="190" y1="24" x2="190" y2="460"/><text class="ax" x="190" y="15" text-anchor="middle">0%</text><line class="gr" x1="342.5" y1="24" x2="342.5" y2="460"/><text class="ax" x="342.5" y="15" text-anchor="middle">25%</text><line class="gr" x1="495.0" y1="24" x2="495.0" y2="460"/><text class="ax" x="495.0" y="15" text-anchor="middle">50%</text><line class="gr" x1="647.5" y1="24" x2="647.5" y2="460"/><text class="ax" x="647.5" y="15" text-anchor="middle">75%</text><line class="gr" x1="800.0" y1="24" x2="800.0" y2="460"/><text class="ax" x="800.0" y="15" text-anchor="middle">100%</text><g class="row"><text class="gl" x="176" y="46" text-anchor="end">White<title>White alone</title></text><text class="gn" x="176" y="63" text-anchor="end">434,022</text><rect class="s1" x="190" y="32" width="508.1" height="15" rx="3"><title>White alone: finds 83.3% of true positives</title></rect><text class="vl" x="707.1" y="44">83.3%</text><rect class="s2" x="190" y="52" width="139.0" height="15" rx="3"><title>White alone: false positive rate 22.8%</title></rect><text class="vl" x="338.0" y="64">22.8%</text></g><g class="row"><text class="gl" x="176" y="100" text-anchor="end">Asian<title>Asian alone</title></text><text class="gn" x="176" y="117" text-anchor="end">55,374</text><rect class="s1" x="190" y="86" width="520.9" height="15" rx="3"><title>Asian alone: finds 85.4% of true positives</title></rect><text class="vl" x="719.9" y="98">85.4%</text><rect class="s2" x="190" y="106" width="140.8" height="15" rx="3"><title>Asian alone: false positive rate 23.1%</title></rect><text class="vl" x="339.8" y="118">23.1%</text></g><g class="row"><text class="gl" x="176" y="154" text-anchor="end">Black<title>Black or African American alone</title></text><text class="gn" x="176" y="171" text-anchor="end">49,941</text><rect class="s1" x="190" y="140" width="432.4" height="15" rx="3"><title>Black or African American alone: finds 70.9% of true positives</title></rect><text class="vl" x="631.4" y="152">70.9%</text><rect class="s2" x="190" y="160" width="100.6" height="15" rx="3"><title>Black or African American alone: false positive rate 16.5%</title></rect><text class="vl" x="299.6" y="172">16.5%</text></g><g class="row"><text class="gl" x="176" y="208" text-anchor="end">Some other race<title>Some other race alone</title></text><text class="gn" x="176" y="225" text-anchor="end">40,106</text><rect class="s1" x="190" y="194" width="330.6" height="15" rx="3"><title>Some other race alone: finds 54.2% of true positives</title></rect><text class="vl" x="529.6" y="206">54.2%</text><rect class="s2" x="190" y="214" width="52.5" height="15" rx="3"><title>Some other race alone: false positive rate 8.6%</title></rect><text class="vl" x="251.5" y="226">8.6%</text></g><g class="row"><text class="gl" x="176" y="262" text-anchor="end">Two or more<title>Two or more races</title></text><text class="gn" x="176" y="279" text-anchor="end">16,928</text><rect class="s1" x="190" y="248" width="476.6" height="15" rx="3"><title>Two or more races: finds 78.1% of true positives</title></rect><text class="vl" x="675.6" y="260">78.1%</text><rect class="s2" x="190" y="268" width="100.1" height="15" rx="3"><title>Two or more races: false positive rate 16.4%</title></rect><text class="vl" x="299.1" y="280">16.4%</text></g><g class="row"><text class="gl" x="176" y="316" text-anchor="end">Am. Indian<title>American Indian alone</title></text><text class="gn" x="176" y="333" text-anchor="end">2,340</text><rect class="s1" x="190" y="302" width="443.2" height="15" rx="3"><title>American Indian alone: finds 72.7% of true positives</title></rect><text class="vl" x="642.2" y="314">72.7%</text><rect class="s2" x="190" y="322" width="108.0" height="15" rx="3"><title>American Indian alone: false positive rate 17.7%</title></rect><text class="vl" x="307.0" y="334">17.7%</text></g><g class="row"><text class="gl" x="176" y="370" text-anchor="end">Native tribes<title>American Indian and Alaska Native tribes specified</title></text><text class="gn" x="176" y="387" text-anchor="end">926</text><rect class="s1" x="190" y="356" width="423.6" height="15" rx="3"><title>American Indian and Alaska Native tribes specified: finds 69.4% of true positives</title></rect><text class="vl" x="622.6" y="368">69.4%</text><rect class="s2" x="190" y="376" width="73.6" height="15" rx="3"><title>American Indian and Alaska Native tribes specified: false positive rate 12.1%</title></rect><text class="vl" x="272.6" y="388">12.1%</text></g><g class="row"><text class="gl" x="176" y="424" text-anchor="end">Pacific Islander<title>Native Hawaiian and Other Pacific Islander alone</title></text><text class="gn" x="176" y="441" text-anchor="end">883</text><rect class="s1" x="190" y="410" width="438.4" height="15" rx="3"><title>Native Hawaiian and Other Pacific Islander alone: finds 71.9% of true positives</title></rect><text class="vl" x="637.4" y="422">71.9%</text><rect class="s2" x="190" y="430" width="124.0" height="15" rx="3"><title>Native Hawaiian and Other Pacific Islander alone: false positive rate 20.3%</title></rect><text class="vl" x="323.0" y="442">20.3%</text></g></svg></div><div class="pane" data-split="test" data-attr="SEX"><svg class="chart" viewBox="0 0 866 148" width="100%" role="img" aria-label="error rates by SEX"><line class="gr" x1="190" y1="24" x2="190" y2="136"/><text class="ax" x="190" y="15" text-anchor="middle">0%</text><line class="gr" x1="342.5" y1="24" x2="342.5" y2="136"/><text class="ax" x="342.5" y="15" text-anchor="middle">25%</text><line class="gr" x1="495.0" y1="24" x2="495.0" y2="136"/><text class="ax" x="495.0" y="15" text-anchor="middle">50%</text><line class="gr" x1="647.5" y1="24" x2="647.5" y2="136"/><text class="ax" x="647.5" y="15" text-anchor="middle">75%</text><line class="gr" x1="800.0" y1="24" x2="800.0" y2="136"/><text class="ax" x="800.0" y="15" text-anchor="middle">100%</text><g class="row"><text class="gl" x="176" y="46" text-anchor="end">Male<title>Male</title></text><text class="gn" x="176" y="63" text-anchor="end">313,136</text><rect class="s1" x="190" y="32" width="515.1" height="15" rx="3"><title>Male: finds 84.4% of true positives</title></rect><text class="vl" x="714.1" y="44">84.4%</text><rect class="s2" x="190" y="52" width="152.4" height="15" rx="3"><title>Male: false positive rate 25.0%</title></rect><text class="vl" x="351.4" y="64">25.0%</text></g><g class="row"><text class="gl" x="176" y="100" text-anchor="end">Female<title>Female</title></text><text class="gn" x="176" y="117" text-anchor="end">287,415</text><rect class="s1" x="190" y="86" width="471.7" height="15" rx="3"><title>Female: finds 77.3% of true positives</title></rect><text class="vl" x="670.7" y="98">77.3%</text><rect class="s2" x="190" y="106" width="103.4" height="15" rx="3"><title>Female: false positive rate 17.0%</title></rect><text class="vl" x="302.4" y="118">17.0%</text></g></svg></div><div class="pane" data-split="shift" data-attr="RAC1P"><svg class="chart" viewBox="0 0 866 310" width="100%" role="img" aria-label="error rates by RAC1P"><line class="gr" x1="190" y1="24" x2="190" y2="298"/><text class="ax" x="190" y="15" text-anchor="middle">0%</text><line class="gr" x1="342.5" y1="24" x2="342.5" y2="298"/><text class="ax" x="342.5" y="15" text-anchor="middle">25%</text><line class="gr" x1="495.0" y1="24" x2="495.0" y2="298"/><text class="ax" x="495.0" y="15" text-anchor="middle">50%</text><line class="gr" x1="647.5" y1="24" x2="647.5" y2="298"/><text class="ax" x="647.5" y="15" text-anchor="middle">75%</text><line class="gr" x1="800.0" y1="24" x2="800.0" y2="298"/><text class="ax" x="800.0" y="15" text-anchor="middle">100%</text><g class="row"><text class="gl" x="176" y="46" text-anchor="end">White<title>White alone</title></text><text class="gn" x="176" y="63" text-anchor="end">33,029</text><rect class="s1" x="190" y="32" width="503.3" height="15" rx="3"><title>White alone: finds 82.5% of true positives</title></rect><text class="vl" x="702.3" y="44">82.5%</text><rect class="s2" x="190" y="52" width="164.9" height="15" rx="3"><title>White alone: false positive rate 27.0%</title></rect><text class="vl" x="363.9" y="64">27.0%</text></g><g class="row"><text class="gl" x="176" y="100" text-anchor="end">Black<title>Black or African American alone</title></text><text class="gn" x="176" y="117" text-anchor="end">5,370</text><rect class="s1" x="190" y="86" width="433.1" height="15" rx="3"><title>Black or African American alone: finds 71.0% of true positives</title></rect><text class="vl" x="632.1" y="98">71.0%</text><rect class="s2" x="190" y="106" width="115.5" height="15" rx="3"><title>Black or African American alone: false positive rate 18.9%</title></rect><text class="vl" x="314.5" y="118">18.9%</text></g><g class="row"><text class="gl" x="176" y="154" text-anchor="end">Asian<title>Asian alone</title></text><text class="gn" x="176" y="171" text-anchor="end">1,712</text><rect class="s1" x="190" y="140" width="450.2" height="15" rx="3"><title>Asian alone: finds 73.8% of true positives</title></rect><text class="vl" x="649.2" y="152">73.8%</text><rect class="s2" x="190" y="160" width="137.1" height="15" rx="3"><title>Asian alone: false positive rate 22.5%</title></rect><text class="vl" x="336.1" y="172">22.5%</text></g><g class="row"><text class="gl" x="176" y="208" text-anchor="end">Some other race<title>Some other race alone</title></text><text class="gn" x="176" y="225" text-anchor="end">1,514</text><rect class="s1" x="190" y="194" width="264.8" height="15" rx="3"><title>Some other race alone: finds 43.4% of true positives</title></rect><text class="vl" x="463.8" y="206">43.4%</text><rect class="s2" x="190" y="214" width="40.8" height="15" rx="3"><title>Some other race alone: false positive rate 6.7%</title></rect><text class="vl" x="239.8" y="226">6.7%</text></g><g class="row"><text class="gl" x="176" y="262" text-anchor="end">Two or more<title>Two or more races</title></text><text class="gn" x="176" y="279" text-anchor="end">969</text><rect class="s1" x="190" y="248" width="448.9" height="15" rx="3"><title>Two or more races: finds 73.6% of true positives</title></rect><text class="vl" x="647.9" y="260">73.6%</text><rect class="s2" x="190" y="268" width="95.1" height="15" rx="3"><title>Two or more races: false positive rate 15.6%</title></rect><text class="vl" x="294.1" y="280">15.6%</text></g></svg></div><div class="pane" data-split="shift" data-attr="SEX"><svg class="chart" viewBox="0 0 866 148" width="100%" role="img" aria-label="error rates by SEX"><line class="gr" x1="190" y1="24" x2="190" y2="136"/><text class="ax" x="190" y="15" text-anchor="middle">0%</text><line class="gr" x1="342.5" y1="24" x2="342.5" y2="136"/><text class="ax" x="342.5" y="15" text-anchor="middle">25%</text><line class="gr" x1="495.0" y1="24" x2="495.0" y2="136"/><text class="ax" x="495.0" y="15" text-anchor="middle">50%</text><line class="gr" x1="647.5" y1="24" x2="647.5" y2="136"/><text class="ax" x="647.5" y="15" text-anchor="middle">75%</text><line class="gr" x1="800.0" y1="24" x2="800.0" y2="136"/><text class="ax" x="800.0" y="15" text-anchor="middle">100%</text><g class="row"><text class="gl" x="176" y="46" text-anchor="end">Male<title>Male</title></text><text class="gn" x="176" y="63" text-anchor="end">22,320</text><rect class="s1" x="190" y="32" width="505.5" height="15" rx="3"><title>Male: finds 82.9% of true positives</title></rect><text class="vl" x="704.5" y="44">82.9%</text><rect class="s2" x="190" y="52" width="180.0" height="15" rx="3"><title>Male: false positive rate 29.5%</title></rect><text class="vl" x="379.0" y="64">29.5%</text></g><g class="row"><text class="gl" x="176" y="100" text-anchor="end">Female<title>Female</title></text><text class="gn" x="176" y="117" text-anchor="end">20,781</text><rect class="s1" x="190" y="86" width="465.0" height="15" rx="3"><title>Female: finds 76.2% of true positives</title></rect><text class="vl" x="664.0" y="98">76.2%</text><rect class="s2" x="190" y="106" width="121.2" height="15" rx="3"><title>Female: false positive rate 19.9%</title></rect><text class="vl" x="320.2" y="118">19.9%</text></g></svg></div>
+    </div>
+  </div>
+</section>
+
+<div class="band">
+  <div class="shell band-in reveal">
+    <p class="kicker">Calibration</p>
+    <h2>Does a probability mean the same thing for everyone?</h2>
+    <div class="split">
+      <div class="panel">
+        <p class="legend"><span class="key k1"></span>Observed
+          <span class="key k2"></span>Predicted</p>
+        <div class="pane is-on" data-split="test" data-attr="RAC1P"><svg class="chart" viewBox="0 0 866 328" width="100%" role="img" aria-label="calibration by RAC1P"><line class="gr" x1="190" y1="24" x2="190" y2="316"/><text class="ax" x="190" y="15" text-anchor="middle">0.00</text><line class="gr" x1="495.0" y1="24" x2="495.0" y2="316"/><text class="ax" x="495.0" y="15" text-anchor="middle">0.29</text><line class="gr" x1="800.0" y1="24" x2="800.0" y2="316"/><text class="ax" x="800.0" y="15" text-anchor="middle">0.57</text><g class="row"><text class="gl" x="176" y="44" text-anchor="end">Asian<title>Asian alone</title></text><line class="lnk" x1="634.3" y1="40" x2="678.0" y2="40"/><circle class="d1" cx="678.0" cy="40" r="5.5"><title>Asian alone: observed 0.458</title></circle><circle class="d2" cx="634.3" cy="40" r="5.5"><title>Asian alone: predicted 0.417</title></circle><text class="vl" x="690.0" y="44">0.041</text></g><g class="row"><text class="gl" x="176" y="80" text-anchor="end">White<title>White alone</title></text><line class="lnk" x1="598.5" y1="76" x2="627.6" y2="76"/><circle class="d1" cx="627.6" cy="76" r="5.5"><title>White alone: observed 0.411</title></circle><circle class="d2" cx="598.5" cy="76" r="5.5"><title>White alone: predicted 0.384</title></circle><text class="vl" x="639.6" y="80">0.027</text></g><g class="row"><text class="gl" x="176" y="116" text-anchor="end">Two or more<title>Two or more races</title></text><line class="lnk" x1="510.6" y1="112" x2="540.4" y2="112"/><circle class="d1" cx="540.4" cy="112" r="5.5"><title>Two or more races: observed 0.329</title></circle><circle class="d2" cx="510.6" cy="112" r="5.5"><title>Two or more races: predicted 0.301</title></circle><text class="vl" x="552.4" y="116">0.028</text></g><g class="row"><text class="gl" x="176" y="152" text-anchor="end">Pacific Islander<title>Native Hawaiian and Other Pacific Islander alone</title></text><line class="lnk" x1="505.3" y1="148" x2="507.2" y2="148"/><circle class="d1" cx="507.2" cy="148" r="5.5"><title>Native Hawaiian and Other Pacific Islander alone: observed 0.298</title></circle><circle class="d2" cx="505.3" cy="148" r="5.5"><title>Native Hawaiian and Other Pacific Islander alone: predicted 0.296</title></circle><text class="vl" x="519.2" y="152">0.002</text></g><g class="row"><text class="gl" x="176" y="188" text-anchor="end">Am. Indian<title>American Indian alone</title></text><line class="lnk" x1="484.0" y1="184" x2="491.3" y2="184"/><circle class="d1" cx="491.3" cy="184" r="5.5"><title>American Indian alone: observed 0.283</title></circle><circle class="d2" cx="484.0" cy="184" r="5.5"><title>American Indian alone: predicted 0.276</title></circle><text class="vl" x="503.3" y="188">0.007</text></g><g class="row"><text class="gl" x="176" y="224" text-anchor="end">Black<title>Black or African American alone</title></text><line class="lnk" x1="476.6" y1="220" x2="484.6" y2="220"/><circle class="d1" cx="484.6" cy="220" r="5.5"><title>Black or African American alone: observed 0.277</title></circle><circle class="d2" cx="476.6" cy="220" r="5.5"><title>Black or African American alone: predicted 0.269</title></circle><text class="vl" x="496.6" y="224">0.008</text></g><g class="row"><text class="gl" x="176" y="260" text-anchor="end">Native tribes<title>American Indian and Alaska Native tribes specified</title></text><line class="lnk" x1="397.0" y1="256" x2="414.1" y2="256"/><circle class="d1" cx="397.0" cy="256" r="5.5"><title>American Indian and Alaska Native tribes specified: observed 0.194</title></circle><circle class="d2" cx="414.1" cy="256" r="5.5"><title>American Indian and Alaska Native tribes specified: predicted 0.210</title></circle><text class="vl" x="426.1" y="260">0.016</text></g><g class="row"><text class="gl" x="176" y="296" text-anchor="end">Some other race<title>Some other race alone</title></text><line class="lnk" x1="378.6" y1="292" x2="390.4" y2="292"/><circle class="d1" cx="390.4" cy="292" r="5.5"><title>Some other race alone: observed 0.188</title></circle><circle class="d2" cx="378.6" cy="292" r="5.5"><title>Some other race alone: predicted 0.177</title></circle><text class="vl" x="402.4" y="296">0.011</text></g></svg></div><div class="pane" data-split="test" data-attr="SEX"><svg class="chart" viewBox="0 0 866 112" width="100%" role="img" aria-label="calibration by SEX"><line class="gr" x1="190" y1="24" x2="190" y2="100"/><text class="ax" x="190" y="15" text-anchor="middle">0.00</text><line class="gr" x1="495.0" y1="24" x2="495.0" y2="100"/><text class="ax" x="495.0" y="15" text-anchor="middle">0.28</text><line class="gr" x1="800.0" y1="24" x2="800.0" y2="100"/><text class="ax" x="800.0" y="15" text-anchor="middle">0.56</text><g class="row"><text class="gl" x="176" y="44" text-anchor="end">Male<title>Male</title></text><line class="lnk" x1="640.8" y1="40" x2="678.0" y2="40"/><circle class="d1" cx="678.0" cy="40" r="5.5"><title>Male: observed 0.451</title></circle><circle class="d2" cx="640.8" cy="40" r="5.5"><title>Male: predicted 0.416</title></circle><text class="vl" x="690.0" y="44">0.034</text></g><g class="row"><text class="gl" x="176" y="80" text-anchor="end">Female<title>Female</title></text><line class="lnk" x1="514.2" y1="76" x2="531.9" y2="76"/><circle class="d1" cx="531.9" cy="76" r="5.5"><title>Female: observed 0.316</title></circle><circle class="d2" cx="514.2" cy="76" r="5.5"><title>Female: predicted 0.299</title></circle><text class="vl" x="543.9" y="80">0.016</text></g></svg></div><div class="pane" data-split="shift" data-attr="RAC1P"><svg class="chart" viewBox="0 0 866 220" width="100%" role="img" aria-label="calibration by RAC1P"><line class="gr" x1="190" y1="24" x2="190" y2="208"/><text class="ax" x="190" y="15" text-anchor="middle">0.00</text><line class="gr" x1="495.0" y1="24" x2="495.0" y2="208"/><text class="ax" x="495.0" y="15" text-anchor="middle">0.23</text><line class="gr" x1="800.0" y1="24" x2="800.0" y2="208"/><text class="ax" x="800.0" y="15" text-anchor="middle">0.45</text><g class="row"><text class="gl" x="176" y="44" text-anchor="end">White<title>White alone</title></text><line class="lnk" x1="639.7" y1="40" x2="678.0" y2="40"/><circle class="d1" cx="639.7" cy="40" r="5.5"><title>White alone: observed 0.334</title></circle><circle class="d2" cx="678.0" cy="40" r="5.5"><title>White alone: predicted 0.363</title></circle><text class="vl" x="690.0" y="44">0.028</text></g><g class="row"><text class="gl" x="176" y="80" text-anchor="end">Asian<title>Asian alone</title></text><line class="lnk" x1="615.7" y1="76" x2="633.7" y2="76"/><circle class="d1" cx="615.7" cy="76" r="5.5"><title>Asian alone: observed 0.317</title></circle><circle class="d2" cx="633.7" cy="76" r="5.5"><title>Asian alone: predicted 0.330</title></circle><text class="vl" x="645.7" y="80">0.013</text></g><g class="row"><text class="gl" x="176" y="116" text-anchor="end">Two or more<title>Two or more races</title></text><line class="lnk" x1="510.5" y1="112" x2="533.9" y2="112"/><circle class="d1" cx="510.5" cy="112" r="5.5"><title>Two or more races: observed 0.238</title></circle><circle class="d2" cx="533.9" cy="112" r="5.5"><title>Two or more races: predicted 0.256</title></circle><text class="vl" x="545.9" y="116">0.017</text></g><g class="row"><text class="gl" x="176" y="152" text-anchor="end">Black<title>Black or African American alone</title></text><line class="lnk" x1="421.3" y1="148" x2="512.4" y2="148"/><circle class="d1" cx="421.3" cy="148" r="5.5"><title>Black or African American alone: observed 0.172</title></circle><circle class="d2" cx="512.4" cy="148" r="5.5"><title>Black or African American alone: predicted 0.240</title></circle><text class="vl" x="524.4" y="152">0.068</text></g><g class="row"><text class="gl" x="176" y="188" text-anchor="end">Some other race<title>Some other race alone</title></text><line class="lnk" x1="351.6" y1="184" x2="374.5" y2="184"/><circle class="d1" cx="351.6" cy="184" r="5.5"><title>Some other race alone: observed 0.120</title></circle><circle class="d2" cx="374.5" cy="184" r="5.5"><title>Some other race alone: predicted 0.137</title></circle><text class="vl" x="386.5" y="188">0.017</text></g></svg></div><div class="pane" data-split="shift" data-attr="SEX"><svg class="chart" viewBox="0 0 866 112" width="100%" role="img" aria-label="calibration by SEX"><line class="gr" x1="190" y1="24" x2="190" y2="100"/><text class="ax" x="190" y="15" text-anchor="middle">0.00</text><line class="gr" x1="495.0" y1="24" x2="495.0" y2="100"/><text class="ax" x="495.0" y="15" text-anchor="middle">0.24</text><line class="gr" x1="800.0" y1="24" x2="800.0" y2="100"/><text class="ax" x="800.0" y="15" text-anchor="middle">0.49</text><g class="row"><text class="gl" x="176" y="44" text-anchor="end">Male<title>Male</title></text><line class="lnk" x1="660.5" y1="40" x2="678.0" y2="40"/><circle class="d1" cx="660.5" cy="40" r="5.5"><title>Male: observed 0.375</title></circle><circle class="d2" cx="678.0" cy="40" r="5.5"><title>Male: predicted 0.389</title></circle><text class="vl" x="690.0" y="44">0.014</text></g><g class="row"><text class="gl" x="176" y="80" text-anchor="end">Female<title>Female</title></text><line class="lnk" x1="470.3" y1="76" x2="535.5" y2="76"/><circle class="d1" cx="470.3" cy="76" r="5.5"><title>Female: observed 0.224</title></circle><circle class="d2" cx="535.5" cy="76" r="5.5"><title>Female: predicted 0.275</title></circle><text class="vl" x="547.5" y="80">0.052</text></g></svg></div>
+      </div>
+      <div class="panel scroll-x">
+        <table>
+          <thead><tr><th scope="col">Split</th><th scope="col">n</th>
+            <th scope="col">AUC</th><th scope="col">ECE</th>
+            <th scope="col">Acc</th><th scope="col">Base</th></tr></thead>
+          <tbody><tr><th scope='row'>val</th><td>583,297</td><td>0.900</td><td>0.000</td><td>0.812</td><td class='mut'>0.641</td></tr><tr><th scope='row'>test</th><td>600,551</td><td>0.888</td><td>0.026</td><td>0.802</td><td class='mut'>0.614</td></tr><tr><th scope='row'>shift</th><td>43,101</td><td>0.864</td><td>0.035</td><td>0.771</td><td class='mut'>0.698</td></tr></tbody>
+        </table>
+        <p class="note">Validation ECE is near zero because the calibrator was fitted
+          there. It is not a result. Error grows on the later year, and again on the
+          four states held out entirely.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="shell reveal">
+    <p class="kicker">Full detail</p>
+    <h2>Every reported group.</h2>
+    <p class="say">Groups below 500 people are measured, then withheld from every table
+      and every summary gap. A rate computed on a few hundred people is mostly noise,
+      and publishing it as though it were a finding would be its own kind of harm.</p>
+    <div class="panel scroll-x"><div class="pane is-on" data-split="test" data-attr="RAC1P"><table><thead><tr><th scope='col'>Group</th><th scope='col'>n</th><th scope='col'>Base rate</th><th scope='col'>Selected</th><th scope='col'>TPR</th><th scope='col'>FPR</th><th scope='col'>Accuracy</th><th scope='col'>ECE</th></tr></thead><tbody><tr><th scope='row'>White alone</th><td>434,022</td><td>0.411</td><td>0.477</td><td>0.833</td><td>0.228</td><td>0.797</td><td class='mut'>0.027</td></tr><tr><th scope='row'>Asian alone</th><td>55,374</td><td>0.458</td><td>0.516</td><td>0.854</td><td>0.231</td><td>0.808</td><td class='mut'>0.042</td></tr><tr><th scope='row'>Black or African American alone</th><td>49,941</td><td>0.277</td><td>0.315</td><td>0.709</td><td>0.165</td><td>0.800</td><td class='mut'>0.009</td></tr><tr><th scope='row'>Some other race alone</th><td>40,106</td><td>0.188</td><td>0.172</td><td>0.542</td><td>0.086</td><td>0.844</td><td class='mut'>0.012</td></tr><tr><th scope='row'>Two or more races</th><td>16,928</td><td>0.329</td><td>0.367</td><td>0.781</td><td>0.164</td><td>0.818</td><td class='mut'>0.028</td></tr><tr><th scope='row'>American Indian alone</th><td>2,340</td><td>0.283</td><td>0.332</td><td>0.727</td><td>0.177</td><td>0.796</td><td class='mut'>0.022</td></tr><tr><th scope='row'>American Indian and Alaska Native tribes specified</th><td>926</td><td>0.194</td><td>0.232</td><td>0.694</td><td>0.121</td><td>0.843</td><td class='mut'>0.033</td></tr><tr><th scope='row'>Native Hawaiian and Other Pacific Islander alone</th><td>883</td><td>0.298</td><td>0.357</td><td>0.719</td><td>0.203</td><td>0.773</td><td class='mut'>0.037</td></tr></tbody></table></div><div class="pane" data-split="test" data-attr="SEX"><table><thead><tr><th scope='col'>Group</th><th scope='col'>n</th><th scope='col'>Base rate</th><th scope='col'>Selected</th><th scope='col'>TPR</th><th scope='col'>FPR</th><th scope='col'>Accuracy</th><th scope='col'>ECE</th></tr></thead><tbody><tr><th scope='row'>Male</th><td>313,136</td><td>0.451</td><td>0.518</td><td>0.844</td><td>0.250</td><td>0.793</td><td class='mut'>0.034</td></tr><tr><th scope='row'>Female</th><td>287,415</td><td>0.316</td><td>0.360</td><td>0.773</td><td>0.170</td><td>0.812</td><td class='mut'>0.016</td></tr></tbody></table></div><div class="pane" data-split="shift" data-attr="RAC1P"><table><thead><tr><th scope='col'>Group</th><th scope='col'>n</th><th scope='col'>Base rate</th><th scope='col'>Selected</th><th scope='col'>TPR</th><th scope='col'>FPR</th><th scope='col'>Accuracy</th><th scope='col'>ECE</th></tr></thead><tbody><tr><th scope='row'>White alone</th><td>33,029</td><td>0.334</td><td>0.456</td><td>0.825</td><td>0.270</td><td>0.762</td><td class='mut'>0.031</td></tr><tr><th scope='row'>Black or African American alone</th><td>5,370</td><td>0.172</td><td>0.279</td><td>0.710</td><td>0.189</td><td>0.793</td><td class='mut'>0.071</td></tr><tr><th scope='row'>Asian alone</th><td>1,712</td><td>0.317</td><td>0.387</td><td>0.738</td><td>0.225</td><td>0.763</td><td class='mut'>0.027</td></tr><tr><th scope='row'>Some other race alone</th><td>1,514</td><td>0.120</td><td>0.111</td><td>0.434</td><td>0.067</td><td>0.873</td><td class='mut'>0.026</td></tr><tr><th scope='row'>Two or more races</th><td>969</td><td>0.238</td><td>0.294</td><td>0.736</td><td>0.156</td><td>0.818</td><td class='mut'>0.033</td></tr></tbody></table></div><div class="pane" data-split="shift" data-attr="SEX"><table><thead><tr><th scope='col'>Group</th><th scope='col'>n</th><th scope='col'>Base rate</th><th scope='col'>Selected</th><th scope='col'>TPR</th><th scope='col'>FPR</th><th scope='col'>Accuracy</th><th scope='col'>ECE</th></tr></thead><tbody><tr><th scope='row'>Male</th><td>22,320</td><td>0.375</td><td>0.495</td><td>0.829</td><td>0.295</td><td>0.751</td><td class='mut'>0.021</td></tr><tr><th scope='row'>Female</th><td>20,781</td><td>0.224</td><td>0.325</td><td>0.762</td><td>0.199</td><td>0.793</td><td class='mut'>0.053</td></tr></tbody></table></div></div>
+  </div>
+</section>
+
+
+<section id="flow">
+  <div class="shell reveal">
+    <p class="kicker">The whole population</p>
+    <h2>Where every person actually goes.</h2>
+    <p class="say">Each ribbon is people, and the total is conserved: everybody leaves one
+      box and arrives in exactly one other. The two error ribbons are the ones that
+      matter. Hover any ribbon to isolate it.</p>
+    <div class="panel chartbox"><svg class="chart sankey" viewBox="0 0 900 440" width="100%" role="img" aria-label="flow of 600,520 people from truth to decision"><path class="rb ok" d="M262,36.00 C441.0,36.00 441.0,36.00 620,36.00 L620,138.75 C441.0,138.75 441.0,138.75 262,138.75 Z"><title>189,271 qualify and are selected</title></path><path class="rb bad" d="M262,138.75 C441.0,138.75 441.0,210.18 620,210.18 L620,233.26 C441.0,233.26 441.0,161.83 262,161.83 Z"><title>42,517 qualify and are OVERLOOKED</title></path><path class="rb warnrb" d="M262,191.83 C441.0,191.83 441.0,138.75 620,138.75 L620,180.18 C441.0,180.18 441.0,233.26 262,233.26 Z"><title>76,327 do not qualify but are selected</title></path><path class="rb ok" d="M262,233.26 C441.0,233.26 441.0,233.26 620,233.26 L620,392.00 C441.0,392.00 441.0,392.00 262,392.00 Z"><title>292,405 do not qualify and are not selected</title></path><rect class="nd" x="240" y="36.00" width="22" height="125.83" rx="4"/><text class="nl" x="222" y="85.9" text-anchor="end">Genuinely qualify</text><text class="nn" x="222" y="107.9" text-anchor="end">231,788</text><text class="ns" x="222" y="125.9" text-anchor="end">38.6%</text><rect class="nd" x="240" y="191.83" width="22" height="200.17" rx="4"/><text class="nl" x="222" y="278.9" text-anchor="end">Do not qualify</text><text class="nn" x="222" y="300.9" text-anchor="end">368,732</text><text class="ns" x="222" y="318.9" text-anchor="end">61.4%</text><rect class="nd" x="620" y="36.00" width="22" height="144.18" rx="4"/><text class="nl" x="660" y="95.1" text-anchor="start">Model selects</text><text class="nn" x="660" y="117.1" text-anchor="start">265,598</text><text class="ns" x="660" y="135.1" text-anchor="start">44.2%</text><rect class="nd" x="620" y="210.18" width="22" height="181.82" rx="4"/><text class="nl" x="660" y="288.1" text-anchor="start">Model rejects</text><text class="nn" x="660" y="310.1" text-anchor="start">334,922</text><text class="ns" x="660" y="328.1" text-anchor="start">55.8%</text><text class="axt" x="222" y="424" text-anchor="end">Truth</text><text class="axt" x="660" y="424">Decision</text></svg></div>
+  </div>
+</section>
+
+<div class="band">
+  <div class="shell band-in reveal">
+    <p class="kicker">Composition</p>
+    <h2>The same four outcomes, group by group.</h2>
+    <p class="say">Rows are normalised within each group, because the question is
+      composition and not size. Overlooked and wrongly picked are shaded in the error
+      colour.</p>
+    <div class="panel chartbox"><svg class="chart heat" viewBox="0 0 870 424" width="100%" role="img" aria-label="outcome composition by RAC1P"><text class="ax" x="325.0" y="26" text-anchor="middle">Found</text><text class="ax" x="475.0" y="26" text-anchor="middle">Overlooked</text><text class="ax" x="625.0" y="26" text-anchor="middle">Wrongly picked</text><text class="ax" x="775.0" y="26" text-anchor="middle">Correctly passed</text><text class="gl" x="234" y="67.0" text-anchor="end">White</text><g class="row"><rect class="cell ok" x="252" y="42" width="146" height="42" rx="5" style="--v:0.3423"><title>White: 148,570 found (34.2%)</title></rect><text class="cv" x="325.0" y="67.0" text-anchor="middle">34%</text></g><g class="row"><rect class="cell bad" x="402" y="42" width="146" height="42" rx="5" style="--v:0.0687"><title>White: 29,803 overlooked (6.9%)</title></rect><text class="cv" x="475.0" y="67.0" text-anchor="middle">7%</text></g><g class="row"><rect class="cell bad" x="552" y="42" width="146" height="42" rx="5" style="--v:0.1343"><title>White: 58,268 wrongly picked (13.4%)</title></rect><text class="cv" x="625.0" y="67.0" text-anchor="middle">13%</text></g><g class="row"><rect class="cell ok" x="702" y="42" width="146" height="42" rx="5" style="--v:0.4548"><title>White: 197,381 correctly passed (45.5%)</title></rect><text class="cv" x="775.0" y="67.0" text-anchor="middle">45%</text></g><text class="gl" x="234" y="113.0" text-anchor="end">Asian</text><g class="row"><rect class="cell ok" x="252" y="88" width="146" height="42" rx="5" style="--v:0.3913"><title>Asian: 21,669 found (39.1%)</title></rect><text class="cv" x="325.0" y="113.0" text-anchor="middle">39%</text></g><g class="row"><rect class="cell bad" x="402" y="88" width="146" height="42" rx="5" style="--v:0.0669"><title>Asian: 3,707 overlooked (6.7%)</title></rect><text class="cv" x="475.0" y="113.0" text-anchor="middle">7%</text></g><g class="row"><rect class="cell bad" x="552" y="88" width="146" height="42" rx="5" style="--v:0.1250"><title>Asian: 6,922 wrongly picked (12.5%)</title></rect><text class="cv" x="625.0" y="113.0" text-anchor="middle">13%</text></g><g class="row"><rect class="cell ok" x="702" y="88" width="146" height="42" rx="5" style="--v:0.4167"><title>Asian: 23,076 correctly passed (41.7%)</title></rect><text class="cv" x="775.0" y="113.0" text-anchor="middle">42%</text></g><text class="gl" x="234" y="159.0" text-anchor="end">Black</text><g class="row"><rect class="cell ok" x="252" y="134" width="146" height="42" rx="5" style="--v:0.1961"><title>Black: 9,794 found (19.6%)</title></rect><text class="cv" x="325.0" y="159.0" text-anchor="middle">20%</text></g><g class="row"><rect class="cell bad" x="402" y="134" width="146" height="42" rx="5" style="--v:0.0805"><title>Black: 4,022 overlooked (8.1%)</title></rect><text class="cv" x="475.0" y="159.0" text-anchor="middle">8%</text></g><g class="row"><rect class="cell bad" x="552" y="134" width="146" height="42" rx="5" style="--v:0.1193"><title>Black: 5,960 wrongly picked (11.9%)</title></rect><text class="cv" x="625.0" y="159.0" text-anchor="middle">12%</text></g><g class="row"><rect class="cell ok" x="702" y="134" width="146" height="42" rx="5" style="--v:0.6040"><title>Black: 30,165 correctly passed (60.4%)</title></rect><text class="cv" x="775.0" y="159.0" text-anchor="middle">60%</text></g><text class="gl" x="234" y="205.0" text-anchor="end">Some other race</text><g class="row"><rect class="cell ok" x="252" y="180" width="146" height="42" rx="5" style="--v:0.1020"><title>Some other race: 4,091 found (10.2%)</title></rect><text class="cv" x="325.0" y="205.0" text-anchor="middle">10%</text></g><g class="row"><rect class="cell bad" x="402" y="180" width="146" height="42" rx="5" style="--v:0.0862"><title>Some other race: 3,457 overlooked (8.6%)</title></rect><text class="cv" x="475.0" y="205.0" text-anchor="middle">9%</text></g><g class="row"><rect class="cell bad" x="552" y="180" width="146" height="42" rx="5" style="--v:0.0698"><title>Some other race: 2,801 wrongly picked (7.0%)</title></rect><text class="cv" x="625.0" y="205.0" text-anchor="middle">7%</text></g><g class="row"><rect class="cell ok" x="702" y="180" width="146" height="42" rx="5" style="--v:0.7420"><title>Some other race: 29,757 correctly passed (74.2%)</title></rect><text class="cv" x="775.0" y="205.0" text-anchor="middle">74%</text></g><text class="gl" x="234" y="251.0" text-anchor="end">Two or more</text><g class="row"><rect class="cell ok" x="252" y="226" width="146" height="42" rx="5" style="--v:0.2571"><title>Two or more: 4,352 found (25.7%)</title></rect><text class="cv" x="325.0" y="251.0" text-anchor="middle">26%</text></g><g class="row"><rect class="cell bad" x="402" y="226" width="146" height="42" rx="5" style="--v:0.0720"><title>Two or more: 1,218 overlooked (7.2%)</title></rect><text class="cv" x="475.0" y="251.0" text-anchor="middle">7%</text></g><g class="row"><rect class="cell bad" x="552" y="226" width="146" height="42" rx="5" style="--v:0.1101"><title>Two or more: 1,863 wrongly picked (11.0%)</title></rect><text class="cv" x="625.0" y="251.0" text-anchor="middle">11%</text></g><g class="row"><rect class="cell ok" x="702" y="226" width="146" height="42" rx="5" style="--v:0.5609"><title>Two or more: 9,495 correctly passed (56.1%)</title></rect><text class="cv" x="775.0" y="251.0" text-anchor="middle">56%</text></g><text class="gl" x="234" y="297.0" text-anchor="end">Am. Indian</text><g class="row"><rect class="cell ok" x="252" y="272" width="146" height="42" rx="5" style="--v:0.2056"><title>Am. Indian: 481 found (20.6%)</title></rect><text class="cv" x="325.0" y="297.0" text-anchor="middle">21%</text></g><g class="row"><rect class="cell bad" x="402" y="272" width="146" height="42" rx="5" style="--v:0.0774"><title>Am. Indian: 181 overlooked (7.7%)</title></rect><text class="cv" x="475.0" y="297.0" text-anchor="middle">8%</text></g><g class="row"><rect class="cell bad" x="552" y="272" width="146" height="42" rx="5" style="--v:0.1269"><title>Am. Indian: 297 wrongly picked (12.7%)</title></rect><text class="cv" x="625.0" y="297.0" text-anchor="middle">13%</text></g><g class="row"><rect class="cell ok" x="702" y="272" width="146" height="42" rx="5" style="--v:0.5902"><title>Am. Indian: 1,381 correctly passed (59.0%)</title></rect><text class="cv" x="775.0" y="297.0" text-anchor="middle">59%</text></g><text class="gl" x="234" y="343.0" text-anchor="end">Native tribes</text><g class="row"><rect class="cell ok" x="252" y="318" width="146" height="42" rx="5" style="--v:0.1350"><title>Native tribes: 125 found (13.5%)</title></rect><text class="cv" x="325.0" y="343.0" text-anchor="middle">13%</text></g><g class="row"><rect class="cell bad" x="402" y="318" width="146" height="42" rx="5" style="--v:0.0594"><title>Native tribes: 55 overlooked (5.9%)</title></rect><text class="cv" x="475.0" y="343.0" text-anchor="middle">6%</text></g><g class="row"><rect class="cell bad" x="552" y="318" width="146" height="42" rx="5" style="--v:0.0972"><title>Native tribes: 90 wrongly picked (9.7%)</title></rect><text class="cv" x="625.0" y="343.0" text-anchor="middle">10%</text></g><g class="row"><rect class="cell ok" x="702" y="318" width="146" height="42" rx="5" style="--v:0.7084"><title>Native tribes: 656 correctly passed (70.8%)</title></rect><text class="cv" x="775.0" y="343.0" text-anchor="middle">71%</text></g><text class="gl" x="234" y="389.0" text-anchor="end">Pacific Islander</text><g class="row"><rect class="cell ok" x="252" y="364" width="146" height="42" rx="5" style="--v:0.2140"><title>Pacific Islander: 189 found (21.4%)</title></rect><text class="cv" x="325.0" y="389.0" text-anchor="middle">21%</text></g><g class="row"><rect class="cell bad" x="402" y="364" width="146" height="42" rx="5" style="--v:0.0838"><title>Pacific Islander: 74 overlooked (8.4%)</title></rect><text class="cv" x="475.0" y="389.0" text-anchor="middle">8%</text></g><g class="row"><rect class="cell bad" x="552" y="364" width="146" height="42" rx="5" style="--v:0.1427"><title>Pacific Islander: 126 wrongly picked (14.3%)</title></rect><text class="cv" x="625.0" y="389.0" text-anchor="middle">14%</text></g><g class="row"><rect class="cell ok" x="702" y="364" width="146" height="42" rx="5" style="--v:0.5595"><title>Pacific Islander: 494 correctly passed (55.9%)</title></rect><text class="cv" x="775.0" y="389.0" text-anchor="middle">56%</text></g></svg></div>
+  </div>
+</div>
+
+<section>
+  <div class="shell reveal">
+    <p class="kicker">Denominators</p>
+    <h2>Who is actually in this data.</h2>
+    <p class="say">Every rate on this page is computed on a wildly different number of
+      people. Area is the honest way to show that before anyone reads a percentage.</p>
+    <div class="panel chartbox"><svg class="chart tree" viewBox="0 0 880 380" width="100%" role="img" aria-label="group sizes by RAC1P"><g class="row"><rect class="tm" x="2.0" y="2.0" width="632.0" height="376.0" rx="7" style="--v:0.7227"><title>White: 434,022 people (72.3%)</title></rect><text class="tml" x="15.0" y="28.0">White</text><text class="tmn" x="15.0" y="49.0">434,022</text></g><g class="row"><rect class="tm" x="638.0" y="2.0" width="240.0" height="122.4" rx="7" style="--v:0.0922"><title>Asian: 55,374 people (9.2%)</title></rect><text class="tml" x="651.0" y="28.0">Asian</text><text class="tmn" x="651.0" y="49.0">55,374</text></g><g class="row"><rect class="tm" x="638.0" y="128.4" width="131.3" height="201.5" rx="7" style="--v:0.0832"><title>Black: 49,941 people (8.3%)</title></rect><text class="tml" x="651.0" y="154.4">Black</text><text class="tmn" x="651.0" y="175.4">49,941</text></g><g class="row"><rect class="tm" x="773.3" y="128.4" width="104.7" height="201.5" rx="7" style="--v:0.0668"><title>Some other race: 40,106 people (6.7%)</title></rect><text class="tml" x="786.3" y="154.4">Some other race</text><text class="tmn" x="786.3" y="175.4">40,106</text></g><g class="row"><rect class="tm" x="638.0" y="333.9" width="192.0" height="44.1" rx="7" style="--v:0.0282"><title>Two or more: 16,928 people (2.8%)</title></rect><text class="tml" x="651.0" y="359.9">Two or more</text><text class="tmn" x="651.0" y="380.9">16,928</text></g><g class="row"><rect class="tm" x="834.0" y="333.9" width="44.0" height="23.1" rx="7" style="--v:0.0039"><title>Am. Indian: 2,340 people (0.4%)</title></rect></g><g class="row"><rect class="tm" x="834.0" y="361.0" width="20.6" height="17.0" rx="7" style="--v:0.0015"><title>Native tribes: 926 people (0.2%)</title></rect></g><g class="row"><rect class="tm" x="858.6" y="361.0" width="19.4" height="17.0" rx="7" style="--v:0.0015"><title>Pacific Islander: 883 people (0.1%)</title></rect></g></svg></div>
+  </div>
+</section>
+
+<div class="band">
+  <div class="shell band-in reveal">
+    <p class="kicker">Mechanism</p>
+    <h2>Why the gap exists at all.</h2>
+    <p class="say">Two shapes per group: the people who qualify, in the error colour, and
+      everyone else. Where they overlap is where the model genuinely cannot tell them
+      apart. That overlap being wider for some groups than others is the mechanism
+      behind every gap on this page.</p>
+    <div class="panel chartbox"><svg class="chart ridge-c" viewBox="0 0 860 648" width="100%" role="img" aria-label="predicted score distributions by RAC1P"><g class="row"><text class="gl" x="194" y="90" text-anchor="end">White</text><path class="ridge neg" d="M210,106 L225.5,44.0 L256.5,83.8 L287.5,92.2 L318.5,93.1 L349.5,94.2 L380.5,98.1 L411.5,96.6 L442.5,100.8 L473.5,98.5 L504.5,102.5 L535.5,100.3 L566.5,102.3 L597.5,102.0 L628.5,102.8 L659.5,103.3 L690.5,104.1 L721.5,104.2 L752.5,104.9 L783.5,105.2 L814.5,105.8 L830,106 Z"><title>does not qualify</title></path><path class="ridge pos" d="M210,106 L225.5,100.8 L256.5,96.2 L287.5,95.1 L318.5,91.1 L349.5,86.8 L380.5,88.4 L411.5,80.4 L442.5,87.6 L473.5,72.5 L504.5,87.0 L535.5,68.7 L566.5,75.8 L597.5,64.1 L628.5,63.4 L659.5,59.5 L690.5,62.6 L721.5,48.3 L752.5,57.1 L783.5,44.0 L814.5,73.2 L830,106 Z"><title>qualifies</title></path><line class="gr" x1="210" y1="106" x2="830" y2="106"/></g><g class="row"><text class="gl" x="194" y="164" text-anchor="end">Asian</text><path class="ridge neg" d="M210,180 L225.5,118.0 L256.5,153.4 L287.5,164.5 L318.5,164.9 L349.5,166.1 L380.5,170.7 L411.5,169.4 L442.5,174.1 L473.5,171.3 L504.5,176.4 L535.5,174.3 L566.5,176.4 L597.5,175.7 L628.5,176.7 L659.5,177.0 L690.5,177.6 L721.5,177.8 L752.5,178.5 L783.5,178.5 L814.5,179.6 L830,180 Z"><title>does not qualify</title></path><path class="ridge pos" d="M210,180 L225.5,176.4 L256.5,170.8 L287.5,172.5 L318.5,168.9 L349.5,164.8 L380.5,168.2 L411.5,159.8 L442.5,164.4 L473.5,153.1 L504.5,163.6 L535.5,152.1 L566.5,154.7 L597.5,144.5 L628.5,140.4 L659.5,141.3 L690.5,141.1 L721.5,123.6 L752.5,135.5 L783.5,118.0 L814.5,148.6 L830,180 Z"><title>qualifies</title></path><line class="gr" x1="210" y1="180" x2="830" y2="180"/></g><g class="row"><text class="gl" x="194" y="238" text-anchor="end">Black</text><path class="ridge neg" d="M210,254 L225.5,192.0 L256.5,231.9 L287.5,241.2 L318.5,242.0 L349.5,243.2 L380.5,247.1 L411.5,246.5 L442.5,249.9 L473.5,248.5 L504.5,251.6 L535.5,250.3 L566.5,251.7 L597.5,251.6 L628.5,252.1 L659.5,252.6 L690.5,253.0 L721.5,253.1 L752.5,253.5 L783.5,253.7 L814.5,254.0 L830,254 Z"><title>does not qualify</title></path><path class="ridge pos" d="M210,254 L225.5,234.5 L256.5,225.0 L287.5,222.7 L318.5,214.8 L349.5,208.0 L380.5,216.5 L411.5,199.5 L442.5,217.8 L473.5,192.4 L504.5,221.3 L535.5,197.2 L566.5,205.8 L597.5,193.2 L628.5,198.1 L659.5,192.0 L690.5,202.9 L721.5,193.8 L752.5,210.7 L783.5,208.9 L814.5,241.9 L830,254 Z"><title>qualifies</title></path><line class="gr" x1="210" y1="254" x2="830" y2="254"/></g><g class="row"><text class="gl" x="194" y="312" text-anchor="end">Some other race</text><path class="ridge neg" d="M210,328 L225.5,266.0 L256.5,307.0 L287.5,316.3 L318.5,318.2 L349.5,320.6 L380.5,323.5 L411.5,323.6 L442.5,325.9 L473.5,325.3 L504.5,326.8 L535.5,326.4 L566.5,327.1 L597.5,327.1 L628.5,327.4 L659.5,327.5 L690.5,327.7 L721.5,327.7 L752.5,327.8 L783.5,327.9 L814.5,328.0 L830,328 Z"><title>does not qualify</title></path><path class="ridge pos" d="M210,328 L225.5,297.5 L256.5,280.3 L287.5,279.6 L318.5,274.7 L349.5,266.0 L380.5,284.6 L411.5,272.5 L442.5,296.1 L473.5,271.0 L504.5,298.0 L535.5,283.3 L566.5,296.0 L597.5,290.8 L628.5,292.3 L659.5,295.4 L690.5,300.9 L721.5,296.8 L752.5,309.9 L783.5,308.5 L814.5,321.8 L830,328 Z"><title>qualifies</title></path><line class="gr" x1="210" y1="328" x2="830" y2="328"/></g><g class="row"><text class="gl" x="194" y="386" text-anchor="end">Two or more</text><path class="ridge neg" d="M210,402 L225.5,340.0 L256.5,385.4 L287.5,393.0 L318.5,393.5 L349.5,394.7 L380.5,396.8 L411.5,396.4 L442.5,398.9 L473.5,397.7 L504.5,399.7 L535.5,398.9 L566.5,400.1 L597.5,399.8 L628.5,400.5 L659.5,400.8 L690.5,400.9 L721.5,401.3 L752.5,401.4 L783.5,401.7 L814.5,401.9 L830,402 Z"><title>does not qualify</title></path><path class="ridge pos" d="M210,402 L225.5,390.9 L256.5,385.6 L287.5,383.2 L318.5,378.4 L349.5,370.0 L380.5,374.6 L411.5,365.0 L442.5,372.1 L473.5,361.3 L504.5,372.4 L535.5,353.4 L566.5,365.5 L597.5,348.9 L628.5,351.7 L659.5,344.5 L690.5,352.3 L721.5,340.0 L752.5,351.1 L783.5,343.7 L814.5,374.8 L830,402 Z"><title>qualifies</title></path><line class="gr" x1="210" y1="402" x2="830" y2="402"/></g><g class="row"><text class="gl" x="194" y="460" text-anchor="end">Am. Indian</text><path class="ridge neg" d="M210,476 L225.5,414.0 L256.5,454.3 L287.5,463.4 L318.5,463.9 L349.5,466.4 L380.5,469.1 L411.5,469.2 L442.5,471.4 L473.5,470.4 L504.5,473.0 L535.5,472.8 L566.5,473.2 L597.5,473.2 L628.5,474.5 L659.5,474.5 L690.5,475.2 L721.5,474.2 L752.5,475.3 L783.5,476.0 L814.5,475.9 L830,476 Z"><title>does not qualify</title></path><path class="ridge pos" d="M210,476 L225.5,454.9 L256.5,443.0 L287.5,452.3 L318.5,432.5 L349.5,445.7 L380.5,443.0 L411.5,421.9 L442.5,433.8 L473.5,414.0 L504.5,436.4 L535.5,419.3 L566.5,440.4 L597.5,418.0 L628.5,414.0 L659.5,415.3 L690.5,428.5 L721.5,415.3 L752.5,429.8 L783.5,425.9 L814.5,462.8 L830,476 Z"><title>qualifies</title></path><line class="gr" x1="210" y1="476" x2="830" y2="476"/></g><g class="row"><text class="gl" x="194" y="534" text-anchor="end">Native tribes</text><path class="ridge neg" d="M210,550 L225.5,488.0 L256.5,527.3 L287.5,536.8 L318.5,539.1 L349.5,541.1 L380.5,542.3 L411.5,545.9 L442.5,546.6 L473.5,546.4 L504.5,547.8 L535.5,548.0 L566.5,548.4 L597.5,548.8 L628.5,548.8 L659.5,549.0 L690.5,548.6 L721.5,549.8 L752.5,550.0 L783.5,549.8 L814.5,550.0 L830,550 Z"><title>does not qualify</title></path><path class="ridge pos" d="M210,550 L225.5,524.5 L256.5,528.1 L287.5,513.5 L318.5,535.4 L349.5,502.6 L380.5,520.8 L411.5,524.5 L442.5,502.6 L473.5,491.6 L504.5,520.8 L535.5,513.5 L566.5,488.0 L597.5,531.8 L628.5,506.2 L659.5,517.2 L690.5,520.8 L721.5,520.8 L752.5,528.1 L783.5,517.2 L814.5,535.4 L830,550 Z"><title>qualifies</title></path><line class="gr" x1="210" y1="550" x2="830" y2="550"/></g><g class="row"><text class="gl" x="194" y="608" text-anchor="end">Pacific Islander</text><path class="ridge neg" d="M210,624 L225.5,562.0 L256.5,596.6 L287.5,608.4 L318.5,608.7 L349.5,610.9 L380.5,615.3 L411.5,612.2 L442.5,618.4 L473.5,613.4 L504.5,621.5 L535.5,618.7 L566.5,620.9 L597.5,620.9 L628.5,621.8 L659.5,621.2 L690.5,621.8 L721.5,623.7 L752.5,623.4 L783.5,623.7 L814.5,623.4 L830,624 Z"><title>does not qualify</title></path><path class="ridge pos" d="M210,624 L225.5,603.3 L256.5,600.4 L287.5,609.2 L318.5,591.5 L349.5,579.7 L380.5,588.6 L411.5,576.8 L442.5,600.4 L473.5,582.7 L504.5,573.8 L535.5,567.9 L566.5,573.8 L597.5,562.0 L628.5,565.0 L659.5,582.7 L690.5,591.5 L721.5,576.8 L752.5,585.6 L783.5,576.8 L814.5,615.1 L830,624 Z"><title>qualifies</title></path><line class="gr" x1="210" y1="624" x2="830" y2="624"/></g><text class="ax" x="210" y="634" text-anchor="middle">0</text><text class="ax" x="365.0" y="634" text-anchor="middle">0.25</text><text class="ax" x="520.0" y="634" text-anchor="middle">0.5</text><text class="ax" x="675.0" y="634" text-anchor="middle">0.75</text><text class="ax" x="830.0" y="634" text-anchor="middle">1</text><text class="axt" x="520.0" y="647" text-anchor="middle">Predicted probability</text></svg></div>
+  </div>
+</div>
+
+<section>
+  <div class="shell reveal">
+    <p class="kicker">Diagnostics</p>
+    <h2>Rarity against recall, and reliability.</h2>
+    <p class="say">On the left, how common the outcome is in a group against how much of
+      it the model finds, with bubble area as group size. On the right, predicted against
+      observed per bin: a calibrated model traces the dashed diagonal.</p>
+    <div class="split">
+      <div class="panel chartbox"><div class="pane is-on" data-split="test" data-attr="RAC1P"><svg class="chart" viewBox="0 0 780 440" width="100%" role="img" aria-label="base rate against true positive rate by RAC1P"><line class="gr" x1="66" y1="22" x2="66" y2="386"/><text class="ax" x="66" y="406" text-anchor="middle">0.00</text><line class="gr" x1="66" y1="22" x2="590" y2="22"/><text class="ax" x="56" y="26" text-anchor="end">1.00</text><line class="gr" x1="197.0" y1="22" x2="197.0" y2="386"/><text class="ax" x="197.0" y="406" text-anchor="middle">0.14</text><line class="gr" x1="66" y1="113.0" x2="590" y2="113.0"/><text class="ax" x="56" y="117.0" text-anchor="end">0.86</text><line class="gr" x1="328.0" y1="22" x2="328.0" y2="386"/><text class="ax" x="328.0" y="406" text-anchor="middle">0.28</text><line class="gr" x1="66" y1="204.0" x2="590" y2="204.0"/><text class="ax" x="56" y="208.0" text-anchor="end">0.73</text><line class="gr" x1="459.0" y1="22" x2="459.0" y2="386"/><text class="ax" x="459.0" y="406" text-anchor="middle">0.41</text><line class="gr" x1="66" y1="295.0" x2="590" y2="295.0"/><text class="ax" x="56" y="299.0" text-anchor="end">0.59</text><line class="gr" x1="590.0" y1="22" x2="590.0" y2="386"/><text class="ax" x="590.0" y="406" text-anchor="middle">0.55</text><line class="gr" x1="66" y1="386.0" x2="590" y2="386.0"/><text class="ax" x="56" y="390.0" text-anchor="end">0.45</text><g class="row"><circle class="bub" cx="502.6" cy="118.7" r="16.3"><title>Asian alone: 55,374 people, base rate 0.458, found 85.4%</title></circle><text class="vl" x="530.9" y="122.7">Asian</text></g><g class="row"><circle class="bub" cx="457.5" cy="132.6" r="33.0"><title>White alone: 434,022 people, base rate 0.411, found 83.3%</title></circle><text class="vl" x="502.5" y="137.7">White</text></g><g class="row"><circle class="bub" cx="379.5" cy="166.7" r="12.1"><title>Two or more races: 16,928 people, base rate 0.329, found 78.1%</title></circle><text class="vl" x="403.6" y="170.7">Two or more</text></g><g class="row"><circle class="bub" cx="335.5" cy="203.0" r="8.9"><title>American Indian alone: 2,340 people, base rate 0.283, found 72.7%</title></circle><text class="vl" x="356.4" y="207.0">Am. Indian</text></g><g class="row"><circle class="bub" cx="349.8" cy="208.2" r="8.2"><title>Native Hawaiian and Other Pacific Islander alone: 883 people, base rate 0.298, found 71.9%</title></circle><path class="lead" d="M360.0,208.2 L365.0,218.0"/><text class="vl" x="370.0" y="222.0">Pacific Islander</text></g><g class="row"><circle class="bub" cx="329.6" cy="214.7" r="15.8"><title>Black or African American alone: 49,941 people, base rate 0.277, found 70.9%</title></circle><path class="lead" d="M347.4,214.7 L352.4,233.0"/><text class="vl" x="357.4" y="237.0">Black</text></g><g class="row"><circle class="bub" cx="251.2" cy="224.2" r="8.2"><title>American Indian and Alaska Native tribes specified: 926 people, base rate 0.194, found 69.4%</title></circle><path class="lead" d="M261.4,224.2 L266.4,248.0"/><text class="vl" x="271.4" y="252.0">Native tribes</text></g><g class="row"><circle class="bub" cx="245.3" cy="325.1" r="14.9"><title>Some other race alone: 40,106 people, base rate 0.188, found 54.2%</title></circle><text class="vl" x="272.2" y="329.1">Some other race</text></g><text class="axt" x="328.0" y="432" text-anchor="middle">How common the outcome is in this group</text><text class="axt" transform="translate(16,204.0) rotate(-90)" text-anchor="middle">Share of them the model finds</text></svg></div><div class="pane" data-split="test" data-attr="SEX"><svg class="chart" viewBox="0 0 780 440" width="100%" role="img" aria-label="base rate against true positive rate by SEX"><line class="gr" x1="66" y1="22" x2="66" y2="386"/><text class="ax" x="66" y="406" text-anchor="middle">0.00</text><line class="gr" x1="66" y1="22" x2="590" y2="22"/><text class="ax" x="56" y="26" text-anchor="end">1.00</text><line class="gr" x1="197.0" y1="22" x2="197.0" y2="386"/><text class="ax" x="197.0" y="406" text-anchor="middle">0.14</text><line class="gr" x1="66" y1="113.0" x2="590" y2="113.0"/><text class="ax" x="56" y="117.0" text-anchor="end">0.86</text><line class="gr" x1="328.0" y1="22" x2="328.0" y2="386"/><text class="ax" x="328.0" y="406" text-anchor="middle">0.28</text><line class="gr" x1="66" y1="204.0" x2="590" y2="204.0"/><text class="ax" x="56" y="208.0" text-anchor="end">0.73</text><line class="gr" x1="459.0" y1="22" x2="459.0" y2="386"/><text class="ax" x="459.0" y="406" text-anchor="middle">0.41</text><line class="gr" x1="66" y1="295.0" x2="590" y2="295.0"/><text class="ax" x="56" y="299.0" text-anchor="end">0.59</text><line class="gr" x1="590.0" y1="22" x2="590.0" y2="386"/><text class="ax" x="590.0" y="406" text-anchor="middle">0.55</text><line class="gr" x1="66" y1="386.0" x2="590" y2="386.0"/><text class="ax" x="56" y="390.0" text-anchor="end">0.45</text><g class="row"><circle class="bub" cx="495.2" cy="125.0" r="33.0"><title>Male: 313,136 people, base rate 0.451, found 84.4%</title></circle><text class="vl" x="540.2" y="129.0">Male</text></g><g class="row"><circle class="bub" cx="366.7" cy="172.0" r="31.9"><title>Female: 287,415 people, base rate 0.316, found 77.3%</title></circle><text class="vl" x="410.6" y="176.0">Female</text></g><text class="axt" x="328.0" y="432" text-anchor="middle">How common the outcome is in this group</text><text class="axt" transform="translate(16,204.0) rotate(-90)" text-anchor="middle">Share of them the model finds</text></svg></div><div class="pane" data-split="shift" data-attr="RAC1P"><svg class="chart" viewBox="0 0 780 440" width="100%" role="img" aria-label="base rate against true positive rate by RAC1P"><line class="gr" x1="66" y1="22" x2="66" y2="386"/><text class="ax" x="66" y="406" text-anchor="middle">0.00</text><line class="gr" x1="66" y1="22" x2="590" y2="22"/><text class="ax" x="56" y="26" text-anchor="end">1.00</text><line class="gr" x1="197.0" y1="22" x2="197.0" y2="386"/><text class="ax" x="197.0" y="406" text-anchor="middle">0.14</text><line class="gr" x1="66" y1="113.0" x2="590" y2="113.0"/><text class="ax" x="56" y="117.0" text-anchor="end">0.85</text><line class="gr" x1="328.0" y1="22" x2="328.0" y2="386"/><text class="ax" x="328.0" y="406" text-anchor="middle">0.28</text><line class="gr" x1="66" y1="204.0" x2="590" y2="204.0"/><text class="ax" x="56" y="208.0" text-anchor="end">0.70</text><line class="gr" x1="459.0" y1="22" x2="459.0" y2="386"/><text class="ax" x="459.0" y="406" text-anchor="middle">0.41</text><line class="gr" x1="66" y1="295.0" x2="590" y2="295.0"/><text class="ax" x="56" y="299.0" text-anchor="end">0.54</text><line class="gr" x1="590.0" y1="22" x2="590.0" y2="386"/><text class="ax" x="590.0" y="406" text-anchor="middle">0.55</text><line class="gr" x1="66" y1="386.0" x2="590" y2="386.0"/><text class="ax" x="56" y="390.0" text-anchor="end">0.39</text><g class="row"><circle class="bub" cx="384.7" cy="126.5" r="33.0"><title>White alone: 33,029 people, base rate 0.334, found 82.5%</title></circle><text class="vl" x="429.7" y="130.5">White</text></g><g class="row"><circle class="bub" cx="367.6" cy="178.5" r="12.9"><title>Asian alone: 1,712 people, base rate 0.317, found 73.8%</title></circle><text class="vl" x="392.5" y="182.5">Asian</text></g><g class="row"><circle class="bub" cx="293.1" cy="179.7" r="11.5"><title>Two or more races: 969 people, base rate 0.238, found 73.6%</title></circle><path class="lead" d="M306.6,179.7 L311.6,193.5"/><text class="vl" x="316.6" y="197.5">Two or more</text></g><g class="row"><circle class="bub" cx="229.9" cy="195.3" r="17.5"><title>Black or African American alone: 5,370 people, base rate 0.172, found 71.0%</title></circle><path class="lead" d="M249.4,195.3 L254.39999999999998,208.5"/><text class="vl" x="259.4" y="212.5">Black</text></g><g class="row"><circle class="bub" cx="180.5" cy="360.1" r="12.6"><title>Some other race alone: 1,514 people, base rate 0.120, found 43.4%</title></circle><text class="vl" x="205.1" y="364.1">Some other race</text></g><text class="axt" x="328.0" y="432" text-anchor="middle">How common the outcome is in this group</text><text class="axt" transform="translate(16,204.0) rotate(-90)" text-anchor="middle">Share of them the model finds</text></svg></div><div class="pane" data-split="shift" data-attr="SEX"><svg class="chart" viewBox="0 0 780 440" width="100%" role="img" aria-label="base rate against true positive rate by SEX"><line class="gr" x1="66" y1="22" x2="66" y2="386"/><text class="ax" x="66" y="406" text-anchor="middle">0.00</text><line class="gr" x1="66" y1="22" x2="590" y2="22"/><text class="ax" x="56" y="26" text-anchor="end">1.00</text><line class="gr" x1="197.0" y1="22" x2="197.0" y2="386"/><text class="ax" x="197.0" y="406" text-anchor="middle">0.14</text><line class="gr" x1="66" y1="113.0" x2="590" y2="113.0"/><text class="ax" x="56" y="117.0" text-anchor="end">0.86</text><line class="gr" x1="328.0" y1="22" x2="328.0" y2="386"/><text class="ax" x="328.0" y="406" text-anchor="middle">0.28</text><line class="gr" x1="66" y1="204.0" x2="590" y2="204.0"/><text class="ax" x="56" y="208.0" text-anchor="end">0.73</text><line class="gr" x1="459.0" y1="22" x2="459.0" y2="386"/><text class="ax" x="459.0" y="406" text-anchor="middle">0.41</text><line class="gr" x1="66" y1="295.0" x2="590" y2="295.0"/><text class="ax" x="56" y="299.0" text-anchor="end">0.59</text><line class="gr" x1="590.0" y1="22" x2="590.0" y2="386"/><text class="ax" x="590.0" y="406" text-anchor="middle">0.55</text><line class="gr" x1="66" y1="386.0" x2="590" y2="386.0"/><text class="ax" x="56" y="390.0" text-anchor="end">0.45</text><g class="row"><circle class="bub" cx="423.4" cy="135.4" r="33.0"><title>Male: 22,320 people, base rate 0.375, found 82.9%</title></circle><text class="vl" x="468.4" y="139.4">Male</text></g><g class="row"><circle class="bub" cx="279.0" cy="179.3" r="32.1"><title>Female: 20,781 people, base rate 0.224, found 76.2%</title></circle><text class="vl" x="323.1" y="183.3">Female</text></g><text class="axt" x="328.0" y="432" text-anchor="middle">How common the outcome is in this group</text><text class="axt" transform="translate(16,204.0) rotate(-90)" text-anchor="middle">Share of them the model finds</text></svg></div></div>
+      <div class="panel chartbox"><svg class="chart relf" viewBox="0 0 906 486" width="100%" role="img" aria-label="reliability per group, predicted against observed"><g class="row"><rect class="facet" x="0" y="0" width="210" height="210" rx="10"/><line class="diag" x1="34" y1="176" x2="200" y2="10"/><line class="gr" x1="34" y1="176" x2="34" y2="10"/><line class="gr" x1="34" y1="176" x2="200" y2="176"/><line class="gr" x1="117.0" y1="176" x2="117.0" y2="10"/><line class="gr" x1="34" y1="93.0" x2="200" y2="93.0"/><line class="gr" x1="200.0" y1="176" x2="200.0" y2="10"/><line class="gr" x1="34" y1="10.0" x2="200" y2="10.0"/><polyline class="cal" points="39.2,170.1 58.6,148.6 75.3,130.2 91.9,112.7 107.3,93.8 124.3,77.0 141.8,58.7 158.1,43.4 175.0,29.5 190.1,18.3"/><circle class="cdot" cx="39.2" cy="170.1" r="3"><title>predicted 0.03, observed 0.04, 123,053 people</title></circle><circle class="cdot" cx="58.6" cy="148.6" r="3"><title>predicted 0.15, observed 0.17, 45,005 people</title></circle><circle class="cdot" cx="75.3" cy="130.2" r="3"><title>predicted 0.25, observed 0.28, 38,446 people</title></circle><circle class="cdot" cx="91.9" cy="112.7" r="3"><title>predicted 0.35, observed 0.38, 33,363 people</title></circle><circle class="cdot" cx="107.3" cy="93.8" r="3"><title>predicted 0.44, observed 0.50, 30,628 people</title></circle><circle class="cdot" cx="124.3" cy="77.0" r="3"><title>predicted 0.54, observed 0.60, 32,677 people</title></circle><circle class="cdot" cx="141.8" cy="58.7" r="3"><title>predicted 0.65, observed 0.71, 34,553 people</title></circle><circle class="cdot" cx="158.1" cy="43.4" r="3"><title>predicted 0.75, observed 0.80, 32,555 people</title></circle><circle class="cdot" cx="175.0" cy="29.5" r="3"><title>predicted 0.85, observed 0.88, 34,892 people</title></circle><circle class="cdot" cx="190.1" cy="18.3" r="3"><title>predicted 0.94, observed 0.95, 28,850 people</title></circle><text class="facet-t" x="12" y="229">White</text><text class="facet-n" x="200" y="229" text-anchor="end">max gap 0.06</text></g><g class="row"><rect class="facet" x="232" y="0" width="210" height="210" rx="10"/><line class="diag" x1="266" y1="176" x2="432" y2="10"/><line class="gr" x1="266" y1="176" x2="266" y2="10"/><line class="gr" x1="266" y1="176" x2="432" y2="176"/><line class="gr" x1="349.0" y1="176" x2="349.0" y2="10"/><line class="gr" x1="266" y1="93.0" x2="432" y2="93.0"/><line class="gr" x1="432.0" y1="176" x2="432.0" y2="10"/><line class="gr" x1="266" y1="10.0" x2="432" y2="10.0"/><polyline class="cal" points="271.2,169.6 290.5,148.5 307.1,134.9 323.8,117.7 339.0,100.7 356.2,85.0 373.5,67.5 389.9,49.6 406.4,35.7 420.8,23.0"/><circle class="cdot" cx="271.2" cy="169.6" r="3"><title>predicted 0.03, observed 0.04, 19,681 people</title></circle><circle class="cdot" cx="290.5" cy="148.5" r="3"><title>predicted 0.15, observed 0.17, 6,675 people</title></circle><circle class="cdot" cx="307.1" cy="134.9" r="3"><title>predicted 0.25, observed 0.25, 5,284 people</title></circle><circle class="cdot" cx="323.8" cy="117.7" r="3"><title>predicted 0.35, observed 0.35, 4,046 people</title></circle><circle class="cdot" cx="339.0" cy="100.7" r="3"><title>predicted 0.44, observed 0.45, 3,255 people</title></circle><circle class="cdot" cx="356.2" cy="85.0" r="3"><title>predicted 0.54, observed 0.55, 2,997 people</title></circle><circle class="cdot" cx="373.5" cy="67.5" r="3"><title>predicted 0.65, observed 0.65, 2,792 people</title></circle><circle class="cdot" cx="389.9" cy="49.6" r="3"><title>predicted 0.75, observed 0.76, 2,323 people</title></circle><circle class="cdot" cx="406.4" cy="35.7" r="3"><title>predicted 0.85, observed 0.84, 1,916 people</title></circle><circle class="cdot" cx="420.8" cy="23.0" r="3"><title>predicted 0.93, observed 0.92, 972 people</title></circle><text class="facet-t" x="244" y="229">Black</text><text class="facet-n" x="432" y="229" text-anchor="end">max gap 0.02</text></g><g class="row"><rect class="facet" x="464" y="0" width="210" height="210" rx="10"/><line class="diag" x1="498" y1="176" x2="664" y2="10"/><line class="gr" x1="498" y1="176" x2="498" y2="10"/><line class="gr" x1="498" y1="176" x2="664" y2="176"/><line class="gr" x1="581.0" y1="176" x2="581.0" y2="10"/><line class="gr" x1="498" y1="93.0" x2="664" y2="93.0"/><line class="gr" x1="664.0" y1="176" x2="664.0" y2="10"/><line class="gr" x1="498" y1="10.0" x2="664" y2="10.0"/><polyline class="cal" points="503.1,168.6 522.5,148.7 539.3,139.9 556.1,112.9 571.3,99.5 588.6,88.6 605.5,64.9 621.9,47.6 638.2,50.3"/><circle class="cdot" cx="503.1" cy="168.6" r="3"><title>predicted 0.03, observed 0.04, 919 people</title></circle><circle class="cdot" cx="522.5" cy="148.7" r="3"><title>predicted 0.15, observed 0.16, 310 people</title></circle><circle class="cdot" cx="539.3" cy="139.9" r="3"><title>predicted 0.25, observed 0.22, 221 people</title></circle><circle class="cdot" cx="556.1" cy="112.9" r="3"><title>predicted 0.35, observed 0.38, 192 people</title></circle><circle class="cdot" cx="571.3" cy="99.5" r="3"><title>predicted 0.44, observed 0.46, 167 people</title></circle><circle class="cdot" cx="588.6" cy="88.6" r="3"><title>predicted 0.55, observed 0.53, 133 people</title></circle><circle class="cdot" cx="605.5" cy="64.9" r="3"><title>predicted 0.65, observed 0.67, 136 people</title></circle><circle class="cdot" cx="621.9" cy="47.6" r="3"><title>predicted 0.75, observed 0.77, 106 people</title></circle><circle class="cdot" cx="638.2" cy="50.3" r="3"><title>predicted 0.84, observed 0.76, 107 people</title></circle><text class="facet-t" x="476" y="229">Am. Indian</text><text class="facet-n" x="664" y="229" text-anchor="end">max gap 0.09</text></g><g class="row"><rect class="facet" x="696" y="0" width="210" height="210" rx="10"/><line class="diag" x1="730" y1="176" x2="896" y2="10"/><line class="gr" x1="730" y1="176" x2="730" y2="10"/><line class="gr" x1="730" y1="176" x2="896" y2="176"/><line class="gr" x1="813.0" y1="176" x2="813.0" y2="10"/><line class="gr" x1="730" y1="93.0" x2="896" y2="93.0"/><line class="gr" x1="896.0" y1="176" x2="896.0" y2="10"/><line class="gr" x1="730" y1="10.0" x2="896" y2="10.0"/><polyline class="cal" points="735.3,171.1 754.0,158.9 771.3,142.8 788.6,118.8 803.1,100.8"/><circle class="cdot" cx="735.3" cy="171.1" r="3"><title>predicted 0.03, observed 0.03, 442 people</title></circle><circle class="cdot" cx="754.0" cy="158.9" r="3"><title>predicted 0.14, observed 0.10, 136 people</title></circle><circle class="cdot" cx="771.3" cy="142.8" r="3"><title>predicted 0.25, observed 0.20, 105 people</title></circle><circle class="cdot" cx="788.6" cy="118.8" r="3"><title>predicted 0.35, observed 0.34, 58 people</title></circle><circle class="cdot" cx="803.1" cy="100.8" r="3"><title>predicted 0.44, observed 0.45, 53 people</title></circle><text class="facet-t" x="708" y="229">Native tribes</text><text class="facet-n" x="896" y="229" text-anchor="end">max gap 0.05</text></g><g class="row"><rect class="facet" x="0" y="250" width="210" height="210" rx="10"/><line class="diag" x1="34" y1="426" x2="200" y2="260"/><line class="gr" x1="34" y1="426" x2="34" y2="260"/><line class="gr" x1="34" y1="426" x2="200" y2="426"/><line class="gr" x1="117.0" y1="426" x2="117.0" y2="260"/><line class="gr" x1="34" y1="343.0" x2="200" y2="343.0"/><line class="gr" x1="200.0" y1="426" x2="200.0" y2="260"/><line class="gr" x1="34" y1="260.0" x2="200" y2="260.0"/><polyline class="cal" points="39.7,418.8 58.7,399.6 75.2,381.6 91.9,358.8 107.3,338.7 124.5,319.4 142.0,300.5 158.3,290.0 174.9,277.5 190.0,270.1"/><circle class="cdot" cx="39.7" cy="418.8" r="3"><title>predicted 0.03, observed 0.04, 13,959 people</title></circle><circle class="cdot" cx="58.7" cy="399.6" r="3"><title>predicted 0.15, observed 0.16, 5,501 people</title></circle><circle class="cdot" cx="75.2" cy="381.6" r="3"><title>predicted 0.25, observed 0.27, 4,771 people</title></circle><circle class="cdot" cx="91.9" cy="358.8" r="3"><title>predicted 0.35, observed 0.40, 4,172 people</title></circle><circle class="cdot" cx="107.3" cy="338.7" r="3"><title>predicted 0.44, observed 0.53, 3,891 people</title></circle><circle class="cdot" cx="124.5" cy="319.4" r="3"><title>predicted 0.55, observed 0.64, 3,901 people</title></circle><circle class="cdot" cx="142.0" cy="300.5" r="3"><title>predicted 0.65, observed 0.76, 4,687 people</title></circle><circle class="cdot" cx="158.3" cy="290.0" r="3"><title>predicted 0.75, observed 0.82, 4,472 people</title></circle><circle class="cdot" cx="174.9" cy="277.5" r="3"><title>predicted 0.85, observed 0.89, 5,326 people</title></circle><circle class="cdot" cx="190.0" cy="270.1" r="3"><title>predicted 0.94, observed 0.94, 4,694 people</title></circle><text class="facet-t" x="12" y="479">Asian</text><text class="facet-n" x="200" y="479" text-anchor="end">max gap 0.11</text></g><g class="row"><rect class="facet" x="232" y="250" width="210" height="210" rx="10"/><line class="diag" x1="266" y1="426" x2="432" y2="260"/><line class="gr" x1="266" y1="426" x2="266" y2="260"/><line class="gr" x1="266" y1="426" x2="432" y2="426"/><line class="gr" x1="349.0" y1="426" x2="349.0" y2="260"/><line class="gr" x1="266" y1="343.0" x2="432" y2="343.0"/><line class="gr" x1="432.0" y1="426" x2="432.0" y2="260"/><line class="gr" x1="266" y1="260.0" x2="432" y2="260.0"/><polyline class="cal" points="271.5,417.7 290.6,402.9 307.2,379.8 323.4,376.2 339.4,355.5 356.8,331.1 374.1,308.7"/><circle class="cdot" cx="271.5" cy="417.7" r="3"><title>predicted 0.03, observed 0.05, 302 people</title></circle><circle class="cdot" cx="290.6" cy="402.9" r="3"><title>predicted 0.15, observed 0.14, 115 people</title></circle><circle class="cdot" cx="307.2" cy="379.8" r="3"><title>predicted 0.25, observed 0.28, 97 people</title></circle><circle class="cdot" cx="323.4" cy="376.2" r="3"><title>predicted 0.35, observed 0.30, 80 people</title></circle><circle class="cdot" cx="339.4" cy="355.5" r="3"><title>predicted 0.44, observed 0.42, 73 people</title></circle><circle class="cdot" cx="356.8" cy="331.1" r="3"><title>predicted 0.55, observed 0.57, 63 people</title></circle><circle class="cdot" cx="374.1" cy="308.7" r="3"><title>predicted 0.65, observed 0.71, 58 people</title></circle><text class="facet-t" x="244" y="479">Pacific Islander</text><text class="facet-n" x="432" y="479" text-anchor="end">max gap 0.06</text></g><g class="row"><rect class="facet" x="464" y="250" width="210" height="210" rx="10"/><line class="diag" x1="498" y1="426" x2="664" y2="260"/><line class="gr" x1="498" y1="426" x2="498" y2="260"/><line class="gr" x1="498" y1="426" x2="664" y2="426"/><line class="gr" x1="581.0" y1="426" x2="581.0" y2="260"/><line class="gr" x1="498" y1="343.0" x2="664" y2="343.0"/><line class="gr" x1="664.0" y1="426" x2="664.0" y2="260"/><line class="gr" x1="498" y1="260.0" x2="664" y2="260.0"/><polyline class="cal" points="503.2,419.8 522.2,398.9 538.9,381.7 555.5,366.4 571.1,346.4 588.0,334.2 605.5,315.7 621.8,300.4 638.1,290.5 652.8,274.0"/><circle class="cdot" cx="503.2" cy="419.8" r="3"><title>predicted 0.03, observed 0.04, 21,242 people</title></circle><circle class="cdot" cx="522.2" cy="398.9" r="3"><title>predicted 0.15, observed 0.16, 6,325 people</title></circle><circle class="cdot" cx="538.9" cy="381.7" r="3"><title>predicted 0.25, observed 0.27, 4,010 people</title></circle><circle class="cdot" cx="555.5" cy="366.4" r="3"><title>predicted 0.35, observed 0.36, 2,470 people</title></circle><circle class="cdot" cx="571.1" cy="346.4" r="3"><title>predicted 0.44, observed 0.48, 1,840 people</title></circle><circle class="cdot" cx="588.0" cy="334.2" r="3"><title>predicted 0.54, observed 0.55, 1,407 people</title></circle><circle class="cdot" cx="605.5" cy="315.7" r="3"><title>predicted 0.65, observed 0.66, 1,112 people</title></circle><circle class="cdot" cx="621.8" cy="300.4" r="3"><title>predicted 0.75, observed 0.76, 801 people</title></circle><circle class="cdot" cx="638.1" cy="290.5" r="3"><title>predicted 0.84, observed 0.82, 614 people</title></circle><circle class="cdot" cx="652.8" cy="274.0" r="3"><title>predicted 0.93, observed 0.92, 285 people</title></circle><text class="facet-t" x="476" y="479">Some other race</text><text class="facet-n" x="664" y="479" text-anchor="end">max gap 0.04</text></g><g class="row"><rect class="facet" x="696" y="250" width="210" height="210" rx="10"/><line class="diag" x1="730" y1="426" x2="896" y2="260"/><line class="gr" x1="730" y1="426" x2="730" y2="260"/><line class="gr" x1="730" y1="426" x2="896" y2="426"/><line class="gr" x1="813.0" y1="426" x2="813.0" y2="260"/><line class="gr" x1="730" y1="343.0" x2="896" y2="343.0"/><line class="gr" x1="896.0" y1="426" x2="896.0" y2="260"/><line class="gr" x1="730" y1="260.0" x2="896" y2="260.0"/><polyline class="cal" points="734.3,421.1 754.5,396.7 771.4,377.0 787.9,358.8 803.7,345.5 820.0,326.7 837.6,308.2 854.3,293.0 871.0,279.5 885.9,267.1"/><circle class="cdot" cx="734.3" cy="421.1" r="3"><title>predicted 0.03, observed 0.03, 6,738 people</title></circle><circle class="cdot" cx="754.5" cy="396.7" r="3"><title>predicted 0.15, observed 0.18, 1,764 people</title></circle><circle class="cdot" cx="771.4" cy="377.0" r="3"><title>predicted 0.25, observed 0.30, 1,474 people</title></circle><circle class="cdot" cx="787.9" cy="358.8" r="3"><title>predicted 0.35, observed 0.41, 1,210 people</title></circle><circle class="cdot" cx="803.7" cy="345.5" r="3"><title>predicted 0.44, observed 0.48, 1,062 people</title></circle><circle class="cdot" cx="820.0" cy="326.7" r="3"><title>predicted 0.54, observed 0.60, 1,042 people</title></circle><circle class="cdot" cx="837.6" cy="308.2" r="3"><title>predicted 0.65, observed 0.71, 1,067 people</title></circle><circle class="cdot" cx="854.3" cy="293.0" r="3"><title>predicted 0.75, observed 0.80, 980 people</title></circle><circle class="cdot" cx="871.0" cy="279.5" r="3"><title>predicted 0.85, observed 0.88, 937 people</title></circle><circle class="cdot" cx="885.9" cy="267.1" r="3"><title>predicted 0.94, observed 0.96, 654 people</title></circle><text class="facet-t" x="708" y="479">Two or more</text><text class="facet-n" x="896" y="479" text-anchor="end">max gap 0.06</text></g></svg></div>
+    </div>
+  </div>
+</section>
+
+<div class="band">
+  <div class="shell band-in reveal">
+    <p class="kicker">Direction of error</p>
+    <h2>Over-selected, under-selected.</h2>
+    <p class="say">Selection rate minus base rate. Zero is the neutral line: bars to the
+      left are groups the model picks less often than the data warrants, bars to the
+      right are groups it picks more often.</p>
+    <div class="panel chartbox"><div class="pane is-on" data-split="test" data-attr="RAC1P"><svg class="chart" viewBox="0 0 772 374" width="100%" role="img" aria-label="selection rate minus base rate by RAC1P"><line class="zero" x1="440" y1="20" x2="440" y2="360"/><text class="ax" x="440" y="12" text-anchor="middle">0</text><text class="ax" x="190" y="12" text-anchor="start">under-selected</text><text class="ax" x="690" y="12" text-anchor="end">over-selected</text><g class="row"><text class="gl" x="174" y="43" text-anchor="end">Some other race<title>Some other race alone</title></text><rect class="s1" x="394.6" y="30" width="45.4" height="18" rx="3"><title>Some other race alone: selected 0.172 against a base rate of 0.188</title></rect><text class="vl" x="384.6" y="44" text-anchor="end">-0.016</text></g><g class="row"><text class="gl" x="174" y="85" text-anchor="end">Native tribes<title>American Indian and Alaska Native tribes specified</title></text><rect class="s2" x="440" y="72" width="105.0" height="18" rx="3"><title>American Indian and Alaska Native tribes specified: selected 0.232 against a base rate of 0.194</title></rect><text class="vl" x="555.0" y="86" text-anchor="start">+0.038</text></g><g class="row"><text class="gl" x="174" y="127" text-anchor="end">Two or more<title>Two or more races</title></text><rect class="s2" x="440" y="114" width="105.8" height="18" rx="3"><title>Two or more races: selected 0.367 against a base rate of 0.329</title></rect><text class="vl" x="555.8" y="128" text-anchor="start">+0.038</text></g><g class="row"><text class="gl" x="174" y="169" text-anchor="end">Black<title>Black or African American alone</title></text><rect class="s2" x="440" y="156" width="107.8" height="18" rx="3"><title>Black or African American alone: selected 0.315 against a base rate of 0.277</title></rect><text class="vl" x="557.8" y="170" text-anchor="start">+0.039</text></g><g class="row"><text class="gl" x="174" y="211" text-anchor="end">Am. Indian<title>American Indian alone</title></text><rect class="s2" x="440" y="198" width="137.7" height="18" rx="3"><title>American Indian alone: selected 0.332 against a base rate of 0.283</title></rect><text class="vl" x="587.7" y="212" text-anchor="start">+0.050</text></g><g class="row"><text class="gl" x="174" y="253" text-anchor="end">Asian<title>Asian alone</title></text><rect class="s2" x="440" y="240" width="161.3" height="18" rx="3"><title>Asian alone: selected 0.516 against a base rate of 0.458</title></rect><text class="vl" x="611.3" y="254" text-anchor="start">+0.058</text></g><g class="row"><text class="gl" x="174" y="295" text-anchor="end">Pacific Islander<title>Native Hawaiian and Other Pacific Islander alone</title></text><rect class="s2" x="440" y="282" width="163.6" height="18" rx="3"><title>Native Hawaiian and Other Pacific Islander alone: selected 0.357 against a base rate of 0.298</title></rect><text class="vl" x="613.6" y="296" text-anchor="start">+0.059</text></g><g class="row"><text class="gl" x="174" y="337" text-anchor="end">White<title>White alone</title></text><rect class="s2" x="440" y="324" width="182.2" height="18" rx="3"><title>White alone: selected 0.477 against a base rate of 0.411</title></rect><text class="vl" x="632.2" y="338" text-anchor="start">+0.066</text></g></svg></div><div class="pane" data-split="test" data-attr="SEX"><svg class="chart" viewBox="0 0 772 122" width="100%" role="img" aria-label="selection rate minus base rate by SEX"><line class="zero" x1="440" y1="20" x2="440" y2="108"/><text class="ax" x="440" y="12" text-anchor="middle">0</text><text class="ax" x="190" y="12" text-anchor="start">under-selected</text><text class="ax" x="690" y="12" text-anchor="end">over-selected</text><g class="row"><text class="gl" x="174" y="43" text-anchor="end">Female<title>Female</title></text><rect class="s2" x="440" y="30" width="123.6" height="18" rx="3"><title>Female: selected 0.360 against a base rate of 0.316</title></rect><text class="vl" x="573.6" y="44" text-anchor="start">+0.045</text></g><g class="row"><text class="gl" x="174" y="85" text-anchor="end">Male<title>Male</title></text><rect class="s2" x="440" y="72" width="186.5" height="18" rx="3"><title>Male: selected 0.518 against a base rate of 0.451</title></rect><text class="vl" x="636.5" y="86" text-anchor="start">+0.067</text></g></svg></div><div class="pane" data-split="shift" data-attr="RAC1P"><svg class="chart" viewBox="0 0 772 248" width="100%" role="img" aria-label="selection rate minus base rate by RAC1P"><line class="zero" x1="440" y1="20" x2="440" y2="234"/><text class="ax" x="440" y="12" text-anchor="middle">0</text><text class="ax" x="190" y="12" text-anchor="start">under-selected</text><text class="ax" x="690" y="12" text-anchor="end">over-selected</text><g class="row"><text class="gl" x="174" y="43" text-anchor="end">Some other race<title>Some other race alone</title></text><rect class="s1" x="424.1" y="30" width="15.9" height="18" rx="3"><title>Some other race alone: selected 0.111 against a base rate of 0.120</title></rect><text class="vl" x="414.1" y="44" text-anchor="end">-0.009</text></g><g class="row"><text class="gl" x="174" y="85" text-anchor="end">Two or more<title>Two or more races</title></text><rect class="s2" x="440" y="72" width="95.7" height="18" rx="3"><title>Two or more races: selected 0.294 against a base rate of 0.238</title></rect><text class="vl" x="545.7" y="86" text-anchor="start">+0.056</text></g><g class="row"><text class="gl" x="174" y="127" text-anchor="end">Asian<title>Asian alone</title></text><rect class="s2" x="440" y="114" width="121.3" height="18" rx="3"><title>Asian alone: selected 0.387 against a base rate of 0.317</title></rect><text class="vl" x="571.3" y="128" text-anchor="start">+0.071</text></g><g class="row"><text class="gl" x="174" y="169" text-anchor="end">Black<title>Black or African American alone</title></text><rect class="s2" x="440" y="156" width="183.5" height="18" rx="3"><title>Black or African American alone: selected 0.279 against a base rate of 0.172</title></rect><text class="vl" x="633.5" y="170" text-anchor="start">+0.107</text></g><g class="row"><text class="gl" x="174" y="211" text-anchor="end">White<title>White alone</title></text><rect class="s2" x="440" y="198" width="208.3" height="18" rx="3"><title>White alone: selected 0.456 against a base rate of 0.334</title></rect><text class="vl" x="658.3" y="212" text-anchor="start">+0.121</text></g></svg></div><div class="pane" data-split="shift" data-attr="SEX"><svg class="chart" viewBox="0 0 772 122" width="100%" role="img" aria-label="selection rate minus base rate by SEX"><line class="zero" x1="440" y1="20" x2="440" y2="108"/><text class="ax" x="440" y="12" text-anchor="middle">0</text><text class="ax" x="190" y="12" text-anchor="start">under-selected</text><text class="ax" x="690" y="12" text-anchor="end">over-selected</text><g class="row"><text class="gl" x="174" y="43" text-anchor="end">Female<title>Female</title></text><rect class="s2" x="440" y="30" width="175.5" height="18" rx="3"><title>Female: selected 0.325 against a base rate of 0.224</title></rect><text class="vl" x="625.5" y="44" text-anchor="start">+0.101</text></g><g class="row"><text class="gl" x="174" y="85" text-anchor="end">Male<title>Male</title></text><rect class="s2" x="440" y="72" width="208.3" height="18" rx="3"><title>Male: selected 0.495 against a base rate of 0.375</title></rect><text class="vl" x="658.3" y="86" text-anchor="start">+0.120</text></g></svg></div></div>
+  </div>
+</div>
+
+<section>
+  <div class="shell reveal">
+    <p class="kicker">Under shift</p>
+    <h2>What happens on states it never saw.</h2>
+    <p class="say">One line per group, from the test year to the four states held out of
+      training entirely. Direction and size of the change at once, which two separate bar
+      charts would make you compute in your head.</p>
+    <div class="panel chartbox"><svg class="chart" viewBox="0 0 780 430" width="100%" role="img" aria-label="true positive rate from the test year to the held-out states"><line class="gr" x1="190" y1="30" x2="190" y2="410"/><line class="gr" x1="520" y1="30" x2="520" y2="410"/><text class="ax" x="190" y="22" text-anchor="middle">Test year</text><text class="ax" x="520" y="22" text-anchor="middle">Held-out states</text><g class="row"><text class="gl" x="172" y="75.0" text-anchor="end">Asian<title>Asian alone</title></text><line class="slope s2l" x1="190" y1="71.0" x2="520" y2="155.7"/><circle class="s2" cx="190" cy="71.0" r="4.5"/><circle class="s2" cx="520" cy="155.7" r="4.5"/><text class="vl" x="535" y="159.7">73.8% (-11.6%)<title>Asian alone</title></text></g><g class="row"><text class="gl" x="172" y="90.3" text-anchor="end">White<title>White alone</title></text><line class="slope s2l" x1="190" y1="86.3" x2="520" y2="92.1"/><circle class="s2" cx="190" cy="86.3" r="4.5"/><circle class="s2" cx="520" cy="92.1" r="4.5"/><text class="vl" x="535" y="96.1">82.5% (-0.8%)<title>White alone</title></text></g><g class="row"><text class="gl" x="172" y="128.0" text-anchor="end">Two or more<title>Two or more races</title></text><line class="slope s2l" x1="190" y1="124.0" x2="520" y2="157.2"/><circle class="s2" cx="190" cy="124.0" r="4.5"/><circle class="s2" cx="520" cy="157.2" r="4.5"/><text class="vl" x="535" y="161.2">73.6% (-4.5%)<title>Two or more races</title></text></g><g class="row"><text class="gl" x="172" y="181.0" text-anchor="end">Black<title>Black or African American alone</title></text><line class="slope s1l" x1="190" y1="177.0" x2="520" y2="176.2"/><circle class="s1" cx="190" cy="177.0" r="4.5"/><circle class="s1" cx="520" cy="176.2" r="4.5"/><text class="vl" x="535" y="180.2">71.0% (+0.1%)<title>Black or African American alone</title></text></g><g class="row"><text class="gl" x="172" y="302.9" text-anchor="end">Some other race<title>Some other race alone</title></text><line class="slope s2l" x1="190" y1="298.9" x2="520" y2="377.8"/><circle class="s2" cx="190" cy="298.9" r="4.5"/><circle class="s2" cx="520" cy="377.8" r="4.5"/><text class="vl" x="535" y="381.8">43.4% (-10.8%)<title>Some other race alone</title></text></g></svg></div>
+  </div>
+</section>
+
+
+<div class="band onward">
+  <div class="shell band-in">
+    <a class="onward-in" href="method.html">
+      <span class="kicker">Next</span>
+      <span class="onward-t">How I measured it</span>
+      <span class="onward-b">The splits, the reporting floor, and what happens when you delete race and sex from the features.</span>
+    </a>
+  </div>
+</div>
+<footer>
+  <div class="shell">
+    <p><strong>Generated, not written.</strong> This page, the model card, the Annex IV
+      technical documentation and the DPIA all come out of
+      <code>scripts/run_audit.py</code>. Continuous integration regenerates each of them
+      and requires a byte-identical match, so editing any number by hand fails the
+      build.</p>
+    <p>Run 2026-09-23T09:54:27+00:00 &#183; commit <code>e3b37e2</code>
+      &#183; pipeline <code>aba10eb137604312</code>
+      &#183; Python 3.14.3</p>
+    <p>Not a deployable system, and not a product. Income prediction on census microdata
+      is a benchmark. No decision about any person should be made with it.</p>
+  </div>
+</footer>
+
+
+
+<button type="button" class="vx-fab" id="vx-open" aria-expanded="false"
+        aria-controls="vx" aria-label="Ask about this audit">
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/>
+    <path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>
+  </svg>
+  <span>Ask</span>
+</button>
+
+<aside class="vx" id="vx" hidden aria-live="polite">
+  <header>
+    <span class="vx-title">Ask the audit</span>
+    <button type="button" class="vx-x" id="vx-close" aria-label="Close">&#215;</button>
+  </header>
+  <div class="vx-log" id="vx-log"></div>
+  <p class="vx-note" id="vx-note"></p>
+  <div class="vx-bar">
+    <button type="button" class="vx-mic" id="vx-mic">Hold to speak</button>
+    <form class="vx-form" id="vx-form">
+      <input type="text" id="vx-text" autocomplete="off"
+             placeholder="or type a question" aria-label="Type a question">
+      <button type="submit" aria-label="Send">&#8594;</button>
+    </form>
+  </div>
+</aside>
+<script>
+(function () {
+  var DATA = {"answers": {"gate": "Continuous integration is a robot that runs a list of checks every time somebody changes the code. A gate is a check with the authority to refuse. Teams already block code that fails a test, but almost nobody blocks a model that fails a fairness check, because that check usually lives in a document nobody opens again. So here the fairness limits sit in a file next to the code, and if the model crosses one, the build turns red like a broken test. Right now the gate is at warn, with 7 checks passing, 9 warning and 0 failing.", "finding": "Out of every hundred people who genuinely earn above the threshold, this model finds about 85 in the Asian alone group and about 54 in the Some other race alone group. That is a recall gap of 0.312. The ninety five percent interval runs from 0.300 to 0.324, so it is not a quirk of the sample. And the accuracy is nearly identical across those groups, between 0.77 and 0.84. A model can be equally accurate everywhere and still put its mistakes on the same people every time.", "people": "42,517 qualifying people are overlooked across every reported group, in a single survey year, out of 600,551 tested. If a real decision hung on this model, that is the size of the room.", "recall": "Recall is the share of people who genuinely qualify that the model actually finds. If a hundred people really do earn above the line and it flags fifty four of them, recall is fifty four percent, and the other forty six are overlooked. It is the measure that tells you who gets missed, which is the question accuracy cannot answer.", "accuracy": "Accuracy sits between 0.77 and 0.84 across the racial groups, which is almost flat. That is exactly the trap. Accuracy is the number most projects report, and by that number this model looks even handed. It is not. It is equally accurate everywhere while placing its errors on the same people.", "intersection": "Audit race on its own and the false positive gap is 0.145. Audit sex on its own and it is 0.080. Cross the two together and it is 0.221. Two acceptable averages with a much worse cell hiding underneath them. Auditing one attribute at a time will never find that.", "fix": "Yes, partly. Giving each group its own cut-off takes the recall gap from 0.3119 down to 0.1143, and it costs 0.0042 of accuracy. By the number most projects report, that is nearly free. I built it, measured it, and did not ship it. Ask me why not.", "why": "Two reasons. First, it needs to know the person's race at the moment it decides, because it has to look up which cut-off applies to you. In hiring or lending that is either illegal or is the exact harm you were trying to prevent. Second, it moves the unfairness rather than removing it. The false positive gap goes up, from 0.145 to 0.196. When groups genuinely differ in how often the outcome happens, equalising one kind of error forces the other kind to become unequal. That is proved, not a bug in my code. You are always choosing which unfairness to keep.", "threshold": "The threshold is the cut-off, currently 0.3450, chosen on the 2016 data and never on the test year. The model gives a probability, and the threshold is the line above which it says yes. Moving it trades one kind of mistake for the other. I swept it end to end, and the best any single cut-off can do for the gap is 0.034, at an accuracy of 0.602, where the model says yes to almost everybody. That is not a fix, that is turning the model off.", "certainty": "A gap measured on a few hundred people and one measured on a hundred thousand are not the same claim. So every rate carries a confidence interval, and a check only fails when the whole interval is past the limit. If the estimate is over the line but the interval still straddles it, that drops to a warning and says so in words. Uncertainty can soften a failure. It can never invent one. A build that goes red on luck is a build people learn to rerun until it passes.", "small": "Any group under five hundred people gets measured and then withheld. 6 of the 18 race by sex cells fall below that line. They are drawn hatched rather than deleted, because the absence is part of the finding. The groups most likely to be harmed are the ones a national survey is least likely to contain enough of to say anything about.", "data": "United States census microdata, the American Community Survey, through the folktables package. Trained on 2015, tuned on 2016, tested on 2018, which is 600,551 real people. Split by time rather than at random, because that is how a model actually gets used: built on the past, applied to the present. Four states are held out entirely and never trained on.", "protected": "It does see them, and I tested what happens when it cannot. Training the same model with race and sex deleted takes the recall gap from 0.3119 to 0.2883. That is 92% of the gap surviving, for 0.0056 of accuracy. Deleting the column does not delete the problem, it deletes your ability to see it. The model rebuilds almost all of the signal from occupation, education, hours and birthplace, because those carry the history of who got which opportunities.", "status": "The gate is at warn. 7 checks pass, 9 are warnings and 0 fail. A warning means the model is past the standard I want but still inside the limit I tolerate. Both numbers are written down on purpose, so the distance between what is tolerated and what is wanted stays visible.", "help": "Ask me what a CI gate is, what the audit found, how many people are overlooked, what recall means, whether it can be fixed and why I did not ship the fix, what happens at the intersections, how sure I am, or where the data comes from. You can also say take me to the checks, or any other section, and I will scroll you there.", "unknown": "I only answer from what the audit actually measured, so I would rather say I do not know than guess. Try asking what the finding is, whether it can be fixed, what a CI gate is, or just say help."}, "grammar": [["\\b(help|what can (i|you)|options|commands)\\b", "help"], ["\\b(why not\\b|why\\b.{0,30}\\bnot\\b|reject|refus|did ?n.t ship|not ship)", "why"], ["\\b(ci gate|what is (this|a gate)|continuous integration|how does the gate)", "gate"], ["\\b(intersect|cross|both attributes|race and sex)", "intersection"], ["\\b(fix|mitigat|solve|repair|close the gap)", "fix"], ["\\b(threshold|cut.?off|sweep)", "threshold"], ["\\b(certain|confiden|interval|noise|sure)", "certainty"], ["\\b(small group|suppress|hidden|withheld|hatch)", "small"], ["\\b(protected|see race|use race|unawareness|remove race|delete race)", "protected"], ["\\b(data|census|source|survey|where.*(from|come))", "data"], ["\\b(how many|people|overlooked|missed|room)", "people"], ["\\b(recall|true positive|tpr)\\b", "recall"], ["\\b(accuracy|accurate)", "accuracy"], ["\\b(status|passing|failing|build|red|green|verdict)", "status"], ["\\b(find|found|finding|result|gap|disparity|problem|wrong)", "finding"]], "sections": {"start": "index.html#plain", "plain": "index.html#plain", "basic": "index.html#plain", "beginning": "index.html#plain", "miss": "index.html#cost", "overlook": "index.html#cost", "who": "index.html#cost", "cost": "index.html#cost", "check": "evidence.html#checks", "policy": "evidence.html#checks", "gate": "evidence.html#checks", "intersect": "evidence.html#intersections", "cross": "evidence.html#intersections", "certain": "evidence.html#certainty", "confiden": "evidence.html#certainty", "noise": "evidence.html#certainty", "group": "evidence.html#groups", "table": "evidence.html#groups", "flow": "evidence.html#flow", "sankey": "evidence.html#flow", "fix": "fix.html#fix", "mitigat": "fix.html#fix", "solution": "fix.html#fix", "conclusion": "fix.html#conclusion", "takeaway": "fix.html#conclusion", "unaware": "method.html#unaware", "delete race": "method.html#unaware", "method": "method.html#method", "source": "method.html#sources", "data": "method.html#sources"}};
+  var panel = document.getElementById('vx');
+  var fab = document.getElementById('vx-open');
+  var log = document.getElementById('vx-log');
+  var note = document.getElementById('vx-note');
+  var mic = document.getElementById('vx-mic');
+  var text = document.getElementById('vx-text');
+
+  // The patterns come from the grammar in src/voice.py, so what the agent can say and
+  // what the page shows cannot drift apart.
+  var rules = DATA.grammar.map(function (r) {
+    return { re: new RegExp(r[0], 'i'), key: r[1] };
+  });
+
+  function add(who, what) {
+    var p = document.createElement('p');
+    p.className = 'vx-' + who;
+    p.textContent = what;
+    log.appendChild(p);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // Picking the voice by hand, because the default is whatever the machine's locale
+  // happens to be. On a Windows box set to China that meant a Chinese voice reading
+  // English sentences and American census figures out loud, which sounds broken and,
+  // on this page of all pages, lands badly. Setting utterance.lang is not enough: it
+  // is a request, and the engine ignores it if the selected voice cannot honour it.
+  // So the voice itself gets chosen.
+  //
+  // Preference order is best-sounding first. The Microsoft "Natural" voices and
+  // Google US English are neural, free, and already on most machines, which beats
+  // calling out to a paid speech API for a page that otherwise needs no network.
+  var VOICE_RANK = [
+    function (v) { return /en(-|_)US/i.test(v.lang) && /natural|neural/i.test(v.name); },
+    function (v) { return /^en/i.test(v.lang) && /natural|neural/i.test(v.name); },
+    function (v) { return /^Google US English/i.test(v.name); },
+    function (v) { return /en(-|_)US/i.test(v.lang) && /^(Samantha|Ava|Allison)/i.test(v.name); },
+    function (v) { return /en(-|_)(US|GB)/i.test(v.lang); },
+    function (v) { return /^en/i.test(v.lang); }
+  ];
+  var picked = null;
+
+  function pickVoice() {
+    if (!('speechSynthesis' in window)) { return null; }
+    var all = window.speechSynthesis.getVoices() || [];
+    for (var r = 0; r < VOICE_RANK.length; r++) {
+      for (var i = 0; i < all.length; i++) {
+        if (VOICE_RANK[r](all[i])) { return all[i]; }
+      }
+    }
+    return null;
+  }
+
+  // getVoices() is empty until the list loads, so ask again when it arrives.
+  if ('speechSynthesis' in window) {
+    picked = pickVoice();
+    window.speechSynthesis.onvoiceschanged = function () { picked = pickVoice(); };
+  }
+
+  // Speaking is a nicety. If the browser has no voice, the answer is already on screen.
+  function speak(what) {
+    if (!('speechSynthesis' in window)) { return; }
+    try {
+      window.speechSynthesis.cancel();
+      if (!picked) { picked = pickVoice(); }
+      // No English voice installed at all: stay quiet rather than read English
+      // numbers through a voice that cannot pronounce them.
+      if (!picked) { return; }
+      var u = new SpeechSynthesisUtterance(what);
+      u.voice = picked;
+      u.lang = picked.lang || 'en-US';
+      u.rate = 0.98;
+      u.pitch = 1;
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* no voice available */ }
+  }
+
+  function reply(key) {
+    add('a', DATA.answers[key]);
+    speak(DATA.answers[key]);
+  }
+
+  function navigate(said) {
+    if (!/\b(take me|go to|show me|scroll|jump|open)\b/i.test(said)) { return false; }
+    var lower = said.toLowerCase();
+    var keys = Object.keys(DATA.sections);
+    for (var i = 0; i < keys.length; i++) {
+      if (lower.indexOf(keys[i]) === -1) { continue; }
+      var target = DATA.sections[keys[i]];
+      var parts = target.split('#');
+      var here = (location.pathname.split('/').pop() || 'index.html');
+      // Already on that page: scroll. On another page: follow the link.
+      if (parts[0] === here) {
+        var el = document.getElementById(parts[1]);
+        if (!el) { continue; }
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        add('a', 'Scrolling there now.');
+        speak('Scrolling there now.');
+      } else {
+        add('a', 'That is on another page. Taking you there.');
+        speak('That is on another page. Taking you there.');
+        setTimeout(function () { location.href = target; }, 700);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function answer(said) {
+    if (!said) { return; }
+    add('q', said);
+    if (navigate(said)) { return; }
+    for (var i = 0; i < rules.length; i++) {
+      if (rules[i].re.test(said)) { reply(rules[i].key); return; }
+    }
+    reply('unknown');
+  }
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SR) {
+    // Firefox and Safari have no recognition. Typing gets identical answers, so the
+    // feature is not hidden here, it just loses the microphone.
+    mic.hidden = true;
+    note.textContent = 'This browser cannot do speech recognition, so type instead. '
+      + 'The answers are the same.';
+  } else {
+    note.textContent = 'Your browser sends the audio to its own speech service to '
+      + 'transcribe it. Nothing else on this page leaves your machine.';
+    var rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    rec.onresult = function (e) { answer(e.results[0][0].transcript); };
+    rec.onerror = function (e) {
+      mic.classList.remove('is-live');
+      note.textContent = e.error === 'not-allowed'
+        ? 'Microphone permission was declined, so type your question instead.'
+        : 'That did not come through. Try again, or type it.';
+    };
+    rec.onend = function () { mic.classList.remove('is-live'); };
+
+    var start = function (ev) {
+      ev.preventDefault();
+      mic.classList.add('is-live');
+      try { rec.start(); } catch (e) { /* already listening */ }
+    };
+    var stop = function () { try { rec.stop(); } catch (e) {} };
+    mic.addEventListener('mousedown', start);
+    mic.addEventListener('touchstart', start, { passive: false });
+    mic.addEventListener('mouseup', stop);
+    mic.addEventListener('mouseleave', stop);
+    mic.addEventListener('touchend', stop);
+  }
+
+  document.getElementById('vx-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var said = text.value.trim();
+    text.value = '';
+    answer(said);
+  });
+
+  function open() {
+    panel.hidden = false;
+    fab.setAttribute('aria-expanded', 'true');
+    if (!log.childElementCount) { add('a', DATA.answers.help); }
+    text.focus();
+  }
+  function close() {
+    panel.hidden = true;
+    fab.setAttribute('aria-expanded', 'false');
+    if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); }
+  }
+  fab.addEventListener('click', function () {
+    if (panel.hidden) { open(); } else { close(); }
+  });
+  document.getElementById('vx-close').addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !panel.hidden) { close(); }
+  });
+})();
+</script>
+
+<script>
+(function () {
+  var cfg = window.__FIELD__;
+  var cv = document.getElementById('field');
+  if (!cfg || !cv) return;
+  var gl = cv.getContext('webgl2', { antialias: true, alpha: true,
+                                     premultipliedAlpha: false });
+  // No WebGL: the CSS mesh behind the canvas already carries the hero.
+  if (!gl) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var N = cfg.n, total = cfg.tp + cfg.fn + cfg.fp + cfg.tn;
+  // Thresholds in the real proportions, so what you see is the actual composition.
+  var cut1 = cfg.tp / total,
+      cut2 = cut1 + cfg.fn / total,
+      cut3 = cut2 + cfg.fp / total;
+
+  // Seeded so every visitor sees the same field and the page stays reproducible.
+  var seed = cfg.seed >>> 0;
+  function rnd() {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  }
+
+  var pos = new Float32Array(N * 3), cat = new Float32Array(N);
+  var GA = Math.PI * (3 - Math.sqrt(5));
+  for (var i = 0; i < N; i++) {
+    // Fibonacci sphere: even coverage with no clumping, and deterministic.
+    var y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(Math.max(0, 1 - y * y)), th = GA * i;
+    var jitter = 0.86 + rnd() * 0.3;
+    pos[i * 3] = Math.cos(th) * r * jitter;
+    pos[i * 3 + 1] = y * jitter;
+    pos[i * 3 + 2] = Math.sin(th) * r * jitter;
+    var u = rnd();
+    cat[i] = u < cut1 ? 0 : u < cut2 ? 1 : u < cut3 ? 2 : 3;
+  }
+
+  function sh(type, src) {
+    var s = gl.createShader(type);
+    gl.shaderSource(s, src); gl.compileShader(s);
+    return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+  }
+  var vs = sh(gl.VERTEX_SHADER,
+    '#version 300 es\n' +
+    'in vec3 aPos; in float aCat;' +
+    'uniform float uT; uniform vec2 uRes; uniform vec2 uM;' +
+    'out float vCat; out float vZ;' +
+    'void main(){' +
+    ' float a = uT*0.11 + uM.x*0.6; float b = -0.22 + uM.y*0.4;' +
+    ' vec3 p = aPos;' +
+    ' float ca=cos(a), sa=sin(a);' +
+    ' p = vec3(p.x*ca + p.z*sa, p.y, -p.x*sa + p.z*ca);' +
+    ' float cb=cos(b), sb=sin(b);' +
+    ' p = vec3(p.x, p.y*cb - p.z*sb, p.y*sb + p.z*cb);' +
+    ' float z = p.z + 3.05;' +
+    ' vec2 q = p.xy / z * 1.75;' +
+    ' q.x *= uRes.y / uRes.x;' +
+    ' gl_Position = vec4(q, 0.0, 1.0);' +
+    ' gl_PointSize = clamp(210.0 / z / 26.0, 1.0, 6.5);' +
+    ' vCat = aCat; vZ = z;' +
+    '}');
+  var fs = sh(gl.FRAGMENT_SHADER,
+    '#version 300 es\nprecision highp float;' +
+    'in float vCat; in float vZ;' +
+    'uniform vec3 cA; uniform vec3 cB; uniform vec3 cC; uniform vec3 cD;' +
+    'out vec4 o;' +
+    'void main(){' +
+    ' vec2 d = gl_PointCoord - 0.5; float r = length(d);' +
+    ' if (r > 0.5) discard;' +
+    ' float soft = smoothstep(0.5, 0.06, r);' +
+    ' vec3 col = cD; float al = 0.10;' +
+    ' if (vCat < 0.5) { col = cA; al = 0.30; }' +
+    ' else if (vCat < 1.5) { col = cB; al = 0.95; }' +
+    ' else if (vCat < 2.5) { col = cC; al = 0.38; }' +
+    ' float fade = clamp(1.7 / vZ, 0.18, 1.5);' +
+    ' o = vec4(col, al * soft * fade);' +
+    '}');
+  if (!vs || !fs) return;
+
+  var pr = gl.createProgram();
+  gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+  if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) return;
+  gl.useProgram(pr);
+
+  function buf(data, loc, size) {
+    var b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    var l = gl.getAttribLocation(pr, loc);
+    gl.enableVertexAttribArray(l);
+    gl.vertexAttribPointer(l, size, gl.FLOAT, false, 0, 0);
+  }
+  buf(pos, 'aPos', 3);
+  buf(cat, 'aCat', 1);
+
+  function css(name, fb) {
+    var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    var m = /^#?([0-9a-f]{6})$/i.exec(v || fb);
+    var h = m ? m[1] : fb;
+    return [parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255,
+            parseInt(h.slice(4, 6), 16) / 255];
+  }
+  function colors() {
+    gl.uniform3fv(gl.getUniformLocation(pr, 'cA'), css('--s1', '3987e5'));
+    gl.uniform3fv(gl.getUniformLocation(pr, 'cB'), css('--acid', 'ccff00'));
+    gl.uniform3fv(gl.getUniformLocation(pr, 'cC'), css('--s2', 'd95926'));
+    gl.uniform3fv(gl.getUniformLocation(pr, 'cD'), css('--ink', 'f6f8f9'));
+  }
+  colors();
+  new MutationObserver(colors).observe(document.documentElement,
+    { attributes: true, attributeFilter: ['data-theme'] });
+
+  var uT = gl.getUniformLocation(pr, 'uT'),
+      uRes = gl.getUniformLocation(pr, 'uRes'),
+      uM = gl.getUniformLocation(pr, 'uM');
+
+  function size() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = cv.clientWidth, h = cv.clientHeight;
+    cv.width = Math.max(1, (w * dpr) | 0);
+    cv.height = Math.max(1, (h * dpr) | 0);
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.uniform2f(uRes, cv.width, cv.height);
+  }
+  size();
+  addEventListener('resize', size, { passive: true });
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);   // additive: overlapping points glow
+
+  var mx = 0, my = 0, tx = 0, ty = 0;
+  addEventListener('pointermove', function (e) {
+    tx = (e.clientX / innerWidth - 0.5) * 2;
+    ty = (e.clientY / innerHeight - 0.5) * 2;
+  }, { passive: true });
+
+  // Stop drawing entirely when the hero is off screen or the tab is hidden. A
+  // background animation that keeps burning a GPU behind six other sections is rude.
+  var live = true;
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (es) { live = es[0].isIntersecting; },
+      { threshold: 0.01 }).observe(cv);
+  }
+
+  var t0 = performance.now();
+  (function frame(now) {
+    requestAnimationFrame(frame);
+    if (!live || document.hidden) return;
+    mx += (tx - mx) * 0.045;
+    my += (ty - my) * 0.045;
+    gl.uniform1f(uT, (now - t0) / 1000);
+    gl.uniform2f(uM, mx, my);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.POINTS, 0, cfg.n);
+  })(t0);
+})();
+</script>
+<script>
+(function () {
+  var root = document.documentElement;
+  var btn = document.getElementById('themer');
+  function label() { btn.textContent = root.dataset.theme === 'dark' ? 'Light' : 'Dark'; }
+  try { var saved = localStorage.getItem('fg-theme'); if (saved) root.dataset.theme = saved; }
+  catch (e) { /* private mode: keep the default */ }
+  label();
+  btn.addEventListener('click', function () {
+    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    label();
+    try { localStorage.setItem('fg-theme', root.dataset.theme); } catch (e) {}
+  });
+
+  // Every pane is already in the document; the controls only choose which one shows.
+  var state = { attr: 'RAC1P', split: 'test' };
+  function sync() {
+    document.querySelectorAll('.pane').forEach(function (p) {
+      p.classList.toggle('is-on',
+        p.dataset.attr === state.attr && p.dataset.split === state.split);
+    });
+  }
+  // Cross-fade the swap where the browser can, cut where it cannot. Either way the
+  // pane changes, so the transition is decoration and never a dependency.
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function swap(fn) {
+    if (document.startViewTransition && !reduce) { document.startViewTransition(fn); }
+    else { fn(); }
+  }
+  document.querySelectorAll('.seg').forEach(function (b) {
+    b.addEventListener('click', function () {
+      swap(function () {
+        state[b.dataset.k] = b.dataset.v;
+        b.parentNode.querySelectorAll('.seg').forEach(function (o) {
+          o.classList.toggle('is-on', o === b);
+        });
+        sync();
+      });
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>

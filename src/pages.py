@@ -22,11 +22,13 @@ def esc(t: object) -> str:
 
 
 def _nav(active: str, verdict: str, verdict_label: str) -> str:
+    # Mirrors dashboard.NAV so the bar does not change shape when you land here.
     items = [
-        ("index.html", "Evidence", "evidence"),
-        ("about.html", "Why this exists", "about"),
-        ("index.html#method", "Method", "method"),
-        ("index.html#sources", "Sources", "sources"),
+        ("index.html", "The finding", "index.html"),
+        ("evidence.html", "Evidence", "evidence.html"),
+        ("method.html", "Method", "method.html"),
+        ("fix.html", "The fix", "fix.html"),
+        ("about.html", "Why", "about.html"),
     ]
     def link(href: str, label: str, key: str) -> str:
         # Built outside the f-string: a backslash inside an f-string expression is
@@ -88,7 +90,7 @@ def about(result: dict) -> str:
   <rect width="100%" height="100%" filter="url(#gr)"/>
 </svg>
 
-{_nav("about", v, label)}
+{_nav("about.html", v, label)}
 
 <header class="hero">
   <div class="mesh" aria-hidden="true"><i class="m1"></i><i class="m2"></i>

@@ -27,6 +27,7 @@ sys.path.insert(0, str(REPO_ROOT))
 import pandas as pd
 
 from src import policy as pol
+from src.dashboard import PAGES as SITE_PAGES
 from src.dashboard import render as render_dashboard
 from src.fingerprint import pipeline_fingerprint
 from src.pages import about as render_about
@@ -40,9 +41,15 @@ GENERATED = {
     REPO_ROOT / "docs" / "annex_iv.md": lambda r, t: annex_iv(r, t),
     REPO_ROOT / "docs" / "dpia.md": lambda r, t: dpia(r),
     REPO_ROOT / "results" / "checks.md": lambda r, t: checks_doc(r),
-    REPO_ROOT / "docs" / "index.html": lambda r, t: render_dashboard(r, t),
     REPO_ROOT / "docs" / "about.html": lambda r, t: render_about(r),
 }
+
+# Every page of the site, added here rather than listed by hand, so a page that gets
+# added to the site cannot quietly escape the byte-identical check.
+for _name, *_rest in SITE_PAGES:
+    GENERATED[REPO_ROOT / "docs" / _name] = (
+        lambda r, t, _n=_name: render_dashboard(r, t, _n)
+    )
 
 def _fail(msg: str) -> None:
     print(f"FAIL  {msg}", file=sys.stderr)

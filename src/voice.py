@@ -35,17 +35,28 @@ import pandas as pd
 from src.dashboard import human_cost
 
 # Where "take me to the intersections" should actually land.
+#
+# These are page plus anchor now that the site is five pages. If the target is on the
+# page you are already on, the panel scrolls; if it is not, it follows the link. The
+# spoken answer is identical either way, so asking a question never depends on having
+# landed in the right place first.
 SECTIONS = {
-    "start": "plain", "plain": "plain", "basic": "plain", "beginning": "plain",
-    "miss": "cost", "overlook": "cost", "who": "cost", "cost": "cost",
-    "check": "checks", "policy": "checks", "gate": "checks",
-    "intersect": "intersections", "cross": "intersections",
-    "certain": "certainty", "confiden": "certainty", "noise": "certainty",
-    "group": "groups", "table": "groups",
-    "flow": "flow", "sankey": "flow",
-    "fix": "fix", "mitigat": "fix", "solution": "fix",
-    "method": "method",
-    "source": "sources", "data": "sources",
+    "start": "index.html#plain", "plain": "index.html#plain",
+    "basic": "index.html#plain", "beginning": "index.html#plain",
+    "miss": "index.html#cost", "overlook": "index.html#cost",
+    "who": "index.html#cost", "cost": "index.html#cost",
+    "check": "evidence.html#checks", "policy": "evidence.html#checks",
+    "gate": "evidence.html#checks",
+    "intersect": "evidence.html#intersections", "cross": "evidence.html#intersections",
+    "certain": "evidence.html#certainty", "confiden": "evidence.html#certainty",
+    "noise": "evidence.html#certainty",
+    "group": "evidence.html#groups", "table": "evidence.html#groups",
+    "flow": "evidence.html#flow", "sankey": "evidence.html#flow",
+    "fix": "fix.html#fix", "mitigat": "fix.html#fix", "solution": "fix.html#fix",
+    "conclusion": "fix.html#conclusion", "takeaway": "fix.html#conclusion",
+    "unaware": "method.html#unaware", "delete race": "method.html#unaware",
+    "method": "method.html#method",
+    "source": "method.html#sources", "data": "method.html#sources",
 }
 
 # Question to answer, walked top to bottom, first match wins.
@@ -367,19 +378,27 @@ SCRIPT = r"""
   }
 
   function navigate(said) {
-    if (!/\b(take me|go to|show me|scroll|jump)\b/i.test(said)) { return false; }
+    if (!/\b(take me|go to|show me|scroll|jump|open)\b/i.test(said)) { return false; }
     var lower = said.toLowerCase();
     var keys = Object.keys(DATA.sections);
     for (var i = 0; i < keys.length; i++) {
-      if (lower.indexOf(keys[i]) !== -1) {
-        var el = document.getElementById(DATA.sections[keys[i]]);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          add('a', 'Scrolling there now.');
-          speak('Scrolling there now.');
-          return true;
-        }
+      if (lower.indexOf(keys[i]) === -1) { continue; }
+      var target = DATA.sections[keys[i]];
+      var parts = target.split('#');
+      var here = (location.pathname.split('/').pop() || 'index.html');
+      // Already on that page: scroll. On another page: follow the link.
+      if (parts[0] === here) {
+        var el = document.getElementById(parts[1]);
+        if (!el) { continue; }
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        add('a', 'Scrolling there now.');
+        speak('Scrolling there now.');
+      } else {
+        add('a', 'That is on another page. Taking you there.');
+        speak('That is on another page. Taking you there.');
+        setTimeout(function () { location.href = target; }, 700);
       }
+      return true;
     }
     return false;
   }
