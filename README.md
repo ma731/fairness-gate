@@ -141,8 +141,28 @@ only fails when the *entire* confidence interval is past the limit. If the estim
 over the line but the interval still straddles it, that is a warning that says so in
 words. Uncertainty can soften a failure. It can never invent one.
 
-There is also a scheduled job that re-runs everything monthly, commits the new numbers
-when they actually move, and opens an issue if a limit breaks.
+## What runs on its own
+
+Three jobs, none of which anyone has to remember.
+
+**On every commit and every pull request**, the gate: lint, the tests on Python 3.11 and
+3.12, and `check_policy.py`. Seconds, no data needed.
+
+**On every pull request**, a reviewer that comments with what actually moved. This one
+matters more than it sounds. A green build tells you nothing crossed a limit. It does
+not tell you what moved, which direction, or which group absorbed it, and a commit can
+keep every check inside its limit while taking four points of recall off one group. So
+`scripts/review_pr.py` diffs the audit on main against the audit on the branch and
+writes the difference: checks that changed status, numbers that moved more than the
+noise floor, and which gap is behind it. One comment per pull request, edited in place.
+
+It never fails the build. Blocking is the gate's job, and a bot that both nags and
+blocks gets muted. It also stays quiet about moves under 0.002, because on 600,000
+people that is rounding and a comment that cries wolf is a comment people skim.
+Deleting a check is the quietest way to turn a gate green, so removals get named.
+
+**Monthly**, the full audit: it downloads the data, retrains, re-audits, commits the
+new numbers only when they actually move, and opens an issue if a limit breaks.
 
 ---
 
@@ -204,6 +224,9 @@ src/dashboard.py         the website
 src/charts_extra.py      the charts that need more than a summary row
 src/pointfield.py        the animated hero: one dot per person, no libraries
 src/voice.py             ask it out loud; every answer written from the audit
+src/glossary.py          plain English for every check name, in one place
+src/unaware.py           the same model without race and sex, and what that costs
+scripts/review_pr.py     the pull request reviewer
 scripts/run_audit.py     one command, every number
 scripts/check_policy.py  the gate
 docs/decisions/          why things are the way they are, including what I rejected
@@ -224,7 +247,12 @@ pushing. I learned that the slow way.
 
 ## The website
 
-`docs/index.html` is the evidence. Fifteen kinds of chart, and each one is there because
+The site is five pages, in the order the argument runs: the finding, the evidence, the
+method, the fix I did not ship, and why I built it. It used to be one endless scroll,
+which asked far too much of a reader. Every page is a real file, so links go straight to
+a section and nothing needs JavaScript to show you content.
+
+`docs/index.html` is the front of it. Fifteen kinds of chart, and each one is there because
 it answers something a table cannot: a flow diagram because every person has to come out
 somewhere, a dot grid because the denominator is people, a tradeoff curve because the
 shape of the curve *is* the argument. I deliberately left out a couple of charts that
