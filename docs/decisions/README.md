@@ -19,4 +19,4 @@ what it costs me.
 | [0003](0003-charts-must-encode-something.md) | No chart without a number behind it | Two impressive charts cut because the data had nothing for them |
 | [0004](0004-webgl-without-a-library.md) | Raw WebGL, no Three.js | 4 KB against 600 KB, for one effect |
 | [0005](0005-suppress-small-groups.md) | Hide any group under 500 people | And draw the hole, do not delete the row |
-| [0006](0006-keep-protected-attributes-out.md) | Model never sees race or sex | Deleting the column does not delete the problem |
+| [0006](0006-keep-protected-attributes-out.md) | Test unawareness, do not assume it | Deleting both columns leaves 92% of the gap |

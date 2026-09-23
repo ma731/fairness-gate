@@ -156,10 +156,25 @@ me nothing, because it hides the fact that the world moves.
 **I held four whole states out.** Never trained on them at all. Performance drops there,
 and I report the drop instead of pretending it does not happen.
 
-**Race and sex never go into the model.** They are kept to one side and used only to check
-the results. An attribute is protected whether or not the model is allowed to see it, so
-deleting it does not make the problem go away, it just makes it invisible. That is the
-mistake I most wanted to avoid.
+**The model does see race and sex, and I tested what happens when it cannot.** They are
+part of the standard feature set for this task, so the shipped model uses them. Then I
+trained the whole thing a second time with both columns deleted, which is the fix
+everybody suggests first, and measured it:
+
+| | recall gap | false positive gap | accuracy |
+|---|---:|---:|---:|
+| sees race and sex | 0.3119 | 0.1447 | 0.8021 |
+| both columns deleted | 0.2883 | 0.1409 | 0.7965 |
+
+**92% of the gap survives.** Deleting the attributes buys you 0.024 of a 0.312 gap and
+costs accuracy. The model reconstructs almost all of the signal from occupation,
+education, hours and birthplace, because those carry the history of who got which
+opportunities.
+
+So an attribute is protected whether or not the model is allowed to look at it. Removing
+it does not remove the disparity, it removes your ability to see the disparity, while
+leaving you feeling like you did something. That is the mistake I most wanted to avoid,
+and now there is a number for it instead of an opinion.
 
 **I report three fairness measures, not one.** They contradict each other on purpose, and
 they cannot all be satisfied when groups genuinely differ in outcomes, which here they do.

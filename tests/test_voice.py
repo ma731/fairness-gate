@@ -156,3 +156,26 @@ def test_it_still_works_without_a_microphone(result, tables):
 def test_build_is_deterministic(result, tables):
     """It lands in index.html, which is compared byte for byte."""
     assert voice.build(result, tables) == voice.build(result, tables)
+
+
+def test_the_agent_does_not_claim_the_model_is_blind_to_race(answers):
+    """I shipped that claim once. It was false, and it is the kind of false that a
+    reviewer checks first, so it gets a test rather than a promise."""
+    said = answers["protected"].lower()
+    assert "never" not in said
+    assert "it does see them" in said
+
+
+def test_the_unawareness_answer_quotes_the_experiment(answers, result):
+    c = (result.get("unaware") or {}).get("comparison") or {}
+    assert c, "no unaware arm in the audit"
+    assert f"{c['tpr_gap_unaware']:.4f}" in answers["protected"]
+
+
+def test_the_agent_picks_an_english_voice(result, tables):
+    """The synthesis default is the machine's locale. On a China-locale Windows that
+    meant a Chinese voice reading American census figures, which sounds broken."""
+    markup = voice.build(result, tables)
+    assert "VOICE_RANK" in markup
+    assert "u.voice = picked" in markup
+    assert "onvoiceschanged" in markup

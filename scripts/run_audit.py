@@ -33,6 +33,8 @@ from src.fingerprint import pipeline_fingerprint
 from src.mitigation import build as build_mitigation
 from src.model import baseline_rate, pick_threshold, predict_proba, score, train
 from src.report import write_all
+from src.unaware import build as build_unaware
+from src.unaware import compare as compare_unaware
 from src.uncertainty import build as build_uncertainty
 
 
@@ -140,6 +142,23 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
         flush=True,
     )
 
+    # The experiment everybody asks for: delete the protected columns and see whether
+    # the disparity follows them out. It does not, and measuring that is the only
+    # honest way to answer the suggestion.
+    print("\ntraining again without race and sex ...", flush=True)
+    race_summary = next(x for x in summaries["test"] if x["attribute"] == "RAC1P")
+    unaware = build_unaware("RAC1P")
+    unaware["comparison"] = compare_unaware(
+        {"tpr_gap": race_summary["tpr_gap"], "accuracy": scores["test"]["accuracy"]},
+        unaware,
+    )
+    print(
+        f"  gap with the attributes {race_summary['tpr_gap']:.4f}, "
+        f"without them {unaware['tpr_gap']:.4f} "
+        f"({unaware['comparison'].get('share_remaining', 0):.0%} of it survives)",
+        flush=True,
+    )
+
     policy = pol.load_policy()
 
     test_gaps = {
@@ -187,6 +206,7 @@ def run(gate: bool = False, set_baseline: bool = False) -> int:
         "distributions": dists,
         "uncertainty": uncertainty,
         "mitigation": mitigation,
+        "unaware": unaware,
         "policy_verdict": pol.verdict(checks),
         "checks": pol.as_records(checks),
     }

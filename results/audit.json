@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-23T09:45:17+00:00",
-  "git_sha": "881c08d",
+  "generated_at": "2026-09-23T09:54:27+00:00",
+  "git_sha": "e3b37e2",
   "python": "3.14.3",
-  "pipeline_fingerprint": "0b9e5fca30abc482",
+  "pipeline_fingerprint": "aba10eb137604312",
   "design": {
     "train_year": "2015",
     "val_year": "2016",
@@ -12768,6 +12768,73 @@
       "accuracy_cost": 0.0081,
       "gap_closed": 0.2353,
       "requires_attribute_at_inference": true
+    }
+  },
+  "unaware": {
+    "tpr_gap": 0.2883,
+    "fpr_gap": 0.140868,
+    "groups": {
+      "1": {
+        "n": 434022,
+        "tpr": 0.830227,
+        "fpr": 0.235714
+      },
+      "2": {
+        "n": 49941,
+        "tpr": 0.73784,
+        "fpr": 0.190256
+      },
+      "3": {
+        "n": 2340,
+        "tpr": 0.761329,
+        "fpr": 0.203814
+      },
+      "5": {
+        "n": 926,
+        "tpr": 0.705556,
+        "fpr": 0.13807
+      },
+      "6": {
+        "n": 55374,
+        "tpr": 0.844341,
+        "fpr": 0.225715
+      },
+      "7": {
+        "n": 883,
+        "tpr": 0.718631,
+        "fpr": 0.201613
+      },
+      "8": {
+        "n": 40106,
+        "tpr": 0.556041,
+        "fpr": 0.094846
+      },
+      "9": {
+        "n": 16928,
+        "tpr": 0.78851,
+        "fpr": 0.17415
+      }
+    },
+    "attribute": "RAC1P",
+    "features": [
+      "AGEP",
+      "COW",
+      "SCHL",
+      "MAR",
+      "OCCP",
+      "POBP",
+      "RELP",
+      "WKHP"
+    ],
+    "threshold": 0.355,
+    "accuracy": 0.796497,
+    "n": 600551,
+    "comparison": {
+      "tpr_gap_aware": 0.311919,
+      "tpr_gap_unaware": 0.2883,
+      "closed": 0.023619,
+      "share_remaining": 0.924278,
+      "accuracy_cost": 0.005603
     }
   },
   "policy_verdict": "warn",

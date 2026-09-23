@@ -118,6 +118,7 @@ def _answers(result: dict, tables: dict[str, pd.DataFrame]) -> dict:
 
     n = result["splits"]["test"]["n"]
     design = result["design"]
+    unaware = (result.get("unaware") or {}).get("comparison") or {}
 
     return {
         "gate": (
@@ -221,11 +222,15 @@ def _answers(result: dict, tables: dict[str, pd.DataFrame]) -> dict:
             "Four states are held out entirely and never trained on."
         ),
         "protected": (
-            "Race and sex never go into the model. It is trained on ten features and "
-            "none of them is a protected attribute, and the gap is there anyway. That "
-            "is the whole point. Deleting the column does not delete the problem, it "
-            "deletes your ability to see it. The model reaches the same disparity "
-            "through occupation, education, hours and region."
+            "It does see them, and I tested what happens when it cannot. Training the "
+            "same model with race and sex deleted takes the recall gap from "
+            f"{unaware.get('tpr_gap_aware', 0):.4f} to "
+            f"{unaware.get('tpr_gap_unaware', 0):.4f}. That is "
+            f"{unaware.get('share_remaining', 0):.0%} of the gap surviving, for "
+            f"{unaware.get('accuracy_cost', 0):.4f} of accuracy. Deleting the column "
+            "does not delete the problem, it deletes your ability to see it. The model "
+            "rebuilds almost all of the signal from occupation, education, hours and "
+            "birthplace, because those carry the history of who got which opportunities."
         ),
         "status": (
             f"The gate is at {verdict}. {counts['pass']} checks pass, "
@@ -301,13 +306,57 @@ SCRIPT = r"""
     log.scrollTop = log.scrollHeight;
   }
 
+  // Picking the voice by hand, because the default is whatever the machine's locale
+  // happens to be. On a Windows box set to China that meant a Chinese voice reading
+  // English sentences and American census figures out loud, which sounds broken and,
+  // on this page of all pages, lands badly. Setting utterance.lang is not enough: it
+  // is a request, and the engine ignores it if the selected voice cannot honour it.
+  // So the voice itself gets chosen.
+  //
+  // Preference order is best-sounding first. The Microsoft "Natural" voices and
+  // Google US English are neural, free, and already on most machines, which beats
+  // calling out to a paid speech API for a page that otherwise needs no network.
+  var VOICE_RANK = [
+    function (v) { return /en(-|_)US/i.test(v.lang) && /natural|neural/i.test(v.name); },
+    function (v) { return /^en/i.test(v.lang) && /natural|neural/i.test(v.name); },
+    function (v) { return /^Google US English/i.test(v.name); },
+    function (v) { return /en(-|_)US/i.test(v.lang) && /^(Samantha|Ava|Allison)/i.test(v.name); },
+    function (v) { return /en(-|_)(US|GB)/i.test(v.lang); },
+    function (v) { return /^en/i.test(v.lang); }
+  ];
+  var picked = null;
+
+  function pickVoice() {
+    if (!('speechSynthesis' in window)) { return null; }
+    var all = window.speechSynthesis.getVoices() || [];
+    for (var r = 0; r < VOICE_RANK.length; r++) {
+      for (var i = 0; i < all.length; i++) {
+        if (VOICE_RANK[r](all[i])) { return all[i]; }
+      }
+    }
+    return null;
+  }
+
+  // getVoices() is empty until the list loads, so ask again when it arrives.
+  if ('speechSynthesis' in window) {
+    picked = pickVoice();
+    window.speechSynthesis.onvoiceschanged = function () { picked = pickVoice(); };
+  }
+
   // Speaking is a nicety. If the browser has no voice, the answer is already on screen.
   function speak(what) {
     if (!('speechSynthesis' in window)) { return; }
     try {
       window.speechSynthesis.cancel();
+      if (!picked) { picked = pickVoice(); }
+      // No English voice installed at all: stay quiet rather than read English
+      // numbers through a voice that cannot pronounce them.
+      if (!picked) { return; }
       var u = new SpeechSynthesisUtterance(what);
-      u.rate = 1.02;
+      u.voice = picked;
+      u.lang = picked.lang || 'en-US';
+      u.rate = 0.98;
+      u.pitch = 1;
       window.speechSynthesis.speak(u);
     } catch (e) { /* no voice available */ }
   }

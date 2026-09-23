@@ -1,45 +1,54 @@
-# 0006. The model never sees race or sex, and that does not make it fair
+# 0006. Let the model see race and sex, then measure what removing them does
 
 **Status:** accepted
+**Supersedes:** an earlier version of this file that claimed the model never saw these
+attributes. That was wrong: `run_audit.py` calls `load_splits()` with the default, and
+the default includes them. The claim was corrected and then tested properly, which is
+how this decision ended up with numbers attached instead of an argument.
 
 ## What I had to decide
 
 Should race and sex be features the model can learn from?
 
-The instinctive answer from most people, including most engineers, is "obviously not,
-delete them, then it cannot discriminate." That intuition has a name, fairness through
-unawareness, and it is wrong. It is probably the single most common mistake in this area.
+The instinctive answer from most people, including engineers, is "obviously not, delete
+them, then it cannot discriminate." That intuition has a name, fairness through
+unawareness. It is the single most common first move in this area, and I did not want
+to dismiss it with a citation. I wanted to run it.
 
 ## What I picked
 
-Race and sex are loaded, held in a separate structure, and used only to evaluate results.
-The model is trained on ten features and none of them is a protected attribute. Race
-crossed with sex is constructed for auditing and cannot reach the feature matrix, because
-of how the loading code is structured rather than because I remembered not to.
+The shipped model uses them, because they are part of the standard ACSIncome feature set
+and because leaving them in makes the interesting question askable. Then `src/unaware.py`
+trains the identical pipeline a second time with both columns dropped, picks its own
+threshold on validation, and scores it on the same test year.
 
-And the gap is 0.312 anyway.
+| | recall gap | false positive gap | accuracy |
+|---|---:|---:|---:|
+| sees race and sex | 0.3119 | 0.1447 | 0.8021 |
+| both columns deleted | 0.2883 | 0.1409 | 0.7965 |
 
-That is the entire point of doing it this way. The model has no idea what race anyone is,
-and it still finds 85 out of 100 qualifying people in one group and 54 in another. It gets
-there through occupation, education, hours, region: variables that carry the history of
-who got which opportunities, and correlate with race strongly enough to reconstruct most
-of the signal without ever being told.
+**92.4% of the gap survives.** Deleting the two columns closes 0.024 of a 0.312 gap and
+costs 0.0056 of accuracy.
 
-So removing the column does not remove the disparity. It removes your **ability to see**
-the disparity, while leaving you feeling like you did something. A team that deletes race
-and ships is in a worse position than a team that keeps it, because they now have a
-problem they have made unmeasurable, and they believe they solved it.
+The model has no idea what race anyone is and it still finds roughly 83 out of every 100
+qualifying people in one group and 56 in another. It gets there through occupation,
+education, hours worked and place of birth: variables that carry the history of who got
+which opportunities, and correlate with race strongly enough to rebuild almost all of the
+signal without ever being told.
 
-An attribute is protected whether or not the model is allowed to look at it. Which is why
-the protected columns stay in the repo, stay out of the features, and are the only reason
-any of this could be measured at all.
+The second model gets its own threshold rather than inheriting the first one. The two
+produce differently shaped score distributions, so reusing one cut-off would have meant
+comparing two different operating points and calling the difference an effect.
 
 ## What it costs me
 
-Slightly awkward plumbing: the data loader has to carry two parallel structures everywhere
-and keep them aligned across four splits. That is a small price.
+The comfortable answer is gone and I do not have one to replace it with. A team that
+deletes race and ships is in a worse position than a team that keeps it, because they now
+have a problem they have made unmeasurable and they believe they solved it. That is a
+harder thing to tell someone than "remove the column".
 
-The bigger cost is that this repo is now a demonstration that the comfortable answer does
-not work, and it does not have a comfortable answer to replace it with. See
-[0002](0002-reject-per-group-thresholds.md) for the fix that does close the gap and why I
-would not ship that either.
+It also costs a second full training run in every audit, which is a few minutes. Worth it:
+this is the one result that changes what a reader does on Monday.
+
+See [0002](0002-reject-per-group-thresholds.md) for the mitigation that does close the
+gap, and why I would not ship that either.
