@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-09-23T20:10:48+00:00",
-  "git_sha": "8a619a4",
-  "python": "3.14.3",
+  "generated_at": "2026-10-01T12:57:52+00:00",
+  "git_sha": "3900876",
+  "python": "3.12.14",
   "pipeline_fingerprint": "fb264eaa04ed7ed5",
   "design": {
     "train_year": "2015",
@@ -11647,22 +11647,22 @@
       "draws": 4000,
       "tpr_gap": {
         "point": 0.3119,
-        "lo": 0.3001,
-        "hi": 0.3241,
+        "lo": 0.3,
+        "hi": 0.324,
         "level": 0.95,
         "draws": 4000
       },
       "fpr_gap": {
         "point": 0.1447,
         "lo": 0.1401,
-        "hi": 0.152,
+        "hi": 0.1521,
         "level": 0.95,
         "draws": 4000
       },
       "selection_gap": {
         "point": 0.3445,
         "lo": 0.3388,
-        "hi": 0.35,
+        "hi": 0.3501,
         "level": 0.95,
         "draws": 4000
       },
@@ -11747,8 +11747,8 @@
       "draws": 4000,
       "tpr_gap": {
         "point": 0.071,
-        "lo": 0.0677,
-        "hi": 0.0744,
+        "lo": 0.0679,
+        "hi": 0.0743,
         "level": 0.95,
         "draws": 4000
       },
@@ -12838,23 +12838,23 @@
     }
   },
   "linear": {
-    "tpr_gap": 0.315448,
-    "fpr_gap": 0.174875,
+    "tpr_gap": 0.315355,
+    "fpr_gap": 0.174909,
     "groups": {
       "1": {
         "n": 434022,
-        "tpr": 0.833596,
-        "fpr": 0.254282
+        "tpr": 0.833646,
+        "fpr": 0.254321
       },
       "2": {
         "n": 49941,
-        "tpr": 0.704039,
-        "fpr": 0.173896
+        "tpr": 0.704111,
+        "fpr": 0.174007
       },
       "3": {
         "n": 2340,
         "tpr": 0.673716,
-        "fpr": 0.162098
+        "fpr": 0.162694
       },
       "5": {
         "n": 926,
@@ -12863,8 +12863,8 @@
       },
       "6": {
         "n": 55374,
-        "tpr": 0.850292,
-        "fpr": 0.267418
+        "tpr": 0.850331,
+        "fpr": 0.267451
       },
       "7": {
         "n": 883,
@@ -12873,7 +12873,7 @@
       },
       "8": {
         "n": 40106,
-        "tpr": 0.534844,
+        "tpr": 0.534976,
         "fpr": 0.092543
       },
       "9": {
@@ -12885,8 +12885,8 @@
     "family": "logistic regression",
     "attribute": "RAC1P",
     "threshold": 0.33,
-    "accuracy": 0.787658,
-    "auc": 0.874601,
+    "accuracy": 0.787652,
+    "auc": 0.874599,
     "n": 600551,
     "features": [
       "AGEP",
@@ -12902,12 +12902,12 @@
     ],
     "comparison": {
       "tpr_gap_tree": 0.311919,
-      "tpr_gap_linear": 0.315448,
+      "tpr_gap_linear": 0.315355,
       "auc_tree": 0.8881,
-      "auc_linear": 0.874601,
+      "auc_linear": 0.874599,
       "accuracy_tree": 0.8021,
-      "accuracy_linear": 0.787658,
-      "share_remaining": 1.011313
+      "accuracy_linear": 0.787652,
+      "share_remaining": 1.011015
     },
     "rank_correlation": 0.9286
   },

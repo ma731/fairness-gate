@@ -5,7 +5,7 @@
 
 # Model card
 
-Generated 2026-09-23T20:10:48+00:00 from commit `8a619a4` on Python 3.14.3.
+Generated 2026-10-01T12:57:52+00:00 from commit `3900876` on Python 3.12.14.
 
 Trained on 2015, threshold chosen on 2016, evaluated on 2018.
 
